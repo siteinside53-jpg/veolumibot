@@ -8,7 +8,7 @@ from telegram.ext import (
     filters,
 )
 
-BOT_TOKEN = os.getenv("8539722268:AAFhP7u_P9AE1SMU_Y6x0NsOcSG6Rxs9Ikw")
+BOT_TOKEN = os.getenv(8539722268:AAFhP7u_P9AE1SMU_Y6x0NsOcSG6Rxs9Ikw)
 if not BOT_TOKEN:
     raise RuntimeError("Λείπει το BOT_TOKEN (Railway Variables)")
 
