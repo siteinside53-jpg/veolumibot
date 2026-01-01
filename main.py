@@ -28,10 +28,9 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 if not BOT_TOKEN:
     raise RuntimeError("Λείπει το BOT_TOKEN (Railway Variables)")
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("DATABASE_PUBLIC_URL")
 if not DATABASE_URL:
-    raise RuntimeError("Λείπει το DATABASE_URL (Railway Variables). Πρόσθεσε PostgreSQL στο Railway.")
-
+    raise RuntimeError("Λείπει DATABASE_URL / DATABASE_PUBLIC_URL (Railway Variables).")
 # ======================
 # UI
 # ======================
