@@ -8,7 +8,7 @@ from telegram.ext import (
     filters,
 )
 
-BOT_TOKEN = os.getenv(8539722268:AAFhP7u_P9AE1SMU_Y6x0NsOcSG6Rxs9Ikw)
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 if not BOT_TOKEN:
     raise RuntimeError("Λείπει το BOT_TOKEN (Railway Variables)")
 
@@ -60,6 +60,43 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Θέλεις να το κάνουμε με κουμπιά επιλογής (inline) όπως στο VeoSeeBot;"
         )
         return
+
+    if text == "🎬 Δημιουργία βίντεο":
+        await update.message.reply_text(
+            "🎬 Βίντεο (σύντομα):\n"
+            "• Veo\n"
+            "• Runway\n"
+            "• Kling"
+        )
+        return
+
+    if text == "🎵 Ήχος (Audio)":
+        await update.message.reply_text(
+            "🎵 Ήχος (σύντομα):\n"
+            "• Text to Speech\n"
+            "• Voice αλλαγή\n"
+            "• Sound FX"
+        )
+        return
+
+    if text == "💡 Κανάλι με prompts":
+        await update.message.reply_text("💡 Κανάλι: (θα βάλουμε link εδώ)")
+        return
+
+    if text == "☁️ Υποστήριξη":
+        await update.message.reply_text("☁️ Υποστήριξη: (θα βάλουμε τρόπο επικοινωνίας)")
+        return
+
+    await update.message.reply_text("Χρησιμοποίησε το μενού κάτω 👇", reply_markup=MAIN_MENU)
+
+def main():
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_menu))
+    app.run_polling()
+
+if __name__ == "__main__":
+    main()        return
 
     if text == "🎬 Δημιουργία βίντεο":
         await update.message.reply_text(
