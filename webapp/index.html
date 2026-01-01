@@ -24,6 +24,7 @@
     li{margin:6px 0}
     .title{font-weight:800;font-size:18px}
     .sp{height:8px}
+    .foot{font-size:12px;color:#7f8898;margin-top:6px}
   </style>
 </head>
 <body>
@@ -48,18 +49,18 @@
       <div class="muted">Τρέχον πακέτο</div>
       <div id="planBig" class="big" style="font-size:22px;margin:6px 0 10px">Free</div>
       <button class="btn" id="buyMore">Αγορά επιπλέον credits</button>
+      <div class="foot">*Η αγορά εδώ είναι demo flow. Θα κουμπώσει Stripe/PayPal/crypto στο επόμενο βήμα.</div>
     </div>
 
     <div class="card">
       <div class="title">Συνδρομές</div>
       <div class="sp"></div>
-
       <div class="plans" id="plans"></div>
     </div>
 
     <div class="card">
       <div class="title">Πρόγραμμα συνεργατών</div>
-      <div class="muted">Κέρδισε % από τις αγορές που φέρνεις.</div>
+      <div class="muted">Μοίρασε το link σου και πάρε ποσοστό.</div>
       <div class="sp"></div>
       <div class="pill" id="ref">Φόρτωση…</div>
       <div class="sp"></div>
@@ -94,9 +95,7 @@
           </div>
           <div class="pill">${p.price}</div>
         </div>
-        <ul>
-          ${p.perks.map(x=>`<li><span class="check">✓</span> ${x}</li>`).join("")}
-        </ul>
+        <ul>${p.perks.map(x=>`<li><span class="check">✓</span> ${x}</li>`).join("")}</ul>
         <div class="sp"></div>
         <button class="btn primary" data-plan="${p.code}">Αγορά</button>
       `;
@@ -104,20 +103,14 @@
     });
 
     root.querySelectorAll("button[data-plan]").forEach(btn=>{
-      btn.addEventListener("click", async ()=>{
+      btn.addEventListener("click", ()=>{
         const plan = btn.getAttribute("data-plan");
-        // Στέλνουμε event στο bot (θα το πιάσει backend)
-        if (tg) {
-          tg.sendData(JSON.stringify({action:"buy_plan", plan}));
-        } else {
-          alert("Telegram WebApp δεν βρέθηκε.");
-        }
+        if (tg) tg.sendData(JSON.stringify({action:"buy_plan", plan}));
       });
     });
   }
 
   async function loadProfile(){
-    // παίρνουμε initData από Telegram για verify στο backend
     const initData = tg?.initData || "";
     const res = await fetch("/api/me", {
       method:"POST",
@@ -141,7 +134,6 @@
     document.getElementById("copyRef").onclick = async ()=>{
       await navigator.clipboard.writeText(data.referral_link || "");
       if (tg) tg.showPopup({title:"Έτοιμο", message:"Το link αντιγράφηκε.", buttons:[{type:"ok"}]});
-      else alert("Αντιγράφηκε.");
     };
 
     document.getElementById("buyMore").onclick = ()=>{
@@ -150,7 +142,7 @@
   }
 
   renderPlans();
-  loadProfile().catch(e=>console.error(e));
+  loadProfile().catch(console.error);
 </script>
 </body>
 </html>
