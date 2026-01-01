@@ -301,32 +301,49 @@ async def handle_ref_redirect(request: web.Request) -> web.Response:
 
 
 async def start_everything():
-    # init db
-    dbmod.init_db(DATABASE_URL)
-    log.info("DB initialized.")
-
-    # start bot (polling) in background
-    bot_app = build_bot_app()
-    await bot_app.initialize()
-    await bot_app.start()
-    await bot_app.updater.start_polling(drop_pending_updates=True)
-    log.info("Bot polling started.")
-    # aiohttp server
+    # 1) WEB SERVER ΠΡΩΤΑ (ώστε /health να δουλεύει ΠΑΝΤΑ)
     webapp = web.Application()
-    webapp["bot_app"] = bot_app
+
+    async def health_handler(request):
+        return web.json_response({"ok": True})
+
+    async def root_handler(request):
+        return web.Response(text="OK", content_type="text/plain")
+
     webapp.add_routes([
-    web.get("/health", lambda r: web.json_response({"ok": True})),
-    web.get("/", lambda r: web.Response(text="OK")),
-    web.get("/app", handle_app),
-    web.post("/api/me", handle_api_me),
-    web.get("/r/{code}", handle_ref_redirect),
-])
+        web.get("/health", health_handler),
+        web.get("/", root_handler),
+        web.get("/app", handle_app),
+        web.post("/api/me", handle_api_me),
+        web.get("/r/{code}", handle_ref_redirect),
+    ])
 
     runner = web.AppRunner(webapp)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", PORT)
     await site.start()
     log.info("Web server started on port %s", PORT)
+
+    # 2) DB INIT ΣΕ TRY (να μην ρίχνει όλη την εφαρμογή)
+    try:
+        dbmod.init_db(DATABASE_URL)
+        log.info("DB initialized.")
+    except Exception as e:
+        log.exception("DB init failed (continuing): %s", e)
+
+    # 3) BOT ΣΕ BACKGROUND (να μην μπλοκάρει το web)
+    async def bot_task():
+        try:
+            bot_app = build_bot_app()
+            webapp["bot_app"] = bot_app
+            await bot_app.initialize()
+            await bot_app.start()
+            await bot_app.updater.start_polling(drop_pending_updates=True)
+            log.info("Bot polling started.")
+        except Exception as e:
+            log.exception("Bot failed: %s", e)
+
+    asyncio.create_task(bot_task())
 
     # keep running
     while True:
