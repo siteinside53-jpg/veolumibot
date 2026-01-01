@@ -95,6 +95,10 @@ def main_menu_kb() -> InlineKeyboardMarkup:
 def back_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Πίσω στο Μενού", callback_data=CB_BACK)]])
 
+async def health(request):
+    return web.json_response({"ok": True})
+
+app.router.add_get("/health", health)
 
 async def ensure_user(update: Update) -> None:
     if not update.effective_user:
