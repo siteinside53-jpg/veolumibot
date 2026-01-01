@@ -315,11 +315,12 @@ async def start_everything():
     webapp = web.Application()
     webapp["bot_app"] = bot_app
     webapp.add_routes([
-        web.get("/app", handle_app),
-        web.post("/api/me", handle_api_me),
-        web.get("/r/{code}", handle_ref_redirect),
-        web.get("/", lambda r: web.Response(text="OK")),
-    ])
+    web.get("/health", lambda r: web.json_response({"ok": True})),
+    web.get("/", lambda r: web.Response(text="OK")),
+    web.get("/app", handle_app),
+    web.post("/api/me", handle_api_me),
+    web.get("/r/{code}", handle_ref_redirect),
+])
 
     runner = web.AppRunner(webapp)
     await runner.setup()
