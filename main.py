@@ -3,6 +3,7 @@ from typing import Optional, Dict
 from datetime import datetime
 
 import psycopg
+import psycopg.rows
 
 from telegram import (
     Update,
@@ -77,8 +78,11 @@ USER_SELECTED_IMAGE_MODEL: Dict[int, Optional[str]] = {}
 
 def db_conn():
     # Railway DATABASE_URL είναι postgres://...
-    return psycopg.connect(DATABASE_URL, cursor_factory=RealDictCursor)
-
+    return psycopg.connect(
+        DATABASE_URL,
+        row_factory=psycopg.rows.dict_row
+    )
+    
 def init_db():
     with db_conn() as conn:
         with conn.cursor() as cur:
