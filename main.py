@@ -1,5 +1,9 @@
 import os
-from typing import Dict, Optional
+from typing import Optional, Dict
+from datetime import datetime
+
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 from telegram import (
     Update,
@@ -18,14 +22,19 @@ from telegram.ext import (
 )
 
 # ======================
-# CONFIG
+# ENV
 # ======================
-
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 if not BOT_TOKEN:
     raise RuntimeError("Λείπει το BOT_TOKEN (Railway Variables)")
 
-# Menu labels (Reply Keyboard)
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError("Λείπει το DATABASE_URL (Railway Variables). Πρόσθεσε PostgreSQL στο Railway.")
+
+# ======================
+# UI
+# ======================
 BTN_PROFILE = "👤 Το προφίλ μου"
 BTN_VIDEO = "🎬 Δημιουργία βίντεο"
 BTN_IMAGES = "🖼 Εικόνες"
@@ -54,37 +63,122 @@ WELCOME_TEXT = (
     "Πρόσβαση από οπουδήποτε 🌍\n"
 )
 
-# ======================
-# SIMPLE IN-MEMORY STORE (για testing)
-# (Μετά το κάνουμε DB)
-# ======================
-
-# credits per user_id
-USER_CREDITS: Dict[int, int] = {}
-
-# state per user_id
-# possible: None | "awaiting_image_prompt" | "awaiting_video_prompt" | "awaiting_audio_prompt"
-USER_STATE: Dict[int, Optional[str]] = {}
-
-# selected model per user_id
-USER_SELECTED_IMAGE_MODEL: Dict[int, Optional[str]] = {}
-
-# Initial free credits for first time users
 FREE_CREDITS_ON_FIRST_START = 5
 
-
-def ensure_user(user_id: int) -> None:
-    """Initialize user if not exists."""
-    if user_id not in USER_CREDITS:
-        USER_CREDITS[user_id] = FREE_CREDITS_ON_FIRST_START
-    if user_id not in USER_STATE:
-        USER_STATE[user_id] = None
-    if user_id not in USER_SELECTED_IMAGE_MODEL:
-        USER_SELECTED_IMAGE_MODEL[user_id] = None
-
+# ======================
+# STATE (μόνο προσωρινά στη μνήμη)
+# Τα credits πλέον είναι στη DB
+# ======================
+USER_STATE: Dict[int, Optional[str]] = {}
+USER_SELECTED_IMAGE_MODEL: Dict[int, Optional[str]] = {}
 
 # ======================
-# HELPERS: UI
+# DB HELPERS
+# ======================
+
+def db_conn():
+    # Railway DATABASE_URL είναι postgres://...
+    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+
+def init_db():
+    with db_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                user_id BIGINT PRIMARY KEY,
+                username TEXT,
+                credits INT NOT NULL DEFAULT 0,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+            );
+            """)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS transactions (
+                id SERIAL PRIMARY KEY,
+                user_id BIGINT NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+                type TEXT NOT NULL,              -- 'grant' | 'buy' | 'spend'
+                amount INT NOT NULL,             -- positive int
+                meta JSONB,
+                created_at TIMESTAMP NOT NULL DEFAULT NOW()
+            );
+            """)
+        conn.commit()
+
+def get_user(user_id: int):
+    with db_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM users WHERE user_id = %s;", (user_id,))
+            return cur.fetchone()
+
+def create_user_if_missing(user_id: int, username: str):
+    """
+    Αν δεν υπάρχει user, τον δημιουργεί και του δίνει FREE credits (μία φορά).
+    """
+    with db_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT user_id FROM users WHERE user_id = %s;", (user_id,))
+            exists = cur.fetchone()
+            if exists:
+                # update username αν άλλαξε
+                cur.execute(
+                    "UPDATE users SET username=%s, updated_at=NOW() WHERE user_id=%s;",
+                    (username, user_id)
+                )
+                conn.commit()
+                return False  # not first time
+
+            # create with free credits
+            cur.execute(
+                "INSERT INTO users (user_id, username, credits) VALUES (%s, %s, %s);",
+                (user_id, username, FREE_CREDITS_ON_FIRST_START)
+            )
+            cur.execute(
+                "INSERT INTO transactions (user_id, type, amount, meta) VALUES (%s, 'grant', %s, %s);",
+                (user_id, FREE_CREDITS_ON_FIRST_START, '{"reason":"first_start"}')
+            )
+            conn.commit()
+            return True  # first time
+
+def get_credits(user_id: int) -> int:
+    with db_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT credits FROM users WHERE user_id=%s;", (user_id,))
+            row = cur.fetchone()
+            return int(row["credits"]) if row else 0
+
+def add_credits(user_id: int, amount: int, tx_type: str, meta_json: str = "{}"):
+    with db_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE users SET credits = credits + %s, updated_at=NOW() WHERE user_id=%s;", (amount, user_id))
+            cur.execute(
+                "INSERT INTO transactions (user_id, type, amount, meta) VALUES (%s, %s, %s, %s::jsonb);",
+                (user_id, tx_type, amount, meta_json)
+            )
+        conn.commit()
+
+def spend_credits(user_id: int, amount: int, meta_json: str = "{}") -> bool:
+    """
+    Αφαιρεί credits αν υπάρχουν αρκετά. Επιστρέφει True/False.
+    """
+    with db_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT credits FROM users WHERE user_id=%s FOR UPDATE;", (user_id,))
+            row = cur.fetchone()
+            if not row:
+                return False
+            current = int(row["credits"])
+            if current < amount:
+                return False
+            cur.execute("UPDATE users SET credits = credits - %s, updated_at=NOW() WHERE user_id=%s;", (amount, user_id))
+            cur.execute(
+                "INSERT INTO transactions (user_id, type, amount, meta) VALUES (%s, 'spend', %s, %s::jsonb);",
+                (user_id, amount, meta_json)
+            )
+        conn.commit()
+        return True
+
+# ======================
+# INLINE KEYBOARDS
 # ======================
 
 def image_models_keyboard() -> InlineKeyboardMarkup:
@@ -100,34 +194,20 @@ def image_models_keyboard() -> InlineKeyboardMarkup:
 def buy_credits_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("➕ 10 credits (Mock)", callback_data="buy:10")],
-            [InlineKeyboardButton("➕ 50 credits (Mock)", callback_data="buy:50")],
+            [InlineKeyboardButton("➕ 10 credits (test)", callback_data="buy:10")],
+            [InlineKeyboardButton("➕ 50 credits (test)", callback_data="buy:50")],
             [InlineKeyboardButton("⬅️ Πίσω", callback_data="back:main")],
         ]
     )
 
-def video_menu_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton("🎬 Veo (coming)", callback_data="vid_model:veo")],
-            [InlineKeyboardButton("🎞 Runway (coming)", callback_data="vid_model:runway")],
-            [InlineKeyboardButton("🌀 Kling (coming)", callback_data="vid_model:kling")],
-            [InlineKeyboardButton("⬅️ Πίσω", callback_data="back:main")],
-        ]
-    )
+def cost_for_image_model(model: str) -> int:
+    return {"nano": 1, "midjourney": 2, "flux": 1}.get(model, 1)
 
-def audio_menu_keyboard() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton("🗣 Text → Voice (coming)", callback_data="aud:tts")],
-            [InlineKeyboardButton("🎭 Voice → Voice (coming)", callback_data="aud:voice2voice")],
-            [InlineKeyboardButton("🎛 Sound FX (coming)", callback_data="aud:sfx")],
-            [InlineKeyboardButton("⬅️ Πίσω", callback_data="back:main")],
-        ]
-    )
+def model_label(model: str) -> str:
+    return {"nano": "Nano Banana Pro", "midjourney": "Midjourney", "flux": "Flux"}.get(model, model)
 
 def profile_text(user_id: int, username: str) -> str:
-    credits = USER_CREDITS.get(user_id, 0)
+    credits = get_credits(user_id)
     return (
         "👤 Το προφίλ μου\n"
         f"• Χρήστης: @{username if username else 'unknown'}\n"
@@ -135,47 +215,37 @@ def profile_text(user_id: int, username: str) -> str:
         "Θες να αγοράσεις credits;"
     )
 
-
-def cost_for_image_model(model: str) -> int:
-    return {"nano": 1, "midjourney": 2, "flux": 1}.get(model, 1)
-
-
-def model_label(model: str) -> str:
-    return {"nano": "Nano Banana Pro", "midjourney": "Midjourney", "flux": "Flux"}.get(model, model)
-
-
 # ======================
 # HANDLERS
 # ======================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    ensure_user(user.id)
+    first_time = create_user_if_missing(user.id, user.username or "")
 
-    # reset state on start
     USER_STATE[user.id] = None
     USER_SELECTED_IMAGE_MODEL[user.id] = None
 
-    # show welcome + menu + free credits line (only if first time already handled in ensure_user)
-    welcome = WELCOME_TEXT + f"\n✅ Σου δόθηκαν {FREE_CREDITS_ON_FIRST_START} credits ⚡ (για δοκιμή)\n\n" \
-                            "Χρησιμοποίησε το μενού κάτω 👇"
-    await update.message.reply_text(welcome, reply_markup=MAIN_MENU)
+    msg = WELCOME_TEXT
+    if first_time:
+        msg += f"\n✅ Σου δόθηκαν {FREE_CREDITS_ON_FIRST_START} credits ⚡ (μόνο την 1η φορά)\n"
+    msg += "\nΧρησιμοποίησε το μενού κάτω 👇"
 
+    await update.message.reply_text(msg, reply_markup=MAIN_MENU)
 
 async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    ensure_user(user.id)
+    create_user_if_missing(user.id, user.username or "")
 
     text = (update.message.text or "").strip()
 
-    # If user is in a state waiting for prompt, treat message as prompt
+    # αν περιμένουμε prompt για εικόνα
     if USER_STATE.get(user.id) == "awaiting_image_prompt":
         await handle_image_prompt(update, context)
         return
 
     if text == BTN_PROFILE:
         await update.message.reply_text(profile_text(user.id, user.username or ""), reply_markup=MAIN_MENU)
-        # show inline buy options as separate message (like app screens)
         await update.message.reply_text("💳 Αγορά credits:", reply_markup=buy_credits_keyboard())
         return
 
@@ -187,50 +257,43 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if text == BTN_VIDEO:
-        await update.message.reply_text("🎬 Δημιουργία βίντεο (menu):", reply_markup=MAIN_MENU)
-        await update.message.reply_text("Επιλογές:", reply_markup=video_menu_keyboard())
+        await update.message.reply_text("🎬 Δημιουργία βίντεο: (έρχεται)", reply_markup=MAIN_MENU)
         return
 
     if text == BTN_AUDIO:
-        await update.message.reply_text("🎵 Εργαλεία ήχου (menu):", reply_markup=MAIN_MENU)
-        await update.message.reply_text("Επιλογές:", reply_markup=audio_menu_keyboard())
+        await update.message.reply_text("🎵 Εργαλεία ήχου: (έρχεται)", reply_markup=MAIN_MENU)
         return
 
     if text == BTN_PROMPTS:
-        await update.message.reply_text("💡 Κανάλι με prompts: (βάλε εδώ link όταν είναι έτοιμο)\n\nπ.χ. https://t.me/TO_KANALI_SOU", reply_markup=MAIN_MENU)
+        await update.message.reply_text("💡 Κανάλι με prompts: (βάλε link εδώ)", reply_markup=MAIN_MENU)
         return
 
     if text == BTN_SUPPORT:
-        await update.message.reply_text("☁️ Υποστήριξη:\nΣτείλε μήνυμα εδώ ή βάλε email/φόρμα.\n\n(βάλε στοιχεία επικοινωνίας)", reply_markup=MAIN_MENU)
+        await update.message.reply_text("☁️ Υποστήριξη: (βάλε στοιχεία επικοινωνίας εδώ)", reply_markup=MAIN_MENU)
         return
 
     await update.message.reply_text("Χρησιμοποίησε το μενού κάτω 👇", reply_markup=MAIN_MENU)
 
-
 async def on_inline(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handles all inline button callbacks."""
     query = update.callback_query
     user = update.effective_user
-    ensure_user(user.id)
+    create_user_if_missing(user.id, user.username or "")
 
     data = query.data or ""
     await query.answer()
 
-    # Back to main
     if data == "back:main":
         USER_STATE[user.id] = None
         USER_SELECTED_IMAGE_MODEL[user.id] = None
         await query.edit_message_text("✅ Επιστροφή στο κεντρικό μενού. Χρησιμοποίησε τα κουμπιά κάτω 👇")
         return
 
-    # Buy credits (mock)
     if data.startswith("buy:"):
         amount = int(data.split(":")[1])
-        USER_CREDITS[user.id] += amount
-        await query.edit_message_text(f"✅ Προστέθηκαν {amount} credits (δοκιμαστικό).\nCredits τώρα: {USER_CREDITS[user.id]}")
+        add_credits(user.id, amount, "buy", meta_json=f'{{"source":"test_button","amount":{amount}}}')
+        await query.edit_message_text(f"✅ Προστέθηκαν {amount} credits.\nCredits τώρα: {get_credits(user.id)}")
         return
 
-    # Image model select
     if data.startswith("img_model:"):
         model = data.split(":")[1]
         USER_SELECTED_IMAGE_MODEL[user.id] = model
@@ -244,21 +307,9 @@ async def on_inline(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # Video model select (coming)
-    if data.startswith("vid_model:"):
-        model = data.split(":")[1]
-        await query.edit_message_text(f"🎬 {model.upper()} (coming soon)\nΘα το ενεργοποιήσουμε μετά.")
-        return
-
-    # Audio actions (coming)
-    if data.startswith("aud:"):
-        await query.edit_message_text("🎵 Coming soon — θα το ενεργοποιήσουμε μετά.")
-        return
-
-
 async def handle_image_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    ensure_user(user.id)
+    create_user_if_missing(user.id, user.username or "")
 
     prompt = (update.message.text or "").strip()
     model = USER_SELECTED_IMAGE_MODEL.get(user.id)
@@ -268,49 +319,38 @@ async def handle_image_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE
         await update.message.reply_text("❌ Δεν έχει επιλεγεί μοντέλο. Πάτα: 🖼 Εικόνες", reply_markup=MAIN_MENU)
         return
 
-    # Check credits
     cost = cost_for_image_model(model)
-    credits = USER_CREDITS.get(user.id, 0)
+    ok = spend_credits(user.id, cost, meta_json=f'{{"tool":"image","model":"{model}","prompt":"{prompt[:200]}"}}')
 
-    if credits < cost:
-        USER_STATE[user.id] = None
-        USER_SELECTED_IMAGE_MODEL[user.id] = None
+    USER_STATE[user.id] = None
+    USER_SELECTED_IMAGE_MODEL[user.id] = None
+
+    if not ok:
         await update.message.reply_text(
-            f"❌ Δεν έχεις αρκετά credits.\nΈχεις: {credits} | Χρειάζονται: {cost}\n\n"
+            f"❌ Δεν έχεις αρκετά credits.\n"
+            f"Έχεις: {get_credits(user.id)} | Χρειάζονται: {cost}\n\n"
             "Πήγαινε στο 👤 Το προφίλ μου για αγορά credits.",
             reply_markup=MAIN_MENU
         )
         return
 
-    # Spend credits
-    USER_CREDITS[user.id] -= cost
-
-    # Reset state
-    USER_STATE[user.id] = None
-    USER_SELECTED_IMAGE_MODEL[user.id] = None
-
-    # MOCK result (no real API yet)
+    # MOCK αποτέλεσμα
     await update.message.reply_text(
         "🧪 (Δοκιμή) Δημιουργία εικόνας...\n"
         f"Μοντέλο: {model_label(model)}\n"
         f"Prompt: {prompt}\n\n"
-        f"✅ Χρεώθηκαν {cost} credits. Υπόλοιπο: {USER_CREDITS[user.id]}",
+        f"✅ Χρεώθηκαν {cost} credits. Υπόλοιπο: {get_credits(user.id)}",
         reply_markup=MAIN_MENU
     )
 
-    # Here later we'll call real API and then send photo:
-    # await update.message.reply_photo(photo=image_url, caption="✅ Έτοιμο!")
-
-
 def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    init_db()  # ✅ δημιουργεί tables αν δεν υπάρχουν
 
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(on_inline))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_menu))
-
     app.run_polling()
-
 
 if __name__ == "__main__":
     main()
