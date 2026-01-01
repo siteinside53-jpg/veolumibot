@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VeoLumi – Προφίλ</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:#0e0f12;color:#fff}
+    .wrap{max-width:520px;margin:0 auto;padding:16px}
+    .card{background:#171a20;border:1px solid #232734;border-radius:16px;padding:14px;margin-bottom:14px}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .avatar{width:44px;height:44px;border-radius:50%;background:#2a2f3d;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .avatar img{width:100%;height:100%;object-fit:cover}
+    .muted{color:#9aa3b2}
+    .big{font-size:26px;font-weight:800}
+    .btn{width:100%;padding:12px 14px;border-radius:14px;border:0;background:#2a2f3d;color:#fff;font-weight:700}
+    .btn.primary{background:#6f3cff}
+    .plans{display:flex;overflow:auto;gap:12px;padding-bottom:8px}
+    .plan{min-width:260px}
+    .pill{display:inline-block;background:#2a2f3d;border:1px solid #343a4a;border-radius:10px;padding:6px 10px;font-weight:700}
+    .check{color:#a78bfa}
+    ul{margin:10px 0 0 18px;padding:0}
+    li{margin:6px 0}
+    .title{font-weight:800;font-size:18px}
+    .sp{height:8px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="row">
+        <div class="row" style="justify-content:flex-start">
+          <div class="avatar" id="avatar"><span>👤</span></div>
+          <div>
+            <div id="name" class="title">—</div>
+            <div id="plan" class="muted">Τρέχον πακέτο: —</div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div class="muted">Υπόλοιπο credits</div>
+          <div id="credits" class="big">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="muted">Τρέχον πακέτο</div>
+      <div id="planBig" class="big" style="font-size:22px;margin:6px 0 10px">Free</div>
+      <button class="btn" id="buyMore">Αγορά επιπλέον credits</button>
+    </div>
+
+    <div class="card">
+      <div class="title">Συνδρομές</div>
+      <div class="sp"></div>
+
+      <div class="plans" id="plans"></div>
+    </div>
+
+    <div class="card">
+      <div class="title">Πρόγραμμα συνεργατών</div>
+      <div class="muted">Κέρδισε % από τις αγορές που φέρνεις.</div>
+      <div class="sp"></div>
+      <div class="pill" id="ref">Φόρτωση…</div>
+      <div class="sp"></div>
+      <button class="btn" id="copyRef">Αντιγραφή link</button>
+    </div>
+  </div>
+
+<script>
+  const tg = window.Telegram?.WebApp;
+  if (tg) tg.expand();
+
+  const PLANS = [
+    {code:"FREE", name:"Free", credits:5,  price:"Δωρεάν", perks:["Δοκιμή εργαλείων εικόνας", "Nano Banana / Flux / Midjourney"]},
+    {code:"START", name:"Start", credits:100, price:"7,5$", perks:["Πρόσβαση σε όλα τα εργαλεία", "5% προμήθεια συνεργατών"]},
+    {code:"MIDDLE", name:"Middle", credits:250, price:"14$", perks:["Πρόσβαση σε όλα τα εργαλεία", "10% προμήθεια συνεργατών"]},
+    {code:"PRO", name:"Pro", credits:500, price:"32$", perks:["Πρόσβαση σε όλα τα εργαλεία", "15% προμήθεια συνεργατών"]},
+    {code:"CREATOR", name:"Creator", credits:1000, price:"57$", perks:["Πρόσβαση σε όλα τα εργαλεία", "20% προμήθεια συνεργατών"]},
+    {code:"ULTRA", name:"Ultra Pro", credits:2000, price:"95$", perks:["Πρόσβαση σε όλα τα εργαλεία", "Veo / Sora / Nano (Unlimited*)", "30% προμήθεια συνεργατών"]},
+  ];
+
+  function renderPlans(){
+    const root = document.getElementById("plans");
+    root.innerHTML = "";
+    PLANS.forEach(p=>{
+      const el = document.createElement("div");
+      el.className = "card plan";
+      el.innerHTML = `
+        <div class="row">
+          <div>
+            <div class="title">${p.name}</div>
+            <div class="muted">Credits: ${p.credits}</div>
+          </div>
+          <div class="pill">${p.price}</div>
+        </div>
+        <ul>
+          ${p.perks.map(x=>`<li><span class="check">✓</span> ${x}</li>`).join("")}
+        </ul>
+        <div class="sp"></div>
+        <button class="btn primary" data-plan="${p.code}">Αγορά</button>
+      `;
+      root.appendChild(el);
+    });
+
+    root.querySelectorAll("button[data-plan]").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        const plan = btn.getAttribute("data-plan");
+        // Στέλνουμε event στο bot (θα το πιάσει backend)
+        if (tg) {
+          tg.sendData(JSON.stringify({action:"buy_plan", plan}));
+        } else {
+          alert("Telegram WebApp δεν βρέθηκε.");
+        }
+      });
+    });
+  }
+
+  async function loadProfile(){
+    // παίρνουμε initData από Telegram για verify στο backend
+    const initData = tg?.initData || "";
+    const res = await fetch("/api/me", {
+      method:"POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ initData })
+    });
+    const data = await res.json();
+
+    document.getElementById("name").textContent = data.name || "—";
+    document.getElementById("credits").textContent = data.credits ?? "—";
+    document.getElementById("plan").textContent = "Τρέχον πακέτο: " + (data.plan || "Free");
+    document.getElementById("planBig").textContent = data.plan || "Free";
+
+    if (data.photo_url){
+      const av = document.getElementById("avatar");
+      av.innerHTML = `<img src="${data.photo_url}" />`;
+    }
+
+    document.getElementById("ref").textContent = data.referral_link || "—";
+
+    document.getElementById("copyRef").onclick = async ()=>{
+      await navigator.clipboard.writeText(data.referral_link || "");
+      if (tg) tg.showPopup({title:"Έτοιμο", message:"Το link αντιγράφηκε.", buttons:[{type:"ok"}]});
+      else alert("Αντιγράφηκε.");
+    };
+
+    document.getElementById("buyMore").onclick = ()=>{
+      if (tg) tg.showPopup({title:"Αγορά credits", message:"Διάλεξε πακέτο από τις Συνδρομές παρακάτω.", buttons:[{type:"ok"}]});
+    };
+  }
+
+  renderPlans();
+  loadProfile().catch(e=>console.error(e));
+</script>
+</body>
+</html>
