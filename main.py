@@ -1,5 +1,5 @@
 # main.py — Telegram AI Marketplace + Mini App (AIOHTTP) on the SAME Railway service
-# ✅ Railway-ready: always binds to 0.0.0.0:$PORT
+# ✅ Railway-ready: binds to 0.0.0.0:$PORT
 # ✅ /health returns {"ok": true}
 # ✅ /app serves webapp/index.html
 # ✅ /api/me returns profile info (validated via Telegram initData)
@@ -36,7 +36,9 @@ from telegram.ext import (
 from config import BOT_TOKEN, DATABASE_URL, PUBLIC_BASE_URL
 import db as dbmod
 
-BUILD = "build_2026_01_02_a"
+BUILD = "build_2026_01_02_fixed_indent"
+
+
 # ======================
 # LOGGING
 # ======================
@@ -125,7 +127,6 @@ async def ensure_user(update: Update) -> None:
     if not update.effective_user:
         return
     u = update.effective_user
-    # DB can fail; do not crash bot
     try:
         dbmod.upsert_user(DATABASE_URL, u.id, u.username, u.first_name)
         dbmod.ensure_referral_code(DATABASE_URL, u.id)
@@ -219,7 +220,6 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("Διάλεξε από το μενού 👇", reply_markup=main_menu_kb())
         return
 
-    # Try to use credits (do not crash if DB down)
     try:
         user = dbmod.get_user(DATABASE_URL, tg_id)
         if not user or user.credits <= 0:
@@ -281,30 +281,40 @@ def build_bot_app() -> Application:
 # ======================
 # AIOHTTP routes
 # ======================
- async def handle_health(request: web.Request) -> web.Response:
+@web.middleware
+async def error_middleware(request: web.Request, handler):
+    try:
+        return await handler(request)
+    except web.HTTPException:
+        raise
+    except Exception as e:
+        log.exception("HTTP error on %s %s: %s", request.method, request.path, e)
+        return web.Response(
+            text=f"SERVER ERROR: {type(e).__name__}: {e}",
+            status=500,
+            content_type="text/plain; charset=utf-8",
+        )
+
+
+async def handle_health(request: web.Request) -> web.Response:
     return web.json_response({"ok": True, "build": BUILD})
 
+
 async def handle_root(request: web.Request) -> web.Response:
+    # Αν θες, κάνε redirect σε /app:
+    # raise web.HTTPFound("/app")
     return web.Response(text=f"ROOT OK | {BUILD}", content_type="text/plain; charset=utf-8")
-    
 
 
 async def handle_app(request: web.Request) -> web.Response:
     """
     Serves webapp/index.html
     """
-    try:
-        here = os.path.dirname(__file__)
-        path = os.path.join(here, "webapp", "index.html")
-        with open(path, "r", encoding="utf-8") as f:
-            html = f.read()
-        return web.Response(text=html, content_type="text/html; charset=utf-8")
-    except Exception as e:
-        return web.Response(
-            text=f"APP ERROR: {type(e).__name__}: {e}",
-            status=500,
-            content_type="text/plain; charset=utf-8",
-        )
+    here = os.path.dirname(__file__)
+    path = os.path.join(here, "webapp", "index.html")
+    with open(path, "r", encoding="utf-8") as f:
+        html = f.read()
+    return web.Response(text=html, content_type="text/html; charset=utf-8")
 
 
 async def handle_api_me(request: web.Request) -> web.Response:
@@ -364,7 +374,6 @@ async def handle_ref_redirect(request: web.Request) -> web.Response:
     code = request.match_info.get("code", "")
     bot_app: Application = request.app.get("bot_app")
     if not bot_app:
-        # Bot not ready yet
         return web.Response(text="Bot not ready yet", status=503)
 
     me = await bot_app.bot.get_me()
@@ -381,7 +390,7 @@ async def start_everything():
     log.info("WEBAPP_URL=%s", WEBAPP_URL)
 
     # 1) Start WEB server first (Railway needs a listening port)
-    webapp = web.Application()
+    webapp = web.Application(middlewares=[error_middleware])
     webapp.add_routes([
         web.get("/health", handle_health),
         web.get("/", handle_root),
@@ -393,7 +402,6 @@ async def start_everything():
     runner = web.AppRunner(webapp)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", PORT)
-    log.info("About to start web server on %s", PORT)
     await site.start()
     log.info("✅ Web server LISTENING on 0.0.0.0:%s", PORT)
 
