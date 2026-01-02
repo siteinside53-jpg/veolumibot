@@ -1,30 +1,12 @@
 import os
-from typing import Optional
 
+BOT_TOKEN = os.getenv("BOT_TOKEN", "")
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+WEBAPP_URL = os.getenv("WEBAPP_URL", "").rstrip("/")
 
-def must_env(name: str) -> str:
-    v = os.getenv(name)
-    if v is None or v.strip() == "":
-        raise RuntimeError(f"Λείπει το {name} (Railway Variables)")
-    return v.strip()
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 
-
-BOT_TOKEN = must_env("BOT_TOKEN")
-DATABASE_URL = must_env("DATABASE_URL")
-
-# Βάλε το public url του Railway service σου:
-# π.χ. https://web-production-82e83.up.railway.app
-PUBLIC_BASE_URL = must_env("PUBLIC_BASE_URL")
-
-
-def get_port(default: int = 8080) -> int:
-    v = os.getenv("PORT")
-    if v is None or v.strip() == "":
-        return default
-    try:
-        return int(v.strip())
-    except ValueError:
-        raise RuntimeError(f"Άκυρη τιμή για PORT: {v!r}")
-
-
-PORT = get_port()
+CRYPTOCLOUD_API_KEY = os.getenv("CRYPTOCLOUD_API_KEY", "")
+CRYPTOCLOUD_SHOP_ID = os.getenv("CRYPTOCLOUD_SHOP_ID", "")
+CRYPTOCLOUD_WEBHOOK_SECRET = os.getenv("CRYPTOCLOUD_WEBHOOK_SECRET", "")
