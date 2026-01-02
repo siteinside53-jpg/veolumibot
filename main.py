@@ -1,4 +1,5 @@
 # main.py — Telegram AI Marketplace + Mini App (AIOHTTP) on the SAME Railway service
+
 from __future__ import annotations
 
 import asyncio
@@ -7,6 +8,7 @@ import hmac
 import json
 import logging
 import os
+import traceback
 from urllib.parse import parse_qsl
 
 from aiohttp import web
@@ -30,7 +32,8 @@ from telegram.ext import (
 from config import BOT_TOKEN, DATABASE_URL, PUBLIC_BASE_URL
 import db as dbmod
 
-BUILD = "build_2026_01_02_debug_mw"
+BUILD = "build_2026_01_02_fixed_v2"
+
 
 # ======================
 # LOGGING
@@ -39,14 +42,16 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
     level=logging.INFO,
 )
-log = logging.getLogger("ai-marketplace-bot")
+log = logging.getLogger("veolumi")
+
 
 # ======================
 # RAILWAY PORT + URLs
 # ======================
 PORT = int(os.environ.get("PORT", "8080"))
-BASE_URL = PUBLIC_BASE_URL.rstrip("/")
+BASE_URL = (PUBLIC_BASE_URL or "").rstrip("/")
 WEBAPP_URL = f"{BASE_URL}/app"
+
 
 # ======================
 # UI
@@ -68,7 +73,7 @@ WAITING_FOR_PROMPT = "waiting_for_prompt"  # None|"video"|"image"|"audio"
 
 
 # ======================
-# ERROR MIDDLEWARE (IMPORTANT)
+# Error middleware (για να δεις ΑΚΡΙΒΩΣ τι σκάει)
 # ======================
 @web.middleware
 async def error_middleware(request: web.Request, handler):
@@ -77,9 +82,11 @@ async def error_middleware(request: web.Request, handler):
     except web.HTTPException:
         raise
     except Exception as e:
-        log.exception("🔥 Unhandled error on %s %s", request.method, request.path)
+        tb = traceback.format_exc()
+        log.error("HTTP 500 on %s %s\n%s", request.method, request.path, tb)
+        # Μικρό “debug” response (χωρίς να εκθέτει πολλά):
         return web.Response(
-            text=f"500 ERROR | {type(e).__name__}: {e}\nBUILD={BUILD}\nPATH={request.path}",
+            text=f"500 Internal Server Error\n\nBUILD={BUILD}\n\n{type(e).__name__}: {e}\n",
             status=500,
             content_type="text/plain; charset=utf-8",
         )
@@ -135,8 +142,8 @@ async def ensure_user(update: Update) -> None:
     try:
         dbmod.upsert_user(DATABASE_URL, u.id, u.username, u.first_name)
         dbmod.ensure_referral_code(DATABASE_URL, u.id)
-    except Exception:
-        log.exception("DB error in ensure_user")
+    except Exception as e:
+        log.exception("DB error in ensure_user: %s", e)
 
 
 # ======================
@@ -234,10 +241,10 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
         dbmod.add_credits(DATABASE_URL, tg_id, delta=-1, reason=f"create_{mode}")
         job_id = dbmod.create_job(DATABASE_URL, tg_id, job_type=mode, prompt=text, provider=None)
-    except Exception:
-        log.exception("DB error on create job")
+    except Exception as e:
+        log.exception("DB error on create job: %s", e)
         context.user_data[WAITING_FOR_PROMPT] = None
-        await update.message.reply_text("⚠️ Πρόβλημα με τη βάση. Ξαναδοκίμασε.", reply_markup=main_menu_kb())
+        await update.message.reply_text("⚠️ Προσωρινό πρόβλημα με τη βάση. Ξαναδοκίμασε.", reply_markup=main_menu_kb())
         return
 
     context.user_data[WAITING_FOR_PROMPT] = None
@@ -263,7 +270,7 @@ async def on_webapp_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await msg.reply_text(
             "🟣 Αίτημα αγοράς (demo)\n\n"
             f"Πακέτο: {plan}\n"
-            "Στο επόμενο βήμα κουμπώνουμε πληρωμές (Stripe/PayPal/crypto).",
+            "Στο επόμενο βήμα κουμπώνουμε πληρωμές (Stripe/PayPal/crypto) και αυτό θα φορτώνει credits αυτόματα.",
             reply_markup=main_menu_kb(),
         )
         return
@@ -281,14 +288,19 @@ def build_bot_app() -> Application:
 
 
 # ======================
-# AIOHTTP handlers
+# AIOHTTP routes
 # ======================
 async def handle_health(request: web.Request) -> web.Response:
     return web.json_response({"ok": True, "build": BUILD})
 
 
 async def handle_root(request: web.Request) -> web.Response:
-    return web.Response(text=f"OK | {BUILD}", content_type="text/plain; charset=utf-8")
+    # super simple handler (για να μην υπάρχει λόγος να σκάει)
+    return web.Response(text=f"ROOT OK | {BUILD}", content_type="text/plain; charset=utf-8")
+
+
+async def handle_favicon(request: web.Request) -> web.Response:
+    return web.Response(status=204)
 
 
 async def handle_app(request: web.Request) -> web.Response:
@@ -300,7 +312,11 @@ async def handle_app(request: web.Request) -> web.Response:
 
 
 async def handle_api_me(request: web.Request) -> web.Response:
-    body = await request.json()
+    try:
+        body = await request.json()
+    except Exception:
+        return web.json_response({"error": "bad_json"}, status=400)
+
     init_data = (body.get("initData") or "").strip()
 
     try:
@@ -319,6 +335,7 @@ async def handle_api_me(request: web.Request) -> web.Response:
     credits = 0
     plan = "Free"
     code = "na"
+
     try:
         dbmod.upsert_user(DATABASE_URL, tg_id, user_obj.get("username"), user_obj.get("first_name"))
         code = dbmod.ensure_referral_code(DATABASE_URL, tg_id)
@@ -326,18 +343,21 @@ async def handle_api_me(request: web.Request) -> web.Response:
         if u:
             credits = u.credits
             plan = getattr(u, "plan", "Free")
-    except Exception:
-        log.exception("DB error on /api/me")
+    except Exception as e:
+        log.exception("DB error on /api/me: %s", e)
 
     referral_link = f"{BASE_URL}/r/{code}"
-    return web.json_response({
-        "tg_id": tg_id,
-        "name": name,
-        "photo_url": photo_url,
-        "credits": credits,
-        "plan": plan,
-        "referral_link": referral_link,
-    })
+
+    return web.json_response(
+        {
+            "tg_id": tg_id,
+            "name": name,
+            "photo_url": photo_url,
+            "credits": credits,
+            "plan": plan,
+            "referral_link": referral_link,
+        }
+    )
 
 
 async def handle_ref_redirect(request: web.Request) -> web.Response:
@@ -347,7 +367,8 @@ async def handle_ref_redirect(request: web.Request) -> web.Response:
         return web.Response(text="Bot not ready yet", status=503)
 
     me = await bot_app.bot.get_me()
-    raise web.HTTPFound(f"https://t.me/{me.username}?start=ref_{code}")
+    url = f"https://t.me/{me.username}?start=ref_{code}"
+    raise web.HTTPFound(url)
 
 
 # ======================
@@ -359,27 +380,31 @@ async def start_everything():
     log.info("WEBAPP_URL=%s", WEBAPP_URL)
 
     webapp = web.Application(middlewares=[error_middleware])
-    webapp.add_routes([
-        web.get("/", handle_root),
-        web.get("/health", handle_health),
-        web.get("/app", handle_app),
-        web.post("/api/me", handle_api_me),
-        web.get("/r/{code}", handle_ref_redirect),
-    ])
+    webapp.add_routes(
+        [
+            web.get("/health", handle_health),
+            web.get("/", handle_root),
+            web.get("/favicon.ico", handle_favicon),
+            web.get("/app", handle_app),
+            web.post("/api/me", handle_api_me),
+            web.get("/r/{code}", handle_ref_redirect),
+        ]
+    )
 
     runner = web.AppRunner(webapp)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", PORT)
     await site.start()
-    log.info("✅ Web server listening on 0.0.0.0:%s", PORT)
+    log.info("✅ Web server LISTENING on 0.0.0.0:%s", PORT)
 
-    # DB init (don’t crash)
+    # DB init (μην ρίξει το web)
     try:
         dbmod.init_db(DATABASE_URL)
         log.info("DB initialized.")
-    except Exception:
-        log.exception("DB init failed (continuing)")
+    except Exception as e:
+        log.exception("DB init failed (continuing): %s", e)
 
+    # Bot polling
     async def bot_task():
         try:
             bot_app = build_bot_app()
@@ -388,11 +413,12 @@ async def start_everything():
             await bot_app.start()
             await bot_app.updater.start_polling(drop_pending_updates=True)
             log.info("✅ Bot polling started.")
-        except Exception:
-            log.exception("Bot failed")
+        except Exception as e:
+            log.exception("Bot failed: %s", e)
 
     asyncio.create_task(bot_task())
 
+    # Keep alive
     while True:
         await asyncio.sleep(3600)
 
