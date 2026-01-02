@@ -281,12 +281,12 @@ def build_bot_app() -> Application:
 # ======================
 # AIOHTTP routes
 # ======================
-async def handle_health(request: web.Request) -> web.Response:
-    return web.json_response({"ok": True})
-
+ async def handle_health(request: web.Request) -> web.Response:
+    return web.json_response({"ok": True, "build": BUILD})
 
 async def handle_root(request: web.Request) -> web.Response:
-    return web.Response(text="OK", content_type="text/plain; charset=utf-8")
+    return web.Response(text=f"ROOT OK | {BUILD}", content_type="text/plain; charset=utf-8")
+    
 
 
 async def handle_app(request: web.Request) -> web.Response:
