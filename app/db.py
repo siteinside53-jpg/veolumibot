@@ -11,9 +11,23 @@ def get_conn():
     return psycopg.connect(DATABASE_URL)
 
 def run_migrations():
+    def run_migrations():
+    print(">>> RUNNING MIGRATIONS <<<")
+
     migrations_dir = Path(__file__).parent / "migrations"
     files = sorted(migrations_dir.glob("*.sql"))
 
+    print("Found migrations:", [f.name for f in files])
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            for f in files:
+                print("Executing:", f.name)
+                sql = f.read_text()
+                cur.execute(sql)
+        conn.commit()
+
+    print(">>> MIGRATIONS DONE <<<")
     with get_conn() as conn:
         with conn.cursor() as cur:
             for f in files:
