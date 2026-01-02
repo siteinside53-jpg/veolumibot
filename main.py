@@ -1,3 +1,10 @@
+# main.py — Telegram AI Marketplace + Mini App (AIOHTTP) on the SAME Railway service
+# ✅ Railway-ready: always binds to 0.0.0.0:$PORT
+# ✅ /health returns {"ok": true}
+# ✅ /app serves webapp/index.html
+# ✅ /api/me returns profile info (validated via Telegram initData)
+# ✅ Bot runs in background (polling)
+
 from __future__ import annotations
 
 import asyncio
@@ -27,10 +34,12 @@ from telegram.ext import (
 )
 
 from config import BOT_TOKEN, DATABASE_URL, PUBLIC_BASE_URL
-PORT = int(os.environ.get("PORT", "8080"))
 import db as dbmod
 
 
+# ======================
+# LOGGING
+# ======================
 logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
     level=logging.INFO,
@@ -38,6 +47,17 @@ logging.basicConfig(
 log = logging.getLogger("ai-marketplace-bot")
 
 
+# ======================
+# RAILWAY PORT + URLs
+# ======================
+PORT = int(os.environ.get("PORT", "8080"))
+BASE_URL = PUBLIC_BASE_URL.rstrip("/")
+WEBAPP_URL = f"{BASE_URL}/app"
+
+
+# ======================
+# UI
+# ======================
 BTN_VIDEO = "🎬 Δημιουργία βίντεο"
 BTN_IMAGES = "🖼 Εικόνες"
 BTN_AUDIO = "🎵 Audio"
@@ -53,16 +73,14 @@ CB_BACK = "back"
 
 WAITING_FOR_PROMPT = "waiting_for_prompt"  # None|"video"|"image"|"audio"
 
-WEBAPP_URL = f"{PUBLIC_BASE_URL.rstrip('/')}/app"
 
-
-# ----------------------
-# Telegram initData verify (Mini App)
-# ----------------------
+# ======================
+# Telegram WebApp initData verify
+# ======================
 def verify_telegram_init_data(init_data: str, bot_token: str) -> dict:
     """
-    Returns parsed data dict if valid, raises ValueError if invalid.
-    Based on Telegram WebApp validation.
+    Validates Telegram WebApp initData.
+    Returns parsed data dict if valid, raises ValueError otherwise.
     """
     if not init_data:
         raise ValueError("Empty initData")
@@ -82,6 +100,9 @@ def verify_telegram_init_data(init_data: str, bot_token: str) -> dict:
     return data
 
 
+# ======================
+# Telegram UI Keyboards
+# ======================
 def main_menu_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("👤 Το προφίλ μου", web_app=WebAppInfo(url=WEBAPP_URL))],
@@ -96,17 +117,25 @@ def main_menu_kb() -> InlineKeyboardMarkup:
 def back_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Πίσω στο Μενού", callback_data=CB_BACK)]])
 
+
+# ======================
+# DB helpers
+# ======================
 async def ensure_user(update: Update) -> None:
     if not update.effective_user:
         return
     u = update.effective_user
-    dbmod.upsert_user(DATABASE_URL, u.id, u.username, u.first_name)
-    dbmod.ensure_referral_code(DATABASE_URL, u.id)
+    # DB can fail; do not crash bot
+    try:
+        dbmod.upsert_user(DATABASE_URL, u.id, u.username, u.first_name)
+        dbmod.ensure_referral_code(DATABASE_URL, u.id)
+    except Exception as e:
+        log.exception("DB error in ensure_user: %s", e)
 
 
-# ----------------------
-# Telegram Handlers
-# ----------------------
+# ======================
+# Telegram handlers
+# ======================
 async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await ensure_user(update)
     context.user_data[WAITING_FOR_PROMPT] = None
@@ -117,10 +146,8 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "• Βίντεο (Veo / Kling / Runway)\n"
         "• Εικόνες (Nano Banana / Flux / Midjourney)\n"
         "• Audio (TTS / SFX / μουσική)\n\n"
-        "💳 Πληρωμές: κάρτα / crypto / PayPal (όπως στο demo)\n"
         "⚡ Ξεκινάς με δωρεάν credits."
     )
-
     await update.message.reply_text(text, reply_markup=main_menu_kb())
 
 
@@ -192,14 +219,21 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await update.message.reply_text("Διάλεξε από το μενού 👇", reply_markup=main_menu_kb())
         return
 
-    user = dbmod.get_user(DATABASE_URL, tg_id)
-    if not user or user.credits <= 0:
-        context.user_data[WAITING_FOR_PROMPT] = None
-        await update.message.reply_text("❌ Δεν έχεις credits.", reply_markup=main_menu_kb())
-        return
+    # Try to use credits (do not crash if DB down)
+    try:
+        user = dbmod.get_user(DATABASE_URL, tg_id)
+        if not user or user.credits <= 0:
+            context.user_data[WAITING_FOR_PROMPT] = None
+            await update.message.reply_text("❌ Δεν έχεις credits.", reply_markup=main_menu_kb())
+            return
 
-    dbmod.add_credits(DATABASE_URL, tg_id, delta=-1, reason=f"create_{mode}")
-    job_id = dbmod.create_job(DATABASE_URL, tg_id, job_type=mode, prompt=text, provider=None)
+        dbmod.add_credits(DATABASE_URL, tg_id, delta=-1, reason=f"create_{mode}")
+        job_id = dbmod.create_job(DATABASE_URL, tg_id, job_type=mode, prompt=text, provider=None)
+    except Exception as e:
+        log.exception("DB error on create job: %s", e)
+        context.user_data[WAITING_FOR_PROMPT] = None
+        await update.message.reply_text("⚠️ Προσωρινό πρόβλημα με τη βάση. Ξαναδοκίμασε.", reply_markup=main_menu_kb())
+        return
 
     context.user_data[WAITING_FOR_PROMPT] = None
     await update.message.reply_text(
@@ -210,12 +244,11 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def on_webapp_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
-    Όταν πατάει "Αγορά" μέσα στο Mini App, το tg.sendData(...) έρχεται εδώ.
+    When Mini App calls tg.sendData(JSON.stringify(...)) this arrives here.
     """
     await ensure_user(update)
     msg = update.effective_message
     data = msg.web_app_data.data if msg and msg.web_app_data else ""
-    tg_id = update.effective_user.id
 
     try:
         payload = json.loads(data)
@@ -225,8 +258,6 @@ async def on_webapp_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     if payload.get("action") == "buy_plan":
         plan = payload.get("plan", "FREE")
-
-        # Demo flow: δεν χρεώνουμε κάρτα ακόμα. Απλά δείχνουμε τι θα γινόταν.
         await msg.reply_text(
             "🟣 Αίτημα αγοράς (demo)\n\n"
             f"Πακέτο: {plan}\n"
@@ -247,19 +278,45 @@ def build_bot_app() -> Application:
     return app
 
 
-# ----------------------
-# AIOHTTP Web Server (serves /app + /api/me)
-# ----------------------
+# ======================
+# AIOHTTP routes
+# ======================
+async def handle_health(request: web.Request) -> web.Response:
+    return web.json_response({"ok": True})
+
+
+async def handle_root(request: web.Request) -> web.Response:
+    return web.Response(text="OK", content_type="text/plain; charset=utf-8")
+
+
 async def handle_app(request: web.Request) -> web.Response:
-    here = os.path.dirname(__file__)
-    path = os.path.join(here, "webapp", "index.html")
-    with open(path, "r", encoding="utf-8") as f:
-        html = f.read()
-    return web.Response(text=html, content_type="text/html; charset=utf-8")
+    """
+    Serves webapp/index.html
+    """
+    try:
+        here = os.path.dirname(__file__)
+        path = os.path.join(here, "webapp", "index.html")
+        with open(path, "r", encoding="utf-8") as f:
+            html = f.read()
+        return web.Response(text=html, content_type="text/html; charset=utf-8")
+    except Exception as e:
+        return web.Response(
+            text=f"APP ERROR: {type(e).__name__}: {e}",
+            status=500,
+            content_type="text/plain; charset=utf-8",
+        )
 
 
 async def handle_api_me(request: web.Request) -> web.Response:
-    body = await request.json()
+    """
+    Mini App calls this with { initData }.
+    Returns profile info.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        return web.json_response({"error": "bad_json"}, status=400)
+
     init_data = (body.get("initData") or "").strip()
 
     try:
@@ -272,47 +329,62 @@ async def handle_api_me(request: web.Request) -> web.Response:
     except Exception:
         return web.json_response({"error": "unauthorized"}, status=401)
 
-    # ensure exists in DB
-    dbmod.upsert_user(DATABASE_URL, tg_id, user_obj.get("username"), user_obj.get("first_name"))
-    code = dbmod.ensure_referral_code(DATABASE_URL, tg_id)
-    u = dbmod.get_user(DATABASE_URL, tg_id)
-
     name = user_obj.get("first_name") or user_obj.get("username") or "—"
-    photo_url = user_obj.get("photo_url")  # Telegram often provides it in initData user object
+    photo_url = user_obj.get("photo_url")
+    credits = 0
+    plan = "Free"
+    code = "na"
 
-    referral_link = f"{PUBLIC_BASE_URL.rstrip('/')}/r/{code}"  # απλό referral link demo
+    try:
+        dbmod.upsert_user(DATABASE_URL, tg_id, user_obj.get("username"), user_obj.get("first_name"))
+        code = dbmod.ensure_referral_code(DATABASE_URL, tg_id)
+        u = dbmod.get_user(DATABASE_URL, tg_id)
+        if u:
+            credits = u.credits
+            plan = getattr(u, "plan", "Free")
+    except Exception as e:
+        log.exception("DB error on /api/me: %s", e)
+
+    referral_link = f"{BASE_URL}/r/{code}"
 
     return web.json_response({
         "tg_id": tg_id,
         "name": name,
         "photo_url": photo_url,
-        "credits": u.credits if u else 0,
-        "plan": u.plan if u else "Free",
+        "credits": credits,
+        "plan": plan,
         "referral_link": referral_link,
     })
 
 
 async def handle_ref_redirect(request: web.Request) -> web.Response:
-    # demo: απλά redirect στο bot start with parameter
+    """
+    /r/<code> -> redirect to bot start=ref_<code>
+    """
     code = request.match_info.get("code", "")
-    bot_username = (await request.app["bot_app"].bot.get_me()).username
-    url = f"https://t.me/{bot_username}?start=ref_{code}"
+    bot_app: Application = request.app.get("bot_app")
+    if not bot_app:
+        # Bot not ready yet
+        return web.Response(text="Bot not ready yet", status=503)
+
+    me = await bot_app.bot.get_me()
+    url = f"https://t.me/{me.username}?start=ref_{code}"
     raise web.HTTPFound(url)
 
 
+# ======================
+# Start everything (WEB first, then DB + bot)
+# ======================
 async def start_everything():
-    # 1) WEB SERVER ΠΡΩΤΑ (ώστε /health να δουλεύει ΠΑΝΤΑ)
+    log.info("ENV PORT=%s", PORT)
+    log.info("PUBLIC_BASE_URL=%s", BASE_URL)
+    log.info("WEBAPP_URL=%s", WEBAPP_URL)
+
+    # 1) Start WEB server first (Railway needs a listening port)
     webapp = web.Application()
-
-    async def health_handler(request):
-        return web.json_response({"ok": True})
-
-    async def root_handler(request):
-        return web.Response(text="OK", content_type="text/plain")
-
     webapp.add_routes([
-        web.get("/health", health_handler),
-        web.get("/", root_handler),
+        web.get("/health", handle_health),
+        web.get("/", handle_root),
         web.get("/app", handle_app),
         web.post("/api/me", handle_api_me),
         web.get("/r/{code}", handle_ref_redirect),
@@ -321,31 +393,32 @@ async def start_everything():
     runner = web.AppRunner(webapp)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", PORT)
+    log.info("About to start web server on %s", PORT)
     await site.start()
-    log.info("Web server started on port %s", PORT)
+    log.info("✅ Web server LISTENING on 0.0.0.0:%s", PORT)
 
-    # 2) DB INIT ΣΕ TRY (να μην ρίχνει όλη την εφαρμογή)
+    # 2) Init DB (but never crash the web server)
     try:
         dbmod.init_db(DATABASE_URL)
         log.info("DB initialized.")
     except Exception as e:
         log.exception("DB init failed (continuing): %s", e)
 
-    # 3) BOT ΣΕ BACKGROUND (να μην μπλοκάρει το web)
+    # 3) Start BOT in background (polling)
     async def bot_task():
         try:
             bot_app = build_bot_app()
-            webapp["bot_app"] = bot_app
+            webapp["bot_app"] = bot_app  # needed for referral redirect
             await bot_app.initialize()
             await bot_app.start()
             await bot_app.updater.start_polling(drop_pending_updates=True)
-            log.info("Bot polling started.")
+            log.info("✅ Bot polling started.")
         except Exception as e:
             log.exception("Bot failed: %s", e)
 
     asyncio.create_task(bot_task())
 
-    # keep running
+    # Keep process alive
     while True:
         await asyncio.sleep(3600)
 
