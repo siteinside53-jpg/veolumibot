@@ -11,7 +11,6 @@ def get_conn():
     return psycopg.connect(DATABASE_URL)
 
 def run_migrations():
-    def run_migrations():
     print(">>> RUNNING MIGRATIONS <<<")
 
     migrations_dir = Path(__file__).parent / "migrations"
