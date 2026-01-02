@@ -36,7 +36,7 @@ from telegram.ext import (
 from config import BOT_TOKEN, DATABASE_URL, PUBLIC_BASE_URL
 import db as dbmod
 
-
+BUILD = "build_2026_01_02_a"
 # ======================
 # LOGGING
 # ======================
