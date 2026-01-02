@@ -1,5 +1,3 @@
-# main.py — Telegram AI Marketplace + Mini App (AIOHTTP) on the SAME Railway service
-
 from __future__ import annotations
 
 import asyncio
@@ -50,7 +48,7 @@ log = logging.getLogger("veolumi")
 # ======================
 PORT = int(os.environ.get("PORT", "8080"))
 BASE_URL = (PUBLIC_BASE_URL or "").rstrip("/")
-WEBAPP_URL = f"{BASE_URL}/app"
+WEBAPP_URL = f"{BASE_URL}/app" if BASE_URL else "/app"
 
 
 # ======================
@@ -73,7 +71,7 @@ WAITING_FOR_PROMPT = "waiting_for_prompt"  # None|"video"|"image"|"audio"
 
 
 # ======================
-# Error middleware (για να δεις ΑΚΡΙΒΩΣ τι σκάει)
+# Error middleware (για να δεις ΑΚΡΙΒΩΣ τι σκάει) -- reduce info in prod
 # ======================
 @web.middleware
 async def error_middleware(request: web.Request, handler):
@@ -84,9 +82,13 @@ async def error_middleware(request: web.Request, handler):
     except Exception as e:
         tb = traceback.format_exc()
         log.error("HTTP 500 on %s %s\n%s", request.method, request.path, tb)
-        # Μικρό “debug” response (χωρίς να εκθέτει πολλά):
+        # In production do NOT expose traceback. Use an env flag to toggle.
+        if os.environ.get("SHOW_ERRORS", "1") == "1":
+            body = f"500 Internal Server Error\n\nBUILD={BUILD}\n\n{type(e).__name__}: {e}\n"
+        else:
+            body = f"500 Internal Server Error\n\nBUILD={BUILD}\n"
         return web.Response(
-            text=f"500 Internal Server Error\n\nBUILD={BUILD}\n\n{type(e).__name__}: {e}\n",
+            text=body,
             status=500,
             content_type="text/plain; charset=utf-8",
         )
@@ -133,15 +135,16 @@ def back_kb() -> InlineKeyboardMarkup:
 
 
 # ======================
-# DB helpers
+# DB helpers (run sync DB code in thread pool)
 # ======================
 async def ensure_user(update: Update) -> None:
     if not update.effective_user:
         return
     u = update.effective_user
     try:
-        dbmod.upsert_user(DATABASE_URL, u.id, u.username, u.first_name)
-        dbmod.ensure_referral_code(DATABASE_URL, u.id)
+        # run potentially blocking DB operations in a thread
+        await asyncio.to_thread(dbmod.upsert_user, DATABASE_URL, u.id, u.username, u.first_name)
+        await asyncio.to_thread(dbmod.ensure_referral_code, DATABASE_URL, u.id)
     except Exception as e:
         log.exception("DB error in ensure_user: %s", e)
 
@@ -161,12 +164,15 @@ async def start_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "• Audio (TTS / SFX / μουσική)\n\n"
         "⚡ Ξεκινάς με δωρεάν credits."
     )
-    await update.message.reply_text(text, reply_markup=main_menu_kb())
+    if update.message:
+        await update.message.reply_text(text, reply_markup=main_menu_kb())
 
 
 async def on_menu_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await ensure_user(update)
     q = update.callback_query
+    if not q:
+        return
     await q.answer()
 
     data = q.data
@@ -224,6 +230,8 @@ async def on_menu_click(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await ensure_user(update)
+    if not update.effective_user or not update.message:
+        return
     tg_id = update.effective_user.id
     text = (update.message.text or "").strip()
 
@@ -233,14 +241,15 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     try:
-        user = dbmod.get_user(DATABASE_URL, tg_id)
-        if not user or user.credits <= 0:
+        # run blocking DB ops in threads
+        user = await asyncio.to_thread(dbmod.get_user, DATABASE_URL, tg_id)
+        if not user or getattr(user, "credits", 0) <= 0:
             context.user_data[WAITING_FOR_PROMPT] = None
             await update.message.reply_text("❌ Δεν έχεις credits.", reply_markup=main_menu_kb())
             return
 
-        dbmod.add_credits(DATABASE_URL, tg_id, delta=-1, reason=f"create_{mode}")
-        job_id = dbmod.create_job(DATABASE_URL, tg_id, job_type=mode, prompt=text, provider=None)
+        await asyncio.to_thread(dbmod.add_credits, DATABASE_URL, tg_id, -1, f"create_{mode}")
+        job_id = await asyncio.to_thread(dbmod.create_job, DATABASE_URL, tg_id, job_type=mode, prompt=text, provider=None)
     except Exception as e:
         log.exception("DB error on create job: %s", e)
         context.user_data[WAITING_FOR_PROMPT] = None
@@ -257,31 +266,37 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def on_webapp_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await ensure_user(update)
     msg = update.effective_message
-    data = msg.web_app_data.data if msg and msg.web_app_data else ""
+    data = ""
+    if msg and getattr(msg, "web_app_data", None):
+        data = msg.web_app_data.data or ""
 
     try:
         payload = json.loads(data)
     except Exception:
-        await msg.reply_text("❌ Μη έγκυρα δεδομένα από το Mini App.", reply_markup=main_menu_kb())
+        if msg:
+            await msg.reply_text("❌ Μη έγκυρα δεδομένα από το Mini App.", reply_markup=main_menu_kb())
         return
 
     if payload.get("action") == "buy_plan":
         plan = payload.get("plan", "FREE")
-        await msg.reply_text(
-            "🟣 Αίτημα αγοράς (demo)\n\n"
-            f"Πακέτο: {plan}\n"
-            "Στο επόμενο βήμα κουμπώνουμε πληρωμές (Stripe/PayPal/crypto) και αυτό θα φορτώνει credits αυτόματα.",
-            reply_markup=main_menu_kb(),
-        )
+        if msg:
+            await msg.reply_text(
+                "🟣 Αίτημα αγοράς (demo)\n\n"
+                f"Πακέτο: {plan}\n"
+                "Στο επόμενο βήμα κουμπώνουμε πληρωμές (Stripe/PayPal/crypto) και αυτό θα φορτώνει credits αυτόματα.",
+                reply_markup=main_menu_kb(),
+            )
         return
 
-    await msg.reply_text("ℹ️ Έλαβα εντολή από το Mini App.", reply_markup=main_menu_kb())
+    if msg:
+        await msg.reply_text("ℹ️ Έλαβα εντολή από το Mini App.", reply_markup=main_menu_kb())
 
 
 def build_bot_app() -> Application:
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start_cmd))
     app.add_handler(CallbackQueryHandler(on_menu_click))
+    # Make sure this filter exists in your PTB version. If not, replace with a custom predicate:
     app.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, on_webapp_data))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_text))
     return app
@@ -306,6 +321,9 @@ async def handle_favicon(request: web.Request) -> web.Response:
 async def handle_app(request: web.Request) -> web.Response:
     here = os.path.dirname(__file__)
     path = os.path.join(here, "webapp", "index.html")
+    if not os.path.exists(path):
+        log.error("Webapp index not found: %s", path)
+        return web.Response(text="Not found", status=404)
     with open(path, "r", encoding="utf-8") as f:
         html = f.read()
     return web.Response(text=html, content_type="text/html; charset=utf-8")
@@ -337,16 +355,17 @@ async def handle_api_me(request: web.Request) -> web.Response:
     code = "na"
 
     try:
-        dbmod.upsert_user(DATABASE_URL, tg_id, user_obj.get("username"), user_obj.get("first_name"))
-        code = dbmod.ensure_referral_code(DATABASE_URL, tg_id)
-        u = dbmod.get_user(DATABASE_URL, tg_id)
+        # db ops in thread
+        await asyncio.to_thread(dbmod.upsert_user, DATABASE_URL, tg_id, user_obj.get("username"), user_obj.get("first_name"))
+        code = await asyncio.to_thread(dbmod.ensure_referral_code, DATABASE_URL, tg_id)
+        u = await asyncio.to_thread(dbmod.get_user, DATABASE_URL, tg_id)
         if u:
-            credits = u.credits
+            credits = getattr(u, "credits", 0)
             plan = getattr(u, "plan", "Free")
     except Exception as e:
         log.exception("DB error on /api/me: %s", e)
 
-    referral_link = f"{BASE_URL}/r/{code}"
+    referral_link = f"{BASE_URL}/r/{code}" if BASE_URL else f"/r/{code}"
 
     return web.json_response(
         {
@@ -397,9 +416,9 @@ async def start_everything():
     await site.start()
     log.info("✅ Web server LISTENING on 0.0.0.0:%s", PORT)
 
-    # DB init (μην ρίξει το web)
+    # DB init (μην ρίξει το web) -- run in thread if it's blocking
     try:
-        dbmod.init_db(DATABASE_URL)
+        await asyncio.to_thread(dbmod.init_db, DATABASE_URL)
         log.info("DB initialized.")
     except Exception as e:
         log.exception("DB init failed (continuing): %s", e)
@@ -409,18 +428,25 @@ async def start_everything():
         try:
             bot_app = build_bot_app()
             webapp["bot_app"] = bot_app
-            await bot_app.initialize()
-            await bot_app.start()
-            await bot_app.updater.start_polling(drop_pending_updates=True)
-            log.info("✅ Bot polling started.")
+            # Run the bot polling in a thread so it doesn't block the aiohttp loop.
+            # run_polling will initialize/start/idle internally; adjust if your PTB version differs.
+            await asyncio.to_thread(bot_app.run_polling, drop_pending_updates=True)
+            log.info("✅ Bot polling finished.")
         except Exception as e:
             log.exception("Bot failed: %s", e)
 
     asyncio.create_task(bot_task())
 
     # Keep alive
-    while True:
-        await asyncio.sleep(3600)
+    try:
+        while True:
+            await asyncio.sleep(3600)
+    finally:
+        log.info("Shutting down web server and bot.")
+        try:
+            await runner.cleanup()
+        except Exception:
+            log.exception("Error during runner cleanup")
 
 
 def run():
