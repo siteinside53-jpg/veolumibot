@@ -1,7 +1,5 @@
 [build]
 builder = "NIXPACKS"
 
-[deploy]
-startCommand = "python -m app.bot"
 
 
