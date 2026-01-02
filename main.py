@@ -1,10 +1,4 @@
 # main.py — Telegram AI Marketplace + Mini App (AIOHTTP) on the SAME Railway service
-# ✅ Railway-ready: binds to 0.0.0.0:$PORT
-# ✅ /health returns {"ok": true}
-# ✅ /app serves webapp/index.html
-# ✅ /api/me returns profile info (validated via Telegram initData)
-# ✅ Bot runs in background (polling)
-
 from __future__ import annotations
 
 import asyncio
@@ -36,8 +30,7 @@ from telegram.ext import (
 from config import BOT_TOKEN, DATABASE_URL, PUBLIC_BASE_URL
 import db as dbmod
 
-BUILD = "build_2026_01_02_fixed_indent"
-
+BUILD = "build_2026_01_02_debug_mw"
 
 # ======================
 # LOGGING
@@ -48,14 +41,12 @@ logging.basicConfig(
 )
 log = logging.getLogger("ai-marketplace-bot")
 
-
 # ======================
 # RAILWAY PORT + URLs
 # ======================
 PORT = int(os.environ.get("PORT", "8080"))
 BASE_URL = PUBLIC_BASE_URL.rstrip("/")
 WEBAPP_URL = f"{BASE_URL}/app"
-
 
 # ======================
 # UI
@@ -77,13 +68,27 @@ WAITING_FOR_PROMPT = "waiting_for_prompt"  # None|"video"|"image"|"audio"
 
 
 # ======================
+# ERROR MIDDLEWARE (IMPORTANT)
+# ======================
+@web.middleware
+async def error_middleware(request: web.Request, handler):
+    try:
+        return await handler(request)
+    except web.HTTPException:
+        raise
+    except Exception as e:
+        log.exception("🔥 Unhandled error on %s %s", request.method, request.path)
+        return web.Response(
+            text=f"500 ERROR | {type(e).__name__}: {e}\nBUILD={BUILD}\nPATH={request.path}",
+            status=500,
+            content_type="text/plain; charset=utf-8",
+        )
+
+
+# ======================
 # Telegram WebApp initData verify
 # ======================
 def verify_telegram_init_data(init_data: str, bot_token: str) -> dict:
-    """
-    Validates Telegram WebApp initData.
-    Returns parsed data dict if valid, raises ValueError otherwise.
-    """
     if not init_data:
         raise ValueError("Empty initData")
 
@@ -130,8 +135,8 @@ async def ensure_user(update: Update) -> None:
     try:
         dbmod.upsert_user(DATABASE_URL, u.id, u.username, u.first_name)
         dbmod.ensure_referral_code(DATABASE_URL, u.id)
-    except Exception as e:
-        log.exception("DB error in ensure_user: %s", e)
+    except Exception:
+        log.exception("DB error in ensure_user")
 
 
 # ======================
@@ -229,10 +234,10 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
         dbmod.add_credits(DATABASE_URL, tg_id, delta=-1, reason=f"create_{mode}")
         job_id = dbmod.create_job(DATABASE_URL, tg_id, job_type=mode, prompt=text, provider=None)
-    except Exception as e:
-        log.exception("DB error on create job: %s", e)
+    except Exception:
+        log.exception("DB error on create job")
         context.user_data[WAITING_FOR_PROMPT] = None
-        await update.message.reply_text("⚠️ Προσωρινό πρόβλημα με τη βάση. Ξαναδοκίμασε.", reply_markup=main_menu_kb())
+        await update.message.reply_text("⚠️ Πρόβλημα με τη βάση. Ξαναδοκίμασε.", reply_markup=main_menu_kb())
         return
 
     context.user_data[WAITING_FOR_PROMPT] = None
@@ -243,9 +248,6 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def on_webapp_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    When Mini App calls tg.sendData(JSON.stringify(...)) this arrives here.
-    """
     await ensure_user(update)
     msg = update.effective_message
     data = msg.web_app_data.data if msg and msg.web_app_data else ""
@@ -261,7 +263,7 @@ async def on_webapp_data(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await msg.reply_text(
             "🟣 Αίτημα αγοράς (demo)\n\n"
             f"Πακέτο: {plan}\n"
-            "Στο επόμενο βήμα κουμπώνουμε πληρωμές (Stripe/PayPal/crypto) και αυτό θα φορτώνει credits αυτόματα.",
+            "Στο επόμενο βήμα κουμπώνουμε πληρωμές (Stripe/PayPal/crypto).",
             reply_markup=main_menu_kb(),
         )
         return
@@ -279,37 +281,17 @@ def build_bot_app() -> Application:
 
 
 # ======================
-# AIOHTTP routes
+# AIOHTTP handlers
 # ======================
-@web.middleware
-async def error_middleware(request: web.Request, handler):
-    try:
-        return await handler(request)
-    except web.HTTPException:
-        raise
-    except Exception as e:
-        log.exception("HTTP error on %s %s: %s", request.method, request.path, e)
-        return web.Response(
-            text=f"SERVER ERROR: {type(e).__name__}: {e}",
-            status=500,
-            content_type="text/plain; charset=utf-8",
-        )
-
-
 async def handle_health(request: web.Request) -> web.Response:
     return web.json_response({"ok": True, "build": BUILD})
 
 
 async def handle_root(request: web.Request) -> web.Response:
-    # Αν θες, κάνε redirect σε /app:
-    # raise web.HTTPFound("/app")
-    return web.Response(text=f"ROOT OK | {BUILD}", content_type="text/plain; charset=utf-8")
+    return web.Response(text=f"OK | {BUILD}", content_type="text/plain; charset=utf-8")
 
 
 async def handle_app(request: web.Request) -> web.Response:
-    """
-    Serves webapp/index.html
-    """
     here = os.path.dirname(__file__)
     path = os.path.join(here, "webapp", "index.html")
     with open(path, "r", encoding="utf-8") as f:
@@ -318,15 +300,7 @@ async def handle_app(request: web.Request) -> web.Response:
 
 
 async def handle_api_me(request: web.Request) -> web.Response:
-    """
-    Mini App calls this with { initData }.
-    Returns profile info.
-    """
-    try:
-        body = await request.json()
-    except Exception:
-        return web.json_response({"error": "bad_json"}, status=400)
-
+    body = await request.json()
     init_data = (body.get("initData") or "").strip()
 
     try:
@@ -341,10 +315,10 @@ async def handle_api_me(request: web.Request) -> web.Response:
 
     name = user_obj.get("first_name") or user_obj.get("username") or "—"
     photo_url = user_obj.get("photo_url")
+
     credits = 0
     plan = "Free"
     code = "na"
-
     try:
         dbmod.upsert_user(DATABASE_URL, tg_id, user_obj.get("username"), user_obj.get("first_name"))
         code = dbmod.ensure_referral_code(DATABASE_URL, tg_id)
@@ -352,11 +326,10 @@ async def handle_api_me(request: web.Request) -> web.Response:
         if u:
             credits = u.credits
             plan = getattr(u, "plan", "Free")
-    except Exception as e:
-        log.exception("DB error on /api/me: %s", e)
+    except Exception:
+        log.exception("DB error on /api/me")
 
     referral_link = f"{BASE_URL}/r/{code}"
-
     return web.json_response({
         "tg_id": tg_id,
         "name": name,
@@ -368,32 +341,27 @@ async def handle_api_me(request: web.Request) -> web.Response:
 
 
 async def handle_ref_redirect(request: web.Request) -> web.Response:
-    """
-    /r/<code> -> redirect to bot start=ref_<code>
-    """
     code = request.match_info.get("code", "")
-    bot_app: Application = request.app.get("bot_app")
+    bot_app: Application | None = request.app.get("bot_app")
     if not bot_app:
         return web.Response(text="Bot not ready yet", status=503)
 
     me = await bot_app.bot.get_me()
-    url = f"https://t.me/{me.username}?start=ref_{code}"
-    raise web.HTTPFound(url)
+    raise web.HTTPFound(f"https://t.me/{me.username}?start=ref_{code}")
 
 
 # ======================
-# Start everything (WEB first, then DB + bot)
+# Start everything
 # ======================
 async def start_everything():
     log.info("ENV PORT=%s", PORT)
     log.info("PUBLIC_BASE_URL=%s", BASE_URL)
     log.info("WEBAPP_URL=%s", WEBAPP_URL)
 
-    # 1) Start WEB server first (Railway needs a listening port)
     webapp = web.Application(middlewares=[error_middleware])
     webapp.add_routes([
-        web.get("/health", handle_health),
         web.get("/", handle_root),
+        web.get("/health", handle_health),
         web.get("/app", handle_app),
         web.post("/api/me", handle_api_me),
         web.get("/r/{code}", handle_ref_redirect),
@@ -403,30 +371,28 @@ async def start_everything():
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", PORT)
     await site.start()
-    log.info("✅ Web server LISTENING on 0.0.0.0:%s", PORT)
+    log.info("✅ Web server listening on 0.0.0.0:%s", PORT)
 
-    # 2) Init DB (but never crash the web server)
+    # DB init (don’t crash)
     try:
         dbmod.init_db(DATABASE_URL)
         log.info("DB initialized.")
-    except Exception as e:
-        log.exception("DB init failed (continuing): %s", e)
+    except Exception:
+        log.exception("DB init failed (continuing)")
 
-    # 3) Start BOT in background (polling)
     async def bot_task():
         try:
             bot_app = build_bot_app()
-            webapp["bot_app"] = bot_app  # needed for referral redirect
+            webapp["bot_app"] = bot_app
             await bot_app.initialize()
             await bot_app.start()
             await bot_app.updater.start_polling(drop_pending_updates=True)
             log.info("✅ Bot polling started.")
-        except Exception as e:
-            log.exception("Bot failed: %s", e)
+        except Exception:
+            log.exception("Bot failed")
 
     asyncio.create_task(bot_task())
 
-    # Keep process alive
     while True:
         await asyncio.sleep(3600)
 
