@@ -1,4 +1,6 @@
 # app/bot.py
+from pathlib import Path
+
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import (
@@ -13,16 +15,19 @@ from .db import run_migrations, ensure_user, get_user
 from . import texts
 from .keyboards import start_inline_menu, open_profile_webapp_kb
 
-# ✅ Local hero image inside repo
+# ✅ Local hero image inside repo: app/assets/hero.png
 HERO_PATH = Path(__file__).parent / "assets" / "hero.png"
 
 
 async def send_start_card(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Στέλνει το start card (photo + caption + inline menu)."""
+    u = update.effective_user
+    ensure_user(u.id, u.username, u.first_name)
+
+    # ΤΟ ΣΩΣΤΟ: στέλνουμε το τοπικό αρχείο HERO_PATH
     if update.message:
-        ensure_user(update.effective_user.id, update.effective_user.username, update.effective_user.first_name)
         await update.message.reply_photo(
-            photo=HERO_IMAGE_URL,
+            photo=HERO_PATH.open("rb"),
             caption=texts.START_CAPTION,
             reply_markup=start_inline_menu(),
         )
@@ -30,7 +35,7 @@ async def send_start_card(update: Update, context: ContextTypes.DEFAULT_TYPE):
         q = update.callback_query
         await q.answer()
         await q.message.reply_photo(
-            photo=HERO_IMAGE_URL,
+            photo=HERO_PATH.open("rb"),
             caption=texts.START_CAPTION,
             reply_markup=start_inline_menu(),
         )
@@ -50,12 +55,10 @@ async def on_menu_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ensure_user(u.id, u.username, u.first_name)
 
     data = q.data or ""
-    # menu:profile, menu:video, menu:images, menu:audio, menu:support, menu:home
 
     if data == "menu:home":
-        # ξαναστέλνει το start card
         await q.message.reply_photo(
-            photo=HERO_IMAGE_URL,
+            photo=HERO_PATH.open("rb"),
             caption=texts.START_CAPTION,
             reply_markup=start_inline_menu(),
         )
