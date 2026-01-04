@@ -1,4 +1,6 @@
-import asyncio
+import os
+from pathlib import Path
+
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import (
@@ -15,27 +17,37 @@ from . import texts
 from .keyboards import main_menu, open_profile_webapp_kb
 
 
-# ✅ ΒΑΛΕ ΕΔΩ ΕΝΑ HERO IMAGE URL (για να βγαίνει σαν κάρτα όπως του άλλου bot)
-HERO_IMAGE_URL = "https://g.co/gemini/share/ed6b2ccf1466"
+# ✅ Local hero image inside repo
+HERO_PATH = Path(__file__).parent / "assets" / "hero.jpg"
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    u = update.effective_user
     if not update.message:
         return
 
+    u = update.effective_user
     ensure_user(u.id, u.username, u.first_name)
 
-    # ✅ Στέλνει "card" (photo + caption) όπως του άλλου bot
-    if HERO_IMAGE_URL and HERO_IMAGE_URL.startswith("http"):
-        await update.message.reply_photo(
-            photo=HERO_IMAGE_URL,
-            caption=texts.START_CAPTION,
+    # ✅ Στείλε κάρτα (εικόνα + caption) — με fallback αν λείπει εικόνα
+    try:
+        if HERO_PATH.exists():
+            with HERO_PATH.open("rb") as f:
+                await update.message.reply_photo(
+                    photo=f,
+                    caption=texts.START_CAPTION,
+                    reply_markup=main_menu(),
+                )
+        else:
+            await update.message.reply_text(
+                texts.WELCOME + "\n\n(⚠️ Δεν βρέθηκε: app/assets/hero.jpg)",
+                reply_markup=main_menu(),
+            )
+    except Exception as e:
+        # ✅ Αν σκάσει κάτι, πάντα να απαντάει
+        await update.message.reply_text(
+            texts.WELCOME + f"\n\n(⚠️ start error: {e})",
             reply_markup=main_menu(),
         )
-    else:
-        # fallback: αν δεν έχεις βάλει URL ακόμη
-        await update.message.reply_text(texts.WELCOME, reply_markup=main_menu())
 
 
 async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -44,14 +56,13 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     txt = (update.message.text or "").strip()
     u = update.effective_user
-
     ensure_user(u.id, u.username, u.first_name)
 
     # ✅ PROFILE
     if txt == texts.BTN_PROFILE:
         dbu = get_user(u.id) or {"tg_user_id": u.id, "tg_username": u.username, "credits": 0}
-
         kb = open_profile_webapp_kb()
+
         await update.message.reply_text(
             texts.PROFILE_MD.format(
                 tg_user_id=dbu["tg_user_id"],
@@ -88,7 +99,6 @@ def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_text))
-
     app.run_polling(close_loop=False)
 
 
