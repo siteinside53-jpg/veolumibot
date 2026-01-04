@@ -15,14 +15,27 @@ from . import texts
 from .keyboards import main_menu, open_profile_webapp_kb
 
 
+# ✅ ΒΑΛΕ ΕΔΩ ΕΝΑ HERO IMAGE URL (για να βγαίνει σαν κάρτα όπως του άλλου bot)
+HERO_IMAGE_URL = "https://YOUR-IMAGE-URL-HERE/hero.jpg"
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     u = update.effective_user
-    # update.message μπορεί να είναι None σε κάποιες περιπτώσεις (π.χ. callback), οπότε προστασία:
     if not update.message:
         return
 
     ensure_user(u.id, u.username, u.first_name)
-    await update.message.reply_text(texts.WELCOME, reply_markup=main_menu())
+
+    # ✅ Στέλνει "card" (photo + caption) όπως του άλλου bot
+    if HERO_IMAGE_URL and HERO_IMAGE_URL.startswith("http"):
+        await update.message.reply_photo(
+            photo=HERO_IMAGE_URL,
+            caption=texts.START_CAPTION,
+            reply_markup=main_menu(),
+        )
+    else:
+        # fallback: αν δεν έχεις βάλει URL ακόμη
+        await update.message.reply_text(texts.WELCOME, reply_markup=main_menu())
 
 
 async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -36,13 +49,11 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ✅ PROFILE
     if txt == texts.BTN_PROFILE:
-        dbu = get_user(u.id)
-        if not dbu:
-            dbu = {"tg_user_id": u.id, "tg_username": u.username, "credits": 0}
+        dbu = get_user(u.id) or {"tg_user_id": u.id, "tg_username": u.username, "credits": 0}
 
         kb = open_profile_webapp_kb()
         await update.message.reply_text(
-            texts.PROFILE_TEXT.format(
+            texts.PROFILE_MD.format(
                 tg_user_id=dbu["tg_user_id"],
                 username=(dbu.get("tg_username") or "—"),
                 credits=f'{float(dbu.get("credits", 0)):.2f}',
@@ -78,7 +89,6 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_text))
 
-    # Railway/containers: καλύτερα να μην κλείνει το loop
     app.run_polling(close_loop=False)
 
 
