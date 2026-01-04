@@ -14,6 +14,9 @@ MIGRATIONS_DIR = Path(__file__).parent / "migrations"
 def _conn():
     return psycopg.connect(DATABASE_URL, autocommit=True)
 
+def get_conn():
+    # ίδια σύνδεση με dict rows για να δουλεύει το web.py (cur.fetchone()["id"])
+    return psycopg.connect(DATABASE_URL, row_factory=psycopg.rows.dict_row)
 
 def run_migrations():
     print(">>> RUNNING MIGRATIONS <<<", flush=True)
