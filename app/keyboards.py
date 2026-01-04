@@ -1,9 +1,5 @@
 # app/keyboards.py
-from telegram import (
-    InlineKeyboardMarkup,
-    InlineKeyboardButton,
-    WebAppInfo,
-)
+from telegram import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 
 from .texts import (
     BTN_PROFILE,
@@ -16,21 +12,56 @@ from .texts import (
 from .config import WEBAPP_URL
 
 
+# -----------------------
+# MAIN MENU (Start card)
+# -----------------------
 def start_inline_menu():
-    """Inline menu κάτω από το START card (σαν το άλλο bot)."""
+    """Κεντρικό inline menu κάτω από το START card."""
     return InlineKeyboardMarkup(
         [
             [InlineKeyboardButton(BTN_PROFILE, callback_data="menu:profile")],
             [InlineKeyboardButton(BTN_VIDEO, callback_data="menu:video")],
             [InlineKeyboardButton(BTN_IMAGES, callback_data="menu:images")],
             [InlineKeyboardButton(BTN_AUDIO, callback_data="menu:audio")],
-            [
-                InlineKeyboardButton(BTN_PROMPTS, url="https://t.me/veolumiprompts"),
-            ],
-            [
-                InlineKeyboardButton(BTN_SUPPORT, url="https://t.me/veolumisupport"),
-            ],
-            
+            [InlineKeyboardButton(BTN_PROMPTS, url="https://t.me/veolumiprompts")],
+            [InlineKeyboardButton(BTN_SUPPORT, url="https://t.me/veolumisupport")],
+        ]
+    )
+
+
+# -----------------------
+# SUB MENUS (like VeoSeeBot)
+# -----------------------
+def video_models_menu():
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("🟢 Kling 2.6 (11–44 credits)  □", callback_data="menu:set:video:kling_26")],
+            [InlineKeyboardButton("🌀 Wan 2.6 (14–56 credits)    □", callback_data="menu:set:video:wan_26")],
+            [InlineKeyboardButton("🛰 Sora 2 PRO (18–80 credits) □", callback_data="menu:set:video:sora2pro")],
+            [InlineKeyboardButton("🎥 Veo 3.1 (12 credits)       □", callback_data="menu:set:video:veo31")],
+            [InlineKeyboardButton("← Πίσω", callback_data="menu:home")],
+        ]
+    )
+
+
+def image_models_menu():
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("🍌 Nano Banana PRO           □", callback_data="menu:set:image:nano_banana_pro")],
+            [InlineKeyboardButton("🟣 Midjourney                □", callback_data="menu:set:image:midjourney")],
+            [InlineKeyboardButton("🧪 Flux Kontext              □", callback_data="menu:set:image:flux_kontext")],
+            [InlineKeyboardButton("⚪ Grok Imagine (0.8–4)      □", callback_data="menu:set:image:grok_imagine")],
+            [InlineKeyboardButton("← Πίσω", callback_data="menu:home")],
+        ]
+    )
+
+
+def audio_models_menu():
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("🎵 Suno V5                    □", callback_data="menu:set:audio:suno_v5")],
+            [InlineKeyboardButton("🗣 ElevenLabs                 □", callback_data="menu:set:audio:elevenlabs")],
+            [InlineKeyboardButton("← Πίσω", callback_data="menu:home")],
         ]
     )
 
