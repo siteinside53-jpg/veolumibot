@@ -1,71 +1,44 @@
 import os
 import psycopg
-from pathlib import Path
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL is not set")
+DATABASE_URL = os.environ["DATABASE_URL"]
 
 def get_conn():
     return psycopg.connect(DATABASE_URL)
 
-def run_migrations():
-    print(">>> RUNNING MIGRATIONS <<<")
-
-    migrations_dir = Path(__file__).parent / "migrations"
-    files = sorted(migrations_dir.glob("*.sql"))
-
-    print("Found migrations:", [f.name for f in files])
-
+def init_db():
     with get_conn() as conn:
         with conn.cursor() as cur:
-            for f in files:
-                print("Executing:", f.name)
-                sql = f.read_text()
-                cur.execute(sql)
-        conn.commit()
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                tg_user_id BIGINT UNIQUE NOT NULL,
+                username TEXT,
+                first_name TEXT,
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+            """)
+            conn.commit()
 
-    print(">>> MIGRATIONS DONE <<<")
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            for f in files:
-                sql = f.read_text()
-                cur.execute(sql)
-        conn.commit()
-
-def ensure_user(tg_user_id, username, first_name):
+def ensure_user(tg_user_id: int, username: str, first_name: str):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT id FROM users WHERE tg_user_id = %s",
                 (tg_user_id,)
             )
-            if cur.fetchone() is None:
-                cur.execute(
-                    """
-                    INSERT INTO users (tg_user_id, tg_username, tg_first_name)
-                    VALUES (%s, %s, %s)
-                    """,
-                    (tg_user_id, username, first_name)
-                )
-        conn.commit()
+            row = cur.fetchone()
+            if row:
+                return row[0]
 
-def get_user(tg_user_id):
-    with get_conn() as conn:
-        with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT tg_user_id, tg_username, credits
-                FROM users WHERE tg_user_id = %s
+                INSERT INTO users (tg_user_id, username, first_name)
+                VALUES (%s, %s, %s)
+                RETURNING id
                 """,
-                (tg_user_id,)
+                (tg_user_id, username, first_name)
             )
-            row = cur.fetchone()
-            if not row:
-                return None
-            return {
-                "tg_user_id": row[0],
-                "tg_username": row[1],
-                "credits": float(row[2]),
-            }
+            user_id = cur.fetchone()[0]
+            conn.commit()
+            return user_id
