@@ -7,6 +7,7 @@ BTN_IMAGES = "🖼 Εικόνες"
 BTN_AUDIO = "🎧 Ήχος"
 BTN_PROMPTS = "💡 Κανάλι με prompts"
 BTN_SUPPORT = "☁️ Υποστήριξη"
+BTN_MENU = "📋 Μενού"
 
 # === START CARD (σαν αυτού) ===
 START_CAPTION = (
