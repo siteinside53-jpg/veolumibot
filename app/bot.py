@@ -16,7 +16,7 @@ from .keyboards import main_menu, open_profile_webapp_kb
 
 
 # ✅ ΒΑΛΕ ΕΔΩ ΕΝΑ HERO IMAGE URL (για να βγαίνει σαν κάρτα όπως του άλλου bot)
-HERO_IMAGE_URL = "https://YOUR-IMAGE-URL-HERE/hero.jpg"
+HERO_IMAGE_URL = "https://g.co/gemini/share/ed6b2ccf1466"
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
