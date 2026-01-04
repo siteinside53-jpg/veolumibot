@@ -1,7 +1,5 @@
-# app/db.py
 import os
 from pathlib import Path
-
 import psycopg
 import psycopg.rows
 
@@ -9,10 +7,8 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("Λείπει το DATABASE_URL")
 
-# ✅ ΕΣΥ έχεις migrations μέσα στο app/
-# db.py: /app/app/db.py
-# migrations: /app/app/migrations
-MIGRATIONS_DIR = Path(__file__).resolve().parent / "migrations"
+# ΠΑΝΤΑ relative στο db.py
+MIGRATIONS_DIR = Path(__file__).parent / "migrations"
 
 
 def _conn():
@@ -24,11 +20,13 @@ def run_migrations():
     print(f">>> migrations dir = {MIGRATIONS_DIR}", flush=True)
 
     if not MIGRATIONS_DIR.exists():
-        raise RuntimeError(f"Δεν υπάρχει migrations folder: {MIGRATIONS_DIR}")
+        print(">>> migrations folder ΔΕΝ βρέθηκε — συνεχίζουμε χωρίς crash", flush=True)
+        return
 
     sql_files = sorted(MIGRATIONS_DIR.glob("*.sql"))
     if not sql_files:
-        raise RuntimeError("Δεν βρέθηκαν .sql migrations")
+        print(">>> Δεν υπάρχουν .sql migrations", flush=True)
+        return
 
     with _conn() as conn:
         with conn.cursor() as cur:
