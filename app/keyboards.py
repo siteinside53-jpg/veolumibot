@@ -12,7 +12,6 @@ from .texts import (
     BTN_AUDIO,
     BTN_PROMPTS,
     BTN_SUPPORT,
-    BTN_MENU,
 )
 from .config import WEBAPP_URL
 
@@ -31,9 +30,7 @@ def start_inline_menu():
             [
                 InlineKeyboardButton(BTN_SUPPORT, url="https://t.me/veolumisupport"),
             ],
-            [
-                InlineKeyboardButton(BTN_MENU, callback_data="menu:home"),
-            ],
+            
         ]
     )
 
