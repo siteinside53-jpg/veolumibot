@@ -1,20 +1,38 @@
-BTN_PROFILE = "👤 Το προφίλ μου"
-BTN_VIDEO = "🎬 Δημιουργία βίντεο"
-BTN_IMAGES = "🖼 Εικόνες"
-BTN_AUDIO = "🎵 Ήχος"
-BTN_PROMPTS = "💡 Κανάλι με prompts"
-BTN_SUPPORT = "☁️ Υποστήριξη"
+# texts.py
 
-WELCOME = (
-"Καλώς ήρθες!\n"
-"Εδώ έχεις πολλά εργαλεία AI σε ένα μέρος.\n\n"
-"👇 Διάλεξε από το μενού."
+START_TEXT = (
+    "Καλώς ήρθες! 👋\n\n"
+    "Το VeoLumiBot είναι το επίσημο AI bot δημιουργίας περιεχομένου.\n\n"
+    "🎯 Όλες οι κορυφαίες AI τεχνολογίες σε ένα μέρος, με μία συνδρομή.\n\n"
+    "Veo 3 • Nano Banana • Flux • Midjourney • Runway • Kling • Qwen\n"
+    "και πολλά ακόμα.\n\n"
+    "💰 Οι χαμηλότερες τιμές της αγοράς\n"
+    "🌍 Πληρωμές από οποιοδήποτε σημείο του κόσμου\n"
+    "💳 Κάρτες • Crypto • PayPal\n\n"
+    "👇 Επίλεξε από το μενού για να ξεκινήσεις"
 )
 
-PROFILE_FMT = (
-"👤 *Προφίλ*\n"
-"• ID: `{tg_user_id}`\n"
-"• Username: `{username}`\n"
-"• Credits: *{credits}*\n\n"
-"Άνοιξε το προφίλ (Mini App) για αγορά credits / συνδρομές."
+CREDITS_TEXT = (
+    "⚡ Σου προστέθηκαν 5 credits!\n\n"
+    "Μπορείς να τα χρησιμοποιήσεις για:\n"
+    "🎬 Βίντεο\n"
+    "🖼 Εικόνες\n"
+    "🎧 Ήχο\n\n"
+    "Καλή δημιουργία 🚀"
+)
+
+PROFILE_TEXT = (
+    "👤 Το προφίλ σου\n\n"
+    "🆔 Telegram ID: {tg_user_id}\n"
+    "👤 Username: @{username}\n\n"
+    "⚡ Credits διαθέσιμα: {credits}"
+)
+
+ABOUT_TEXT = (
+    "Τι μπορεί να κάνει αυτό το bot;\n\n"
+    "Το VeoLumiBot είναι επίσημο AI εργαλείο δημιουργίας.\n\n"
+    "Πατώντας /start αποδέχεσαι:\n"
+    "• τους Όρους Χρήσης\n"
+    "• την Πολιτική Απορρήτου\n\n"
+    "🔗 https://telegra.ph/OROI-CHRISIS-VeoLumiBot"
 )
