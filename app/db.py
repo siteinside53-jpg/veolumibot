@@ -19,6 +19,22 @@ def run_migrations():
     print(">>> RUNNING MIGRATIONS <<<", flush=True)
     print(f">>> migrations dir = {MIGRATIONS_DIR}", flush=True)
 
+    with _conn() as conn:
+        with conn.cursor() as cur:
+            # ✅ ALWAYS ensure base tables exist (fallback)
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+              id SERIAL PRIMARY KEY,
+              tg_user_id BIGINT UNIQUE NOT NULL,
+              tg_username TEXT,
+              tg_first_name TEXT,
+              credits NUMERIC(10,2) NOT NULL DEFAULT 0,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+            """)
+            print(">>> ensured table users exists", flush=True)
+
+    # Αν υπάρχει migrations folder, τρέξε και τα .sql
     if not MIGRATIONS_DIR.exists():
         print(">>> migrations folder ΔΕΝ βρέθηκε — συνεχίζουμε χωρίς crash", flush=True)
         return
@@ -33,8 +49,6 @@ def run_migrations():
             for f in sql_files:
                 print(f">>> applying {f.name}", flush=True)
                 cur.execute(f.read_text(encoding="utf-8"))
-
-
 def ensure_user(tg_user_id, tg_username, tg_first_name):
     with _conn() as conn:
         with conn.cursor(row_factory=psycopg.rows.dict_row) as cur:
