@@ -13,7 +13,8 @@ from .db import run_migrations, ensure_user, get_user
 from . import texts
 from .keyboards import start_inline_menu, open_profile_webapp_kb
 
-HERO_IMAGE_URL = "ΒΑΛΕ_ΕΔΩ_ΤΟ_DIRECT_IMAGE_URL_ΣΟΥ"  # πχ https://.../lumi.jpg
+# ✅ Local hero image inside repo
+HERO_PATH = Path(__file__).parent / "assets" / "hero.png"
 
 
 async def send_start_card(update: Update, context: ContextTypes.DEFAULT_TYPE):
