@@ -1,7 +1,5 @@
 # app/keyboards.py
 from telegram import (
-    ReplyKeyboardMarkup,
-    KeyboardButton,
     InlineKeyboardMarkup,
     InlineKeyboardButton,
     WebAppInfo,
@@ -14,31 +12,34 @@ from .texts import (
     BTN_AUDIO,
     BTN_PROMPTS,
     BTN_SUPPORT,
+    BTN_MENU,
 )
 from .config import WEBAPP_URL
 
 
-def main_menu():
-    return ReplyKeyboardMarkup(
+def start_inline_menu():
+    """Inline menu κάτω από το START card (σαν το άλλο bot)."""
+    return InlineKeyboardMarkup(
         [
-            [KeyboardButton(BTN_PROFILE)],
-            [KeyboardButton(BTN_VIDEO), KeyboardButton(BTN_IMAGES)],
-            [KeyboardButton(BTN_AUDIO)],
-            [KeyboardButton(BTN_PROMPTS), KeyboardButton(BTN_SUPPORT)],
-        ],
-        resize_keyboard=True,
+            [InlineKeyboardButton(BTN_PROFILE, callback_data="menu:profile")],
+            [InlineKeyboardButton(BTN_VIDEO, callback_data="menu:video")],
+            [InlineKeyboardButton(BTN_IMAGES, callback_data="menu:images")],
+            [InlineKeyboardButton(BTN_AUDIO, callback_data="menu:audio")],
+            [
+                InlineKeyboardButton(BTN_PROMPTS, url="https://t.me/YOUR_PROMPTS_CHANNEL"),
+            ],
+            [
+                InlineKeyboardButton(BTN_SUPPORT, callback_data="menu:support"),
+            ],
+            [
+                InlineKeyboardButton(BTN_MENU, callback_data="menu:home"),
+            ],
+        ]
     )
 
 
 def open_profile_webapp_kb():
     url = f"{WEBAPP_URL}/profile" if WEBAPP_URL else "/profile"
     return InlineKeyboardMarkup(
-        [
-            [
-                InlineKeyboardButton(
-                    "👤 Άνοιγμα Προφίλ / Αγορά Credits",
-                    web_app=WebAppInfo(url=url),
-                )
-            ]
-        ]
+        [[InlineKeyboardButton("👤 Άνοιγμα Προφίλ / Αγορά Credits", web_app=WebAppInfo(url=url))]]
     )
