@@ -10,6 +10,7 @@ if not DATABASE_URL:
     raise RuntimeError("Λείπει το DATABASE_URL")
 
 BASE_DIR = Path(__file__).resolve().parent
+MIGRATIONS_DIR = BASE_DIR.parent / "migrations"
 
 # Πιθανά paths για migrations (για να μην “σπάει” στο Railway)
 CANDIDATE_MIGRATIONS_DIRS = [
