@@ -1,93 +1,85 @@
-import os
-from pathlib import Path
-
+# app/bot.py
 from telegram import Update
 from telegram.constants import ParseMode
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
-    MessageHandler,
+    CallbackQueryHandler,
     ContextTypes,
-    filters,
 )
 
 from .config import BOT_TOKEN
 from .db import run_migrations, ensure_user, get_user
 from . import texts
-from .keyboards import main_menu, open_profile_webapp_kb
+from .keyboards import start_inline_menu, open_profile_webapp_kb
+
+HERO_IMAGE_URL = "ΒΑΛΕ_ΕΔΩ_ΤΟ_DIRECT_IMAGE_URL_ΣΟΥ"  # πχ https://.../lumi.jpg
 
 
-# ✅ Local hero image inside repo
-HERO_PATH = Path(__file__).parent / "assets" / "hero.png"
-
-
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message:
-        return
-
-    u = update.effective_user
-    ensure_user(u.id, u.username, u.first_name)
-
-    # ✅ Στείλε κάρτα (εικόνα + caption) — με fallback αν λείπει εικόνα
-    try:
-        if HERO_PATH.exists():
-            with HERO_PATH.open("rb") as f:
-                await update.message.reply_photo(
-                    photo=f,
-                    caption=texts.START_CAPTION,
-                    reply_markup=main_menu(),
-                )
-        else:
-            await update.message.reply_text(
-                texts.WELCOME + "\n\n(⚠️ Δεν βρέθηκε: app/assets/hero.jpg)",
-                reply_markup=main_menu(),
-            )
-    except Exception as e:
-        # ✅ Αν σκάσει κάτι, πάντα να απαντάει
-        await update.message.reply_text(
-            texts.WELCOME + f"\n\n(⚠️ start error: {e})",
-            reply_markup=main_menu(),
+async def send_start_card(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Στέλνει το start card (photo + caption + inline menu)."""
+    if update.message:
+        ensure_user(update.effective_user.id, update.effective_user.username, update.effective_user.first_name)
+        await update.message.reply_photo(
+            photo=HERO_IMAGE_URL,
+            caption=texts.START_CAPTION,
+            reply_markup=start_inline_menu(),
+        )
+    elif update.callback_query:
+        q = update.callback_query
+        await q.answer()
+        await q.message.reply_photo(
+            photo=HERO_IMAGE_URL,
+            caption=texts.START_CAPTION,
+            reply_markup=start_inline_menu(),
         )
 
 
-async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message:
-        return
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await send_start_card(update, context)
 
-    txt = (update.message.text or "").strip()
-    u = update.effective_user
+
+async def on_menu_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    if not q:
+        return
+    await q.answer()
+
+    u = q.from_user
     ensure_user(u.id, u.username, u.first_name)
 
-    # ✅ PROFILE
-    if txt == texts.BTN_PROFILE:
-        dbu = get_user(u.id) or {"tg_user_id": u.id, "tg_username": u.username, "credits": 0}
-        kb = open_profile_webapp_kb()
+    data = q.data or ""
+    # menu:profile, menu:video, menu:images, menu:audio, menu:support, menu:home
 
-        await update.message.reply_text(
+    if data == "menu:home":
+        # ξαναστέλνει το start card
+        await q.message.reply_photo(
+            photo=HERO_IMAGE_URL,
+            caption=texts.START_CAPTION,
+            reply_markup=start_inline_menu(),
+        )
+        return
+
+    if data == "menu:profile":
+        dbu = get_user(u.id) or {"tg_user_id": u.id, "tg_username": u.username, "credits": 0}
+        await q.message.reply_text(
             texts.PROFILE_MD.format(
                 tg_user_id=dbu["tg_user_id"],
                 username=(dbu.get("tg_username") or "—"),
                 credits=f'{float(dbu.get("credits", 0)):.2f}',
             ),
             parse_mode=ParseMode.MARKDOWN,
-            reply_markup=kb,
+            reply_markup=open_profile_webapp_kb(),
         )
         return
 
-    # Placeholder routes
-    if txt in (texts.BTN_VIDEO, texts.BTN_IMAGES, texts.BTN_AUDIO):
-        await update.message.reply_text("🚧 Εδώ θα μπει το generator flow. (Template)")
+    if data in ("menu:video", "menu:images", "menu:audio"):
+        await q.message.reply_text("🚧 Εδώ θα μπει το generator flow. (Template)")
         return
 
-    if txt == texts.BTN_SUPPORT:
-        await update.message.reply_text("☁️ Υποστήριξη: γράψε εδώ το θέμα σου και θα σου απαντήσουμε. (Template)")
+    if data == "menu:support":
+        await q.message.reply_text("☁️ Υποστήριξη: γράψε εδώ το θέμα σου και θα σου απαντήσουμε. (Template)")
         return
-
-    if txt == texts.BTN_PROMPTS:
-        await update.message.reply_text("💡 Βάλε link στο κανάλι σου εδώ. (Template)")
-        return
-
-    await update.message.reply_text("Διάλεξε από το μενού 👇", reply_markup=main_menu())
 
 
 def main():
@@ -98,7 +90,7 @@ def main():
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, on_text))
+    app.add_handler(CallbackQueryHandler(on_menu_click, pattern=r"^menu:"))
     app.run_polling(close_loop=False)
 
 
