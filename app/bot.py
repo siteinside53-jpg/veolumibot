@@ -20,17 +20,16 @@ async def on_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ensure_user(u.id, u.username, u.first_name)
 
     if txt == texts.BTN_PROFILE:
-        dbu = get_user(u.id)
-        await update.message.reply_text(
-            texts.PROFILE_FMT.format(
-                tg_user_id=dbu["tg_user_id"],
-                username=(dbu["tg_username"] or "—"),
-                credits=f'{dbu["credits"]:.2f}'
-            ),
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=open_profile_webapp_kb()
-        )
-        return
+    dbu = get_user(u.id) or {"tg_user_id": u.id, "tg_username": u.username, "credits": 0}
+    await update.message.reply_text(
+        texts.PROFILE_TEXT.format(
+            tg_user_id=dbu["tg_user_id"],
+            username=(dbu["tg_username"] or "—"),
+            credits=f'{float(dbu["credits"]):.2f}'
+        ),
+        reply_markup=open_profile_webapp_kb()
+    )
+    return
 
     # Placeholder routes (θα τα “δέσεις” μετά με generation endpoints)
     if txt in (texts.BTN_VIDEO, texts.BTN_IMAGES, texts.BTN_AUDIO):
