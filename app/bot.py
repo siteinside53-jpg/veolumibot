@@ -18,7 +18,7 @@ from .keyboards import main_menu, open_profile_webapp_kb
 
 
 # ✅ Local hero image inside repo
-HERO_PATH = Path(__file__).parent / "assets" / "hero.jpg"
+HERO_PATH = Path(__file__).parent / "assets" / "hero.png"
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
