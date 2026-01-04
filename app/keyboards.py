@@ -12,7 +12,6 @@ from .texts import (
     BTN_AUDIO,
     BTN_PROMPTS,
     BTN_SUPPORT,
-    BTN_MENU,
 )
 from .config import WEBAPP_URL
 
