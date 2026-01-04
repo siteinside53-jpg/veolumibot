@@ -3,67 +3,281 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>AI Marketplace – Προφίλ</title>
+  <title>VeoLumi – Προφίλ</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:#0b0c10;color:#fff}
-    .wrap{max-width:560px;margin:0 auto;padding:16px}
-    .card{background:#121421;border:1px solid #232843;border-radius:18px;padding:14px;margin-bottom:12px}
-    .row{display:flex;justify-content:space-between;align-items:center;gap:10px}
-    .muted{opacity:.75;font-size:13px}
-    .title{font-size:18px;font-weight:800}
-    .btn{width:100%;padding:12px 14px;border-radius:14px;border:0;cursor:pointer;font-weight:800}
-    .btn-primary{background:#7c3aed;color:#fff}
-    .btn-ghost{background:#1a1d2d;color:#fff;border:1px solid #2b3150}
-    .grid{display:grid;gap:10px}
-    .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:#1a1d2d;border:1px solid #2b3150;font-size:12px}
-    .tabs{display:flex;gap:10px;margin-bottom:10px}
-    .tab{flex:1;text-align:center;padding:10px;border-radius:14px;background:#121421;border:1px solid #232843}
+    :root{
+      --bg:#0b0c10;
+      --card:#14161c;
+      --stroke:rgba(255,255,255,.08);
+      --text:#fff;
+      --muted:rgba(255,255,255,.65);
+      --purple:#7b2cff;
+      --purple2:#6a22ff;
+      --shadow:0 18px 45px rgba(0,0,0,.38);
+      --r:22px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      color:var(--text);
+      background:
+        radial-gradient(1100px 700px at 80% 20%, rgba(123,44,255,.18), transparent 60%),
+        radial-gradient(900px 600px at 10% 80%, rgba(123,44,255,.12), transparent 55%),
+        var(--bg);
+    }
+    .wrap{max-width:560px;margin:0 auto;padding:16px 14px 92px}
+
+    /* top user card */
+    .user{
+      display:flex;align-items:center;gap:12px;
+      background:rgba(255,255,255,.03);
+      border:1px solid var(--stroke);
+      border-radius:22px;
+      padding:10px 12px;
+      box-shadow:var(--shadow);
+    }
+    .avatar{
+      width:44px;height:44px;border-radius:50%;
+      background:linear-gradient(135deg, rgba(123,44,255,.85), rgba(123,44,255,.25));
+      display:flex;align-items:center;justify-content:center;
+      font-weight:900;
+      flex:0 0 auto;
+      overflow:hidden;
+    }
+    .meta{display:flex;flex-direction:column;gap:2px;min-width:0}
+    .name{font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .small{font-size:12px;color:var(--muted)}
+    .credits{
+      margin-left:auto;
+      display:flex;flex-direction:column;align-items:flex-end;gap:2px;
+    }
+    .credits .num{font-size:22px;font-weight:900;line-height:1}
+
+    .section{
+      margin-top:14px;
+      background:rgba(255,255,255,.02);
+      border:1px solid var(--stroke);
+      border-radius:22px;
+      padding:14px;
+    }
+    .h1{margin:0;font-weight:900;font-size:18px}
+    .sub{margin-top:4px;font-size:13px;color:var(--muted)}
+    .btn-secondary{
+      width:100%;
+      margin-top:12px;
+      border:1px solid var(--stroke);
+      background:rgba(255,255,255,.03);
+      color:var(--text);
+      padding:14px 14px;
+      border-radius:16px;
+      font-weight:800;
+    }
+
+    /* carousel plans */
+    .h2{margin:16px 2px 10px;font-weight:900;font-size:18px}
+    .carousel{
+      display:flex;gap:12px;overflow:auto;
+      padding:10px 2px 6px;
+      scroll-snap-type:x mandatory;
+      -webkit-overflow-scrolling:touch;
+    }
+    .plan{
+      min-width:290px;
+      scroll-snap-align:start;
+      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+      border:1px solid var(--stroke);
+      border-radius:22px;
+      padding:14px;
+      box-shadow:var(--shadow);
+    }
+    .plan-title{font-size:18px;font-weight:900}
+    .plan-desc{margin-top:3px;font-size:13px;color:var(--muted)}
+    .row{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap}
+    .pill{
+      padding:7px 10px;border-radius:12px;
+      border:1px solid var(--stroke);
+      background:rgba(255,255,255,.03);
+      font-weight:850;
+      font-size:13px;
+    }
+    .more{
+      width:100%;margin-top:12px;
+      border:1px solid var(--stroke);
+      background:rgba(255,255,255,.03);
+      color:var(--text);
+      padding:13px 14px;
+      border-radius:16px;
+      font-weight:850;
+    }
+    .buy{
+      width:100%;
+      margin-top:10px;
+      border:none;
+      background:linear-gradient(90deg, var(--purple), var(--purple2));
+      color:#fff;
+      padding:14px 14px;
+      border-radius:16px;
+      font-weight:950;
+      letter-spacing:.2px;
+    }
+    .buy-ghost{
+      width:100%;
+      margin-top:8px;
+      border:1px solid var(--stroke);
+      background:rgba(255,255,255,.03);
+      color:var(--text);
+      padding:13px 14px;
+      border-radius:16px;
+      font-weight:900;
+    }
+
+    /* bottom tabs */
+    .tabs{
+      position:fixed;left:0;right:0;bottom:0;
+      background:rgba(12,13,18,.92);
+      border-top:1px solid var(--stroke);
+      backdrop-filter:blur(12px);
+      padding:10px 14px 12px;
+    }
+    .tabs-inner{max-width:560px;margin:0 auto;display:flex;gap:10px}
+    .tab{
+      flex:1;
+      border:1px solid var(--stroke);
+      background:rgba(255,255,255,.03);
+      color:var(--text);
+      padding:12px 10px;
+      border-radius:16px;
+      font-weight:900;
+      text-align:center;
+      user-select:none;
+    }
+    .tab.active{
+      border-color:rgba(123,44,255,.45);
+      background:rgba(123,44,255,.14);
+    }
   </style>
 </head>
+
 <body>
   <div class="wrap">
-    <div class="tabs">
-      <div class="tab">👤 Το προφίλ μου</div>
-      <div class="tab" style="opacity:.6">🤝 Συνεργασία (soon)</div>
-    </div>
 
-    <div class="card">
-      <div class="row">
-        <div>
-          <div class="muted">Υπόλοιπο credits</div>
-          <div class="title">{{ credits }} credits</div>
-        </div>
-        <div class="pill">Free</div>
+    <!-- User header -->
+    <div class="user">
+      <div class="avatar" id="avatar">V</div>
+      <div class="meta">
+        <div class="name" id="name">VeoLumi</div>
+        <div class="small" id="username">—</div>
       </div>
-      <div style="height:10px"></div>
-      <div class="muted">Διάλεξε πακέτο. Πληρωμή με κάρτα ή crypto.</div>
+      <div class="credits">
+        <div class="small">Υπόλοιπο credits</div>
+        <div class="num" id="credits">{{ credits }}</div>
+      </div>
     </div>
 
-    <div class="grid">
+    <!-- Current plan -->
+    <div class="section">
+      <div class="h1">Τρέχον πακέτο</div>
+      <div class="sub">Free</div>
+
+      <button class="btn-secondary" onclick="openCreditsInfo()">
+        Αγορά επιπλέον credits
+      </button>
+
+      <div class="sub" style="margin-top:10px">
+        Διάλεξε πακέτο. Πληρωμή με κάρτα ή crypto.
+      </div>
+    </div>
+
+    <!-- Subscriptions -->
+    <div class="h2">Συνδρομές</div>
+
+    <div class="carousel">
       {% for p in packs %}
-      <div class="card">
+      <div class="plan">
+        <div class="plan-title">{{ p.title }}</div>
+        <div class="plan-desc">{{ p.desc }}</div>
+
         <div class="row">
-          <div>
-            <div class="title">{{ p.title }}</div>
-            <div class="muted">{{ p.desc }}</div>
-          </div>
-          <div class="pill">{{ "%.2f"|format(p.amount_eur) }}€</div>
+          <span class="pill">Credits: {{ p.credits }}</span>
+          <span class="pill">{{ "%.2f"|format(p.amount_eur) }}€</span>
         </div>
-        <div style="height:10px"></div>
-        <button class="btn btn-primary" onclick="buyStripe('{{ p.sku }}')">💳 Αγορά με κάρτα</button>
-        <div style="height:8px"></div>
-        <button class="btn btn-ghost" onclick="buyCrypto('{{ p.sku }}')">🪙 Αγορά με Crypto</button>
+
+        <button class="more" onclick="showIncludes('{{ p.title|e }}', '{{ p.desc|e }}')">
+          Τι περιλαμβάνει
+        </button>
+
+        <button class="buy" onclick="buyStripe('{{ p.sku }}')">
+          Αγορά με κάρτα
+        </button>
+
+        <button class="buy-ghost" onclick="buyCrypto('{{ p.sku }}')">
+          Αγορά με Crypto
+        </button>
       </div>
       {% endfor %}
+    </div>
+
+  </div>
+
+  <!-- Bottom tabs -->
+  <div class="tabs">
+    <div class="tabs-inner">
+      <div class="tab active" id="tab_profile" onclick="switchTab('profile')">👤 Το προφίλ μου</div>
+      <div class="tab" id="tab_aff" onclick="switchTab('aff')">🤝 Συνεργασία</div>
     </div>
   </div>
 
 <script>
-  const tg = window.Telegram.WebApp;
-  tg.ready();
+  const tg = window.Telegram?.WebApp;
+  if (tg) {
+    tg.ready();
+    tg.expand();
+    tg.setHeaderColor("#0b0c10");
+    tg.setBackgroundColor("#0b0c10");
 
-  function initData(){ return tg.initData; }
+    const u = tg.initDataUnsafe?.user;
+    if (u) {
+      document.getElementById("name").textContent =
+        [u.first_name, u.last_name].filter(Boolean).join(" ") || "VeoLumi";
+      document.getElementById("username").textContent = u.username ? "@"+u.username : "—";
+      document.getElementById("avatar").textContent = (u.first_name || "V").slice(0,1).toUpperCase();
+    }
+  }
+
+  function initData(){ return tg ? tg.initData : ""; }
+
+  function popup(title, message){
+    if (tg?.showPopup) {
+      tg.showPopup({ title, message, buttons: [{type:"ok"}] });
+    } else {
+      alert(title + "\\n\\n" + message);
+    }
+  }
+
+  function openCreditsInfo(){
+    popup("Credits", "Διάλεξε πακέτο από κάτω και πλήρωσε με κάρτα ή crypto.");
+  }
+
+  function showIncludes(title, desc){
+    popup(title, desc);
+  }
+
+  function switchTab(which){
+    const p = document.getElementById("tab_profile");
+    const a = document.getElementById("tab_aff");
+    p.classList.remove("active");
+    a.classList.remove("active");
+
+    if(which === "profile"){
+      p.classList.add("active");
+      popup("Προφίλ", "Βρίσκεσαι στο προφίλ σου.");
+    } else {
+      a.classList.add("active");
+      popup("Συνεργασία", "Εδώ θα μπει affiliate / referrals (soon).");
+    }
+  }
 
   async function buyStripe(sku){
     const r = await fetch('/api/stripe/checkout', {
@@ -73,7 +287,7 @@
     });
     const data = await r.json();
     if(data.url) window.location.href = data.url;
-    else alert('Σφάλμα checkout');
+    else popup('Σφάλμα', 'Checkout δεν ήταν διαθέσιμο.');
   }
 
   async function buyCrypto(sku){
@@ -84,7 +298,7 @@
     });
     const data = await r.json();
     if(data.url) window.location.href = data.url;
-    else alert('Σφάλμα invoice');
+    else popup('Σφάλμα', 'Invoice δεν ήταν διαθέσιμο.');
   }
 </script>
 </body>
