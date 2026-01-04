@@ -1,4 +1,22 @@
-from telegram import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
+from telegram import ReplyKeyboardMarkup
+
+BTN_PROFILE = "👤 Το προφίλ μου"
+BTN_VIDEO = "🎬 Δημιουργία βίντεο"
+BTN_IMAGES = "🖼 Εικόνες"
+BTN_AUDIO = "🎧 Ήχος"
+BTN_PROMPTS = "💡 Κανάλι με prompts"
+BTN_SUPPORT = "☁️ Υποστήριξη"
+
+def main_menu():
+    return ReplyKeyboardMarkup(
+        [
+            [BTN_PROFILE],
+            [BTN_VIDEO, BTN_IMAGES],
+            [BTN_AUDIO],
+            [BTN_PROMPTS, BTN_SUPPORT],
+        ],
+        resize_keyboard=True,
+    )
 from .texts import *
 from .config import WEBAPP_URL
 
