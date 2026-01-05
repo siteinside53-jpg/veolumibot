@@ -4,18 +4,17 @@ from .texts import BTN_PROFILE, BTN_VIDEO, BTN_IMAGES, BTN_AUDIO, BTN_PROMPTS, B
 from .config import WEBAPP_URL
 
 
-def _webapp_url(path: str) -> str:
-    base = (WEBAPP_URL or "").strip().rstrip("/")
-    if not base.startswith("https://"):
-        # Βάλε το web domain σου εδώ (αυτό που έκανες Generate Domain στο web service)
-        base = "https://veolumibot-production.up.railway.app"
-    return f"{base}{path}"
+def _base_url() -> str:
+    return (WEBAPP_URL or "").rstrip("/")
 
 
 def start_inline_menu():
+    base = _base_url()
+    profile_url = f"{base}/profile" if base else "https://veolumibot-production.up.railway.app/profile"
+
     return InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton(BTN_PROFILE, web_app=WebAppInfo(url=_webapp_url("/profile")))],
+            [InlineKeyboardButton(BTN_PROFILE, web_app=WebAppInfo(url=profile_url))],
             [InlineKeyboardButton(BTN_VIDEO, callback_data="menu:video")],
             [InlineKeyboardButton(BTN_IMAGES, callback_data="menu:images")],
             [InlineKeyboardButton(BTN_AUDIO, callback_data="menu:audio")],
@@ -26,6 +25,8 @@ def start_inline_menu():
 
 
 def open_profile_webapp_kb():
+    base = _base_url()
+    url = f"{base}/profile" if base else "https://veolumibot-production.up.railway.app/profile"
     return InlineKeyboardMarkup(
-        [[InlineKeyboardButton("👤 Άνοιγμα Προφίλ / Αγορά Credits", web_app=WebAppInfo(url=_webapp_url("/profile")))]]
+        [[InlineKeyboardButton("👤 Άνοιγμα Προφίλ / Αγορά Credits", web_app=WebAppInfo(url=url))]]
     )
