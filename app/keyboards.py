@@ -1,25 +1,21 @@
 # app/keyboards.py
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
-
-from .texts import (
-    BTN_PROFILE,
-    BTN_VIDEO,
-    BTN_IMAGES,
-    BTN_AUDIO,
-    BTN_PROMPTS,
-    BTN_SUPPORT,
-)
+from .texts import BTN_PROFILE, BTN_VIDEO, BTN_IMAGES, BTN_AUDIO, BTN_PROMPTS, BTN_SUPPORT
 from .config import WEBAPP_URL
 
 
-# -----------------------
-# MAIN MENU (Start card)
-# -----------------------
+def _webapp_url(path: str) -> str:
+    base = (WEBAPP_URL or "").strip().rstrip("/")
+    if not base.startswith("https://"):
+        # Βάλε το web domain σου εδώ (αυτό που έκανες Generate Domain στο web service)
+        base = "https://veolumibot-production.up.railway.app"
+    return f"{base}{path}"
+
+
 def start_inline_menu():
-    """Κεντρικό inline menu κάτω από το START card."""
     return InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton(BTN_PROFILE,web_app=WebAppInfo(url=f"{WEBAPP_URL}/profile"))],
+            [InlineKeyboardButton(BTN_PROFILE, web_app=WebAppInfo(url=_webapp_url("/profile")))],
             [InlineKeyboardButton(BTN_VIDEO, callback_data="menu:video")],
             [InlineKeyboardButton(BTN_IMAGES, callback_data="menu:images")],
             [InlineKeyboardButton(BTN_AUDIO, callback_data="menu:audio")],
@@ -29,47 +25,7 @@ def start_inline_menu():
     )
 
 
-# -----------------------
-# SUB MENUS (like VeoSeeBot)
-# -----------------------
-def video_models_menu():
-    return InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton("🟢 Kling 2.6 (11–44 credits)  □", callback_data="menu:set:video:kling_26")],
-            [InlineKeyboardButton("🌀 Wan 2.6 (14–56 credits)    □", callback_data="menu:set:video:wan_26")],
-            [InlineKeyboardButton("🛰 Sora 2 PRO (18–80 credits) □", callback_data="menu:set:video:sora2pro")],
-            [InlineKeyboardButton("🎥 Veo 3.1 (12 credits)       □", callback_data="menu:set:video:veo31")],
-            [InlineKeyboardButton("← Πίσω", callback_data="menu:home")],
-        ]
-    )
-
-
-def image_models_menu():
-    return InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton("🍌 Nano Banana PRO           □", callback_data="menu:set:image:nano_banana_pro")],
-            [InlineKeyboardButton("🟣 Midjourney                □", callback_data="menu:set:image:midjourney")],
-            [InlineKeyboardButton("🧪 Flux Kontext              □", callback_data="menu:set:image:flux_kontext")],
-            [InlineKeyboardButton("⚪ Grok Imagine (0.8–4)      □", callback_data="menu:set:image:grok_imagine")],
-            [InlineKeyboardButton("← Πίσω", callback_data="menu:home")],
-        ]
-    )
-
-
-def audio_models_menu():
-    return InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton("🎵 Suno V5                    □", callback_data="menu:set:audio:suno_v5")],
-            [InlineKeyboardButton("🗣 ElevenLabs                 □", callback_data="menu:set:audio:elevenlabs")],
-            [InlineKeyboardButton("← Πίσω", callback_data="menu:home")],
-        ]
-    )
-
-
 def open_profile_webapp_kb():
-    base = (WEBAPP_URL or "").rstrip("/")
-    url = f"{base}/profile" if base else "https://veolumibot-web.up.railway.app/profile"  # βάλε κάτι έγκυρο αν θες
     return InlineKeyboardMarkup(
-        [[InlineKeyboardButton("👤 Άνοιγμα Προφίλ / Αγορά Credits", web_app=WebAppInfo(url=url))]]
-    
+        [[InlineKeyboardButton("👤 Άνοιγμα Προφίλ / Αγορά Credits", web_app=WebAppInfo(url=_webapp_url("/profile")))]]
     )
