@@ -66,7 +66,7 @@ def audio_models_menu():
     )
 
 
- def open_profile_webapp_kb():
+def open_profile_webapp_kb():
     base = (WEBAPP_URL or "").rstrip("/")
     url = f"{base}/profile" if base else "https://veolumibot-web.up.railway.app/profile"  # βάλε κάτι έγκυρο αν θες
     return InlineKeyboardMarkup(
