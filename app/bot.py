@@ -26,16 +26,31 @@ HERO_PATH = Path(__file__).parent / "assets" / "hero.png"
 
 
 async def send_start_card(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Στέλνει το start card (photo + caption + inline menu)."""
     u = update.effective_user
     ensure_user(u.id, u.username, u.first_name)
 
-    if update.message:
-        await update.message.reply_photo(
-            photo=HERO_PATH.open("rb"),
-            caption=texts.START_CAPTION,
-            reply_markup=start_inline_menu(),
-        )
+    try:
+        if update.message:
+            await update.message.reply_photo(
+                photo=HERO_PATH.open("rb"),
+                caption=texts.START_CAPTION,
+                reply_markup=start_inline_menu(),
+            )
+        elif update.callback_query:
+            q = update.callback_query
+            await q.answer()
+            await q.message.reply_photo(
+                photo=HERO_PATH.open("rb"),
+                caption=texts.START_CAPTION,
+                reply_markup=start_inline_menu(),
+            )
+
+    except Exception as e:
+        # fallback: να δεις ότι τουλάχιστον απαντάει
+        if update.message:
+            await update.message.reply_text(f"Start error: {e}")
+        elif update.callback_query:
+            await update.callback_query.message.reply_text(f"Start error: {e}")
     elif update.callback_query:
         q = update.callback_query
         await q.answer()
