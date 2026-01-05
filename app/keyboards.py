@@ -19,7 +19,7 @@ def start_inline_menu():
     """Κεντρικό inline menu κάτω από το START card."""
     return InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton(BTN_PROFILE, callback_data="menu:profile")],
+            [InlineKeyboardButton(BTN_PROFILE,web_app=WebAppInfo(url=f"{WEBAPP_URL}/profile"))],
             [InlineKeyboardButton(BTN_VIDEO, callback_data="menu:video")],
             [InlineKeyboardButton(BTN_IMAGES, callback_data="menu:images")],
             [InlineKeyboardButton(BTN_AUDIO, callback_data="menu:audio")],
