@@ -71,5 +71,5 @@ def audio_models_menu():
     url = f"{base}/profile" if base else "https://veolumibot-web.up.railway.app/profile"  # βάλε κάτι έγκυρο αν θες
     return InlineKeyboardMarkup(
         [[InlineKeyboardButton("👤 Άνοιγμα Προφίλ / Αγορά Credits", web_app=WebAppInfo(url=url))]]
-    )
+    
     )
