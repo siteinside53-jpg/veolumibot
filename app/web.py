@@ -3,7 +3,8 @@ import os
 import hmac
 import hashlib
 import json
-from typing import Dict, Any
+import time
+from typing import Dict, Any, Optional, Tuple
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -39,6 +40,10 @@ CREDITS_PACKS: Dict[str, Dict[str, Any]] = {
     "CREDITS_300": {"credits": 300, "amount_eur": 19.00, "title": "Boost", "desc": "300 credits"},
     "CREDITS_800": {"credits": 800, "amount_eur": 45.00, "title": "Pro", "desc": "800 credits"},
 }
+
+
+def packs_list():
+    return [{"sku": k, **v} for k, v in CREDITS_PACKS.items()]
 
 
 # ======================
@@ -90,20 +95,14 @@ def db_user_from_webapp(init_data: str):
     return dbu
 
 
-def packs_list():
-    return [{"sku": k, **v} for k, v in CREDITS_PACKS.items()]
-
-
 # ======================
 # Pages
 # ======================
 @api.get("/profile", response_class=HTMLResponse)
 async def profile_page(request: Request):
     """
-    IMPORTANT:
-    This endpoint should NOT require initData in query.
-    Telegram WebApp provides initData via JS (Telegram.WebApp.initData).
-    So we render the page and the page JS calls /api/me to load user data.
+    Telegram WebApp provides initData via JS.
+    We render the page and page JS calls /api/me to load user data.
     """
     return templates.TemplateResponse(
         "profile.html",
@@ -132,6 +131,85 @@ async def me(payload: dict):
         },
         "packs": packs_list(),
     }
+
+
+# ======================
+# API: Telegram avatar helper
+# ======================
+# μικρό in-memory cache: user_id -> (url, expires_at)
+_AVATAR_CACHE: Dict[int, Tuple[str, float]] = {}
+_AVATAR_TTL_SECONDS = 60 * 30  # 30 λεπτά
+
+
+async def _get_telegram_file_url(file_id: str) -> Optional[str]:
+    """
+    getFile -> file_path -> build file URL
+    """
+    if not file_id:
+        return None
+
+    base = f"https://api.telegram.org/bot{BOT_TOKEN}"
+    async with httpx.AsyncClient(timeout=15) as client:
+        r = await client.get(f"{base}/getFile", params={"file_id": file_id})
+        data = r.json()
+        if not data.get("ok"):
+            return None
+        file_path = (data.get("result") or {}).get("file_path")
+        if not file_path:
+            return None
+        return f"{base}/file/{file_path}"
+
+
+async def _fetch_telegram_avatar_url(tg_user_id: int) -> Optional[str]:
+    """
+    getUserProfilePhotos -> pick first photo -> file_id -> url
+    """
+    base = f"https://api.telegram.org/bot{BOT_TOKEN}"
+    async with httpx.AsyncClient(timeout=15) as client:
+        r = await client.get(
+            f"{base}/getUserProfilePhotos",
+            params={"user_id": tg_user_id, "limit": 1},
+        )
+        data = r.json()
+        if not data.get("ok"):
+            return None
+
+        result = data.get("result") or {}
+        photos = result.get("photos") or []
+        if not photos or not photos[0]:
+            return None
+
+        # photos[0] = list of sizes; take the last (usually biggest)
+        best = photos[0][-1]
+        file_id = best.get("file_id")
+        if not file_id:
+            return None
+
+        return await _get_telegram_file_url(file_id)
+
+
+@api.post("/api/avatar")
+async def avatar(payload: dict):
+    """
+    Returns: { ok: true, url: "https://api.telegram.org/bot.../file/..." } or url=""
+    """
+    init_data = payload.get("initData", "")
+    tg_user = verify_telegram_init_data(init_data)
+    tg_id = int(tg_user["id"])
+
+    # cache
+    now = time.time()
+    cached = _AVATAR_CACHE.get(tg_id)
+    if cached and cached[1] > now:
+        return {"ok": True, "url": cached[0]}
+
+    url = await _fetch_telegram_avatar_url(tg_id)
+    if not url:
+        _AVATAR_CACHE[tg_id] = ("", now + 60)  # αν δεν έχει, μην σπαμάρει
+        return {"ok": True, "url": ""}
+
+    _AVATAR_CACHE[tg_id] = (url, now + _AVATAR_TTL_SECONDS)
+    return {"ok": True, "url": url}
 
 
 # ======================
@@ -209,7 +287,6 @@ async def stripe_webhook(request: Request):
     except Exception:
         raise HTTPException(400, "Invalid webhook signature")
 
-    # Payment completed
     if event["type"] == "checkout.session.completed":
         sess = event["data"]["object"]
         meta = sess.get("metadata") or {}
@@ -310,7 +387,6 @@ async def cryptocloud_webhook(request: Request):
     body = await request.body()
     signature = request.headers.get("Signature", "")
 
-    # Verify webhook signature if configured
     if CRYPTOCLOUD_WEBHOOK_SECRET:
         calc = hmac.new(CRYPTOCLOUD_WEBHOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
         if calc != signature:
