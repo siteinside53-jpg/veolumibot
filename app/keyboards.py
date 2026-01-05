@@ -66,8 +66,10 @@ def audio_models_menu():
     )
 
 
-def open_profile_webapp_kb():
-    url = f"{WEBAPP_URL}/profile" if WEBAPP_URL else "/profile"
+ def open_profile_webapp_kb():
+    base = (WEBAPP_URL or "").rstrip("/")
+    url = f"{base}/profile" if base else "https://veolumibot-web.up.railway.app/profile"  # βάλε κάτι έγκυρο αν θες
     return InlineKeyboardMarkup(
         [[InlineKeyboardButton("👤 Άνοιγμα Προφίλ / Αγορά Credits", web_app=WebAppInfo(url=url))]]
+    )
     )
