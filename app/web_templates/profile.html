@@ -46,6 +46,7 @@
       flex:0 0 auto;
       overflow:hidden;
     }
+    .avatar img{width:100%;height:100%;object-fit:cover;display:none}
     .meta{display:flex;flex-direction:column;gap:2px;min-width:0}
     .name{font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .small{font-size:12px;color:var(--muted)}
@@ -165,21 +166,26 @@
 
     <!-- User header -->
     <div class="user">
-      <div class="avatar" id="avatar">V</div>
+      <div class="avatar" id="avatarBox">
+        <img id="avatarImg" alt="avatar" />
+        <span id="avatarLetter">V</span>
+      </div>
+
       <div class="meta">
         <div class="name" id="name">VeoLumi</div>
         <div class="small" id="username">—</div>
       </div>
+
       <div class="credits">
         <div class="small">Υπόλοιπο credits</div>
-        <div class="num" id="credits">{{ credits }}</div>
+        <div class="num" id="credits">—</div>
       </div>
     </div>
 
     <!-- Current plan -->
     <div class="section">
       <div class="h1">Τρέχον πακέτο</div>
-      <div class="sub">Free</div>
+      <div class="sub">Δωρεάν</div>
 
       <button class="btn-secondary" onclick="openCreditsInfo()">
         Αγορά επιπλέον credits
@@ -194,6 +200,25 @@
     <div class="h2">Συνδρομές</div>
 
     <div class="carousel">
+      <!-- 1η κάρτα Free (όπως στη φωτό, με dynamic credits) -->
+      <div class="plan">
+        <div class="plan-title">Free</div>
+        <div class="row">
+          <span class="pill" id="freeCreditsPill">Credits: —</span>
+          <span class="pill">Δωρεάν</span>
+        </div>
+
+        <div class="plan-desc" style="margin-top:12px;line-height:1.3">
+          ✓ Μπορείς να δοκιμάσεις μοντέλα με εικόνες<br/>
+          ✓ Nano Banana, Midjourney, Flux κ.ά.
+        </div>
+
+        <button class="more" onclick="showIncludes('Free', '✓ Μπορείς να δοκιμάσεις μοντέλα με εικόνες\\n✓ Nano Banana, Midjourney, Flux κ.ά.')">
+          Τι περιλαμβάνει το πακέτο
+        </button>
+      </div>
+
+      <!-- Τα δικά σου packs -->
       {% for p in packs %}
       <div class="plan">
         <div class="plan-title">{{ p.title }}</div>
@@ -231,6 +256,7 @@
 
 <script>
   const tg = window.Telegram?.WebApp;
+
   if (tg) {
     tg.ready();
     tg.expand();
@@ -242,7 +268,7 @@
       document.getElementById("name").textContent =
         [u.first_name, u.last_name].filter(Boolean).join(" ") || "VeoLumi";
       document.getElementById("username").textContent = u.username ? "@"+u.username : "—";
-      document.getElementById("avatar").textContent = (u.first_name || "V").slice(0,1).toUpperCase();
+      document.getElementById("avatarLetter").textContent = (u.first_name || "V").slice(0,1).toUpperCase();
     }
   }
 
@@ -272,11 +298,43 @@
 
     if(which === "profile"){
       p.classList.add("active");
-      popup("Προφίλ", "Βρίσκεσαι στο προφίλ σου.");
     } else {
       a.classList.add("active");
       popup("Συνεργασία", "Εδώ θα μπει affiliate / referrals (soon).");
     }
+  }
+
+  async function loadMe(){
+    const r = await fetch('/api/me', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ initData: initData() })
+    });
+    const data = await r.json();
+    if(!data?.ok) return;
+
+    const credits = Number(data.user?.credits ?? 0);
+    document.getElementById("credits").textContent = credits.toString();
+    document.getElementById("freeCreditsPill").textContent = "Credits: " + credits.toString();
+  }
+
+  async function loadAvatar(){
+    // δουλεύει ΜΟΝΟ αν υπάρχει /api/avatar στο web.py (στον κώδικα που σου δίνω κάτω)
+    try{
+      const r = await fetch('/api/avatar', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ initData: initData() })
+      });
+      const data = await r.json();
+      const url = data?.url || "";
+      if(url){
+        const img = document.getElementById("avatarImg");
+        img.src = url;
+        img.style.display = "block";
+        document.getElementById("avatarLetter").style.display = "none";
+      }
+    }catch(e){}
   }
 
   async function buyStripe(sku){
@@ -300,6 +358,9 @@
     if(data.url) window.location.href = data.url;
     else popup('Σφάλμα', 'Invoice δεν ήταν διαθέσιμο.');
   }
+
+  loadMe();
+  loadAvatar();
 </script>
 </body>
 </html>
