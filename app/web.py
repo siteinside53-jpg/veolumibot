@@ -4,7 +4,7 @@ import hashlib
 import json
 import time
 from typing import Dict, Any, Optional, Tuple
-from urllib.parse import unquote
+from urllib.parse import parse_qsl
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -52,30 +52,26 @@ async def root():
     return RedirectResponse(url="/profile")
 
 # ======================
-# Telegram WebApp initData verification (FIXED)
+# Telegram WebApp initData verification (CORRECT)
 # ======================
-from urllib.parse import unquote
-
 def verify_telegram_init_data(init_data: str) -> dict:
     if not init_data:
-        raise HTTPException(401, "Missing initData")
+        raise HTTPException(401, "Missing initData (open inside Telegram)")
 
-    # ΜΗΝ χρησιμοποιείς parse_qsl γιατί κάνει + -> space
-    pairs = init_data.split("&")
-    data = {}
-    for p in pairs:
-        if "=" not in p:
-            continue
-        k, v = p.split("=", 1)
-        # unquote, όχι unquote_plus
-        data[k] = unquote(v)
+    # parse querystring
+    data = dict(parse_qsl(init_data, keep_blank_values=True))
 
     hash_received = data.pop("hash", None)
     if not hash_received:
         raise HTTPException(401, "No hash")
 
+    # build data-check-string (all fields except hash), sorted
     data_check_string = "\n".join(f"{k}={data[k]}" for k in sorted(data.keys()))
-    secret_key = hashlib.sha256(BOT_TOKEN.encode("utf-8")).digest()
+
+    # ✅ IMPORTANT: secret_key = HMAC_SHA256(bot_token, "WebAppData")
+    secret_key = hmac.new(b"WebAppData", BOT_TOKEN.encode("utf-8"), hashlib.sha256).digest()
+
+    # hash = hex(HMAC_SHA256(data_check_string, secret_key))
     h = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
 
     if not hmac.compare_digest(h, hash_received):
@@ -93,6 +89,7 @@ def verify_telegram_init_data(init_data: str) -> dict:
 def db_user_from_webapp(init_data: str):
     tg_user = verify_telegram_init_data(init_data)
     tg_id = int(tg_user["id"])
+
     ensure_user(tg_id, tg_user.get("username"), tg_user.get("first_name"))
 
     dbu = get_user(tg_id)
