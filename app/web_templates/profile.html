@@ -173,11 +173,10 @@
 
       <div class="meta">
         <div class="name" id="name">VeoLumi</div>
-        <div class="small" id="username">—</div>
       </div>
 
       <div class="credits">
-        <div class="small">Υπόλοιπο credits</div>
+        <div class="small">Credits</div>
         <div class="num" id="credits">—</div>
       </div>
     </div>
@@ -265,8 +264,7 @@
 
     const u = tg.initDataUnsafe?.user;
     if (u) {
-      document.getElementById("name").textContent =
-        [u.first_name, u.last_name].filter(Boolean).join(" ") || "VeoLumi";
+      document.getElementById("name").textContent = u.first_name || "VeoLumi";
       document.getElementById("username").textContent = u.username ? "@"+u.username : "—";
       document.getElementById("avatarLetter").textContent = (u.first_name || "V").slice(0,1).toUpperCase();
     }
