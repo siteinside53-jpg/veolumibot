@@ -5,7 +5,7 @@ import json
 import time
 from typing import Dict, Any, Optional, Tuple
 from urllib.parse import parse_qsl
-from .db import get_conn, ensure_user, get_user, add_credits_by_user_id
+
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -22,7 +22,9 @@ from .config import (
     CRYPTOCLOUD_SHOP_ID,
     CRYPTOCLOUD_WEBHOOK_SECRET,
 )
-from .db import get_conn, ensure_user, get_user
+
+# ✅ ΜΟΝΟ αυτά τα imports από db.py (όχι διπλά)
+from .db import get_conn, ensure_user, get_user, add_credits_by_user_id
 
 # ======================
 # Init
@@ -58,20 +60,16 @@ def verify_telegram_init_data(init_data: str) -> dict:
     if not init_data:
         raise HTTPException(401, "Missing initData (open inside Telegram)")
 
-    # parse querystring
     data = dict(parse_qsl(init_data, keep_blank_values=True))
 
     hash_received = data.pop("hash", None)
     if not hash_received:
         raise HTTPException(401, "No hash")
 
-    # build data-check-string (all fields except hash), sorted
     data_check_string = "\n".join(f"{k}={data[k]}" for k in sorted(data.keys()))
 
-    # ✅ IMPORTANT: secret_key = HMAC_SHA256(bot_token, "WebAppData")
+    # ✅ secret_key = HMAC_SHA256(bot_token, "WebAppData")
     secret_key = hmac.new(b"WebAppData", BOT_TOKEN.encode("utf-8"), hashlib.sha256).digest()
-
-    # hash = hex(HMAC_SHA256(data_check_string, secret_key))
     h = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
 
     if not hmac.compare_digest(h, hash_received):
@@ -263,6 +261,7 @@ async def stripe_webhook(request: Request):
         if not (order_id and pack):
             return JSONResponse({"ok": True})
 
+        # ✅ Παίρνουμε order + κάνουμε paid μέσα σε transaction
         with get_conn() as conn:
             cur = conn.cursor()
             cur.execute("SELECT * FROM orders WHERE id=%s FOR UPDATE", (order_id,))
@@ -273,15 +272,16 @@ async def stripe_webhook(request: Request):
                 return JSONResponse({"ok": True})
 
             cur.execute("UPDATE orders SET status='paid' WHERE id=%s", (order_id,))
-            cur.execute("UPDATE users SET credits = credits + %s WHERE id=%s", (pack["credits"], order["user_id"]))
-            cur.execute(
-                """
-                INSERT INTO credit_ledger (user_id, delta, reason, provider, provider_ref)
-                VALUES (%s,%s,%s,'stripe',%s)
-                """,
-                (order["user_id"], pack["credits"], f"Purchase {sku}", order.get("provider_ref")),
-            )
             conn.commit()
+
+        # ✅ ΕΔΩ ΓΙΝΕΤΑΙ το credit update + ledger entry (atomic μέσα στο db.py)
+        add_credits_by_user_id(
+            order["user_id"],
+            pack["credits"],
+            f"Purchase {sku}",
+            "stripe",
+            order.get("provider_ref"),
+        )
 
     return JSONResponse({"ok": True})
 
@@ -373,14 +373,16 @@ async def cryptocloud_webhook(request: Request):
                 return JSONResponse({"ok": True})
 
             cur.execute("UPDATE orders SET status='paid' WHERE id=%s", (order_id,))
-            cur.execute("UPDATE users SET credits = credits + %s WHERE id=%s", (pack["credits"], order["user_id"]))
-            cur.execute(
-                """
-                INSERT INTO credit_ledger (user_id, delta, reason, provider, provider_ref)
-                VALUES (%s,%s,%s,'cryptocloud',%s)
-                """,
-                (order["user_id"], pack["credits"], f"Purchase {order['sku']}", order.get("provider_ref")),
-            )
             conn.commit()
 
+        # ✅ ΕΔΩ ΓΙΝΕΤΑΙ το credit update + ledger entry
+        add_credits_by_user_id(
+            order["user_id"],
+            pack["credits"],
+            f"Purchase {order['sku']}",
+            "cryptocloud",
+            order.get("provider_ref"),
+        )
+
     return JSONResponse({"ok": True})
+```0
