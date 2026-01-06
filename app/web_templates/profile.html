@@ -309,47 +309,39 @@
   }
 
   async function loadAvatar(){
-    try{
-      const r = await fetch('/api/avatar', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ initData: initData() })
-      });
+  try{
+    const tg = window.Telegram?.WebApp;
+    const u = tg?.initDataUnsafe?.user;
 
-      if(!r.ok) return;
+    // ✅ 1) Άμεση φωτό από Telegram (αν υπάρχει)
+    const direct = u?.photo_url;
+    if (direct){
+      const img = document.getElementById("avatarImg");
+      img.src = direct;
+      img.style.display = "block";
+      document.getElementById("avatarLetter").style.display = "none";
+      return;
+    }
 
-      const data = await r.json();
-      const url = data?.url || "";
-      if(url){
-        const img = document.getElementById("avatarImg");
-        img.src = url;
-        img.style.display = "block";
-        document.getElementById("avatarLetter").style.display = "none";
-      }
-    }catch(e){}
-  }
-
-  async function buyStripe(sku){
-    const r = await fetch('/api/stripe/checkout', {
+    // 🔁 2) Fallback στο backend
+    const r = await fetch('/api/avatar', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ initData: initData(), sku })
+      body: JSON.stringify({ initData: tg ? tg.initData : "" })
     });
-    const data = await r.json();
-    if(data.url) window.location.href = data.url;
-    else popup('Σφάλμα', 'Checkout δεν ήταν διαθέσιμο.');
-  }
 
-  async function buyCrypto(sku){
-    const r = await fetch('/api/cryptocloud/invoice', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ initData: initData(), sku })
-    });
+    if(!r.ok) return;
+
     const data = await r.json();
-    if(data.url) window.location.href = data.url;
-    else popup('Σφάλμα', 'Invoice δεν ήταν διαθέσιμο.');
-  }
+    const url = data?.url || "";
+    if(url){
+      const img = document.getElementById("avatarImg");
+      img.src = url;
+      img.style.display = "block";
+      document.getElementById("avatarLetter").style.display = "none";
+    }
+  }catch(e){}
+}
 
   (async () => {
     await loadMe();
