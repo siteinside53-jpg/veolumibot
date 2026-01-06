@@ -275,74 +275,49 @@
   function initData(){ return tg ? tg.initData : ""; }
 
   function popup(title, message){
-    if (tg?.showPopup) {
-      tg.showPopup({ title, message, buttons: [{type:"ok"}] });
-    } else {
-      alert(title + "\\n\\n" + message);
-    }
-  }
-
-  function openCreditsInfo(){
-    popup("Credits", "Διάλεξε πακέτο από κάτω και πλήρωσε με κάρτα ή crypto.");
-  }
-
-  function showIncludes(title, desc){
-    popup(title, desc);
-  }
-
-  function switchTab(which){
-    const p = document.getElementById("tab_profile");
-    const a = document.getElementById("tab_aff");
-    p.classList.remove("active");
-    a.classList.remove("active");
-
-    if(which === "profile"){
-      p.classList.add("active");
-    } else {
-      a.classList.add("active");
-      popup("Συνεργασία", "Εδώ θα μπει affiliate / referrals (soon).");
-    }
+    if (tg?.showPopup) tg.showPopup({ title, message, buttons: [{type:"ok"}] });
+    else alert(title + "\n\n" + message);
   }
 
   async function loadMe(){
-  try{
-    const r = await fetch('/api/me', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ initData: initData() })
-    });
+    try{
+      const r = await fetch('/api/me', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ initData: initData() })
+      });
 
-    if(!r.ok){
-      popup("API σφάλμα", `/api/me: ${r.status} ${r.statusText}`);
-      return;
+      if(!r.ok){
+        popup("API σφάλμα", `/api/me: ${r.status} ${r.statusText}`);
+        return;
+      }
+
+      const data = await r.json();
+      if(!data?.ok){
+        popup("API σφάλμα", "Η απάντηση δεν είχε ok:true");
+        return;
+      }
+
+      const credits = Number(data.user?.credits ?? 0);
+      document.getElementById("credits").textContent = credits.toString();
+
+      const pill = document.getElementById("freeCreditsPill");
+      if (pill) pill.textContent = "Credits: " + credits.toString();
+    }catch(e){
+      popup("JS σφάλμα", String(e));
     }
-
-    const data = await r.json();
-    if(!data?.ok){
-      popup("API σφάλμα", "Η απάντηση δεν είχε ok:true");
-      return;
-    }
-
-    const credits = Number(data.user?.credits ?? 0);
-    const el = document.getElementById("credits");
-    if (el) el.textContent = credits.toString();
-
-    const pill = document.getElementById("freeCreditsPill");
-    if (pill) pill.textContent = "Credits: " + credits.toString();
-
-  }catch(e){
-    popup("JS σφάλμα", String(e));
   }
-}
 
-  async funct μιion loadAvatar(){
-    // δουλεύει ΜΟΝΟ αν υπάρχει /api/avatar στο web.py (στον κώδικα που σου δίνω κάτω)
+  async function loadAvatar(){
     try{
       const r = await fetch('/api/avatar', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ initData: initData() })
       });
+
+      if(!r.ok) return;
+
       const data = await r.json();
       const url = data?.url || "";
       if(url){
@@ -376,53 +351,10 @@
     else popup('Σφάλμα', 'Invoice δεν ήταν διαθέσιμο.');
   }
 
-  const tg = window.Telegram?.WebApp;
-  if (tg) { tg.ready(); tg.expand(); }
-
-  function initData(){ return tg ? tg.initData : ""; }
-
-  async function loadMe(){
-    const r = await fetch('/api/me', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ initData: initData() })
-    });
-    const data = await r.json();
-    if(!data?.ok) return;
-
-    const credits = Number(data.user?.credits ?? 0);
-    const creditsEl = document.getElementById("credits");
-    if (creditsEl) creditsEl.textContent = credits.toString();
-
-    const pill = document.getElementById("freeCreditsPill");
-    if (pill) pill.textContent = "Credits: " + credits.toString();
-  }
-
-  async function loadAvatar(){
-    try{
-      const r = await fetch('/api/avatar', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ initData: initData() })
-      });
-      const data = await r.json();
-      const url = data?.url || "";
-      if(url){
-        const img = document.getElementById("avatarImg");
-        if (img){
-          img.src = url;
-          img.style.display = "block";
-        }
-        const letter = document.getElementById("avatarLetter");
-        if (letter) letter.style.display = "none";
-      }
-    }catch(e){}
-  }
-
   (async () => {
     await loadMe();
     await loadAvatar();
   })();
-</script>
+</script>        
 </body>
 </html>
