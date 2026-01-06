@@ -4,7 +4,7 @@ import hashlib
 import json
 import time
 from typing import Dict, Any, Optional, Tuple
-from urllib.parse import parse_qsl
+from urllib.parse import unquote
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -54,11 +54,21 @@ async def root():
 # ======================
 # Telegram WebApp initData verification (FIXED)
 # ======================
+from urllib.parse import unquote
+
 def verify_telegram_init_data(init_data: str) -> dict:
     if not init_data:
         raise HTTPException(401, "Missing initData")
 
-    data = dict(parse_qsl(init_data, keep_blank_values=True))
+    # ΜΗΝ χρησιμοποιείς parse_qsl γιατί κάνει + -> space
+    pairs = init_data.split("&")
+    data = {}
+    for p in pairs:
+        if "=" not in p:
+            continue
+        k, v = p.split("=", 1)
+        # unquote, όχι unquote_plus
+        data[k] = unquote(v)
 
     hash_received = data.pop("hash", None)
     if not hash_received:
