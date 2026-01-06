@@ -1,5 +1,4 @@
 # app/web.py
-import os
 import hmac
 import hashlib
 import json
@@ -7,7 +6,7 @@ import time
 from typing import Dict, Any, Optional, Tuple
 
 from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 import stripe
@@ -44,6 +43,14 @@ CREDITS_PACKS: Dict[str, Dict[str, Any]] = {
 
 def packs_list():
     return [{"sku": k, **v} for k, v in CREDITS_PACKS.items()]
+
+
+# ======================
+# Root (fix: "detail not found" on Chrome)
+# ======================
+@api.get("/")
+async def root():
+    return RedirectResponse(url="/profile")
 
 
 # ======================
@@ -89,9 +96,11 @@ def db_user_from_webapp(init_data: str):
     tg_user = verify_telegram_init_data(init_data)
     tg_id = int(tg_user["id"])
     ensure_user(tg_id, tg_user.get("username"), tg_user.get("first_name"))
+
     dbu = get_user(tg_id)
     if not dbu:
         raise HTTPException(500, "User not found after ensure_user")
+
     return dbu
 
 
@@ -115,7 +124,7 @@ async def profile_page(request: Request):
 
 
 # ======================
-# API: load current user
+# API: load current user (credits)
 # ======================
 @api.post("/api/me")
 async def me(payload: dict):
@@ -136,15 +145,12 @@ async def me(payload: dict):
 # ======================
 # API: Telegram avatar helper
 # ======================
-# μικρό in-memory cache: user_id -> (url, expires_at)
+# small in-memory cache: user_id -> (url, expires_at)
 _AVATAR_CACHE: Dict[int, Tuple[str, float]] = {}
-_AVATAR_TTL_SECONDS = 60 * 30  # 30 λεπτά
+_AVATAR_TTL_SECONDS = 60 * 30  # 30 minutes
 
 
 async def _get_telegram_file_url(file_id: str) -> Optional[str]:
-    """
-    getFile -> file_path -> build file URL
-    """
     if not file_id:
         return None
 
@@ -154,16 +160,15 @@ async def _get_telegram_file_url(file_id: str) -> Optional[str]:
         data = r.json()
         if not data.get("ok"):
             return None
+
         file_path = (data.get("result") or {}).get("file_path")
         if not file_path:
             return None
+
         return f"{base}/file/{file_path}"
 
 
 async def _fetch_telegram_avatar_url(tg_user_id: int) -> Optional[str]:
-    """
-    getUserProfilePhotos -> pick first photo -> file_id -> url
-    """
     base = f"https://api.telegram.org/bot{BOT_TOKEN}"
     async with httpx.AsyncClient(timeout=15) as client:
         r = await client.get(
@@ -179,8 +184,7 @@ async def _fetch_telegram_avatar_url(tg_user_id: int) -> Optional[str]:
         if not photos or not photos[0]:
             return None
 
-        # photos[0] = list of sizes; take the last (usually biggest)
-        best = photos[0][-1]
+        best = photos[0][-1]  # biggest size
         file_id = best.get("file_id")
         if not file_id:
             return None
@@ -190,14 +194,10 @@ async def _fetch_telegram_avatar_url(tg_user_id: int) -> Optional[str]:
 
 @api.post("/api/avatar")
 async def avatar(payload: dict):
-    """
-    Returns: { ok: true, url: "https://api.telegram.org/bot.../file/..." } or url=""
-    """
     init_data = payload.get("initData", "")
     tg_user = verify_telegram_init_data(init_data)
     tg_id = int(tg_user["id"])
 
-    # cache
     now = time.time()
     cached = _AVATAR_CACHE.get(tg_id)
     if cached and cached[1] > now:
@@ -205,7 +205,7 @@ async def avatar(payload: dict):
 
     url = await _fetch_telegram_avatar_url(tg_id)
     if not url:
-        _AVATAR_CACHE[tg_id] = ("", now + 60)  # αν δεν έχει, μην σπαμάρει
+        _AVATAR_CACHE[tg_id] = ("", now + 60)
         return {"ok": True, "url": ""}
 
     _AVATAR_CACHE[tg_id] = (url, now + _AVATAR_TTL_SECONDS)
@@ -247,11 +247,10 @@ async def stripe_checkout(payload: dict):
         order_id = cur.fetchone()["id"]
         conn.commit()
 
-    # Create Stripe Checkout Session
     session = stripe.checkout.Session.create(
         mode="payment",
-        success_url=f"{WEBAPP_URL}/profile?success=1",
-        cancel_url=f"{WEBAPP_URL}/profile?canceled=1",
+        success_url=f"{WEBAPP_URL.rstrip('/')}/profile?success=1",
+        cancel_url=f"{WEBAPP_URL.rstrip('/')}/profile?canceled=1",
         line_items=[
             {
                 "price_data": {
@@ -265,7 +264,6 @@ async def stripe_checkout(payload: dict):
         metadata={"order_id": str(order_id), "sku": sku},
     )
 
-    # Save provider ref
     with get_conn() as conn:
         cur = conn.cursor()
         cur.execute("UPDATE orders SET provider_ref=%s WHERE id=%s", (session.id, order_id))
@@ -339,7 +337,6 @@ async def cryptocloud_invoice(payload: dict):
     dbu = db_user_from_webapp(init_data)
     pack = CREDITS_PACKS[sku]
 
-    # Create pending order
     with get_conn() as conn:
         cur = conn.cursor()
         cur.execute(
@@ -353,7 +350,6 @@ async def cryptocloud_invoice(payload: dict):
         order_id = cur.fetchone()["id"]
         conn.commit()
 
-    # Create invoice
     async with httpx.AsyncClient(timeout=20) as client:
         resp = await client.post(
             "https://api.cryptocloud.plus/v2/invoice/create",
@@ -373,7 +369,6 @@ async def cryptocloud_invoice(payload: dict):
     invoice_id = data["result"]["uuid"]
     pay_url = data["result"]["link"]
 
-    # Save provider ref
     with get_conn() as conn:
         cur = conn.cursor()
         cur.execute("UPDATE orders SET provider_ref=%s WHERE id=%s", (invoice_id, order_id))
