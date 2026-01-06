@@ -305,20 +305,37 @@
   }
 
   async function loadMe(){
+  try{
     const r = await fetch('/api/me', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ initData: initData() })
     });
+
+    if(!r.ok){
+      popup("API σφάλμα", `/api/me: ${r.status} ${r.statusText}`);
+      return;
+    }
+
     const data = await r.json();
-    if(!data?.ok) return;
+    if(!data?.ok){
+      popup("API σφάλμα", "Η απάντηση δεν είχε ok:true");
+      return;
+    }
 
     const credits = Number(data.user?.credits ?? 0);
-    document.getElementById("credits").textContent = credits.toString();
-    document.getElementById("freeCreditsPill").textContent = "Credits: " + credits.toString();
-  }
+    const el = document.getElementById("credits");
+    if (el) el.textContent = credits.toString();
 
-  async function loadAvatar(){
+    const pill = document.getElementById("freeCreditsPill");
+    if (pill) pill.textContent = "Credits: " + credits.toString();
+
+  }catch(e){
+    popup("JS σφάλμα", String(e));
+  }
+}
+
+  async funct μιion loadAvatar(){
     // δουλεύει ΜΟΝΟ αν υπάρχει /api/avatar στο web.py (στον κώδικα που σου δίνω κάτω)
     try{
       const r = await fetch('/api/avatar', {
