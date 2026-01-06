@@ -57,25 +57,25 @@ async def root():
 # Telegram WebApp initData verification
 # ======================
 def verify_telegram_init_data(init_data: str) -> dict:
-    """
-    Verifies Telegram WebApp initData signature.
-    Returns decoded user dict.
-    """
+def verify_telegram_init_data(init_data: str) -> dict:
     if not init_data:
         raise HTTPException(401, "Missing initData")
 
-    pairs = [p.split("=", 1) for p in init_data.split("&") if "=" in p]
-    data = {k: v for k, v in pairs}
+    # ✅ σωστό parse + decode
+    data = dict(parse_qsl(init_data, keep_blank_values=True))
 
     hash_received = data.pop("hash", None)
     if not hash_received:
         raise HTTPException(401, "No hash")
 
-    data_check_string = "\n".join([f"{k}={data[k]}" for k in sorted(data.keys())])
-    secret_key = hashlib.sha256(BOT_TOKEN.encode()).digest()
-    h = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
+    # Telegram requirement: sort keys and join with "\n"
+    data_check_string = "\n".join(f"{k}={data[k]}" for k in sorted(data.keys()))
 
-    if h != hash_received:
+    secret_key = hashlib.sha256(BOT_TOKEN.encode("utf-8")).digest()
+    h = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
+
+    # ✅ constant-time compare
+    if not hmac.compare_digest(h, hash_received):
         raise HTTPException(401, "Invalid initData signature")
 
     user_json = data.get("user")
@@ -83,6 +83,7 @@ def verify_telegram_init_data(init_data: str) -> dict:
         raise HTTPException(401, "No user")
 
     try:
+        # user field είναι JSON (με quotes κλπ)
         return json.loads(user_json)
     except Exception:
         raise HTTPException(401, "Bad user json")
