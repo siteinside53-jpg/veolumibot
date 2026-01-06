@@ -4,10 +4,8 @@ import hashlib
 import json
 import time
 from typing import Dict, Any, Optional, Tuple
-from urllib.parse import parse_qsl, unquote_plus
-from fastapi import HTTPException
+from urllib.parse import parse_qsl
 
-from .config import BOT_TOKEN
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -35,7 +33,7 @@ api = FastAPI()
 templates = Jinja2Templates(directory="app/web_templates")
 
 # ======================
-# Packs (edit as you want)
+# Packs
 # ======================
 CREDITS_PACKS: Dict[str, Dict[str, Any]] = {
     "CREDITS_100": {"credits": 100, "amount_eur": 7.50, "title": "Start", "desc": "100 credits"},
@@ -43,41 +41,33 @@ CREDITS_PACKS: Dict[str, Dict[str, Any]] = {
     "CREDITS_800": {"credits": 800, "amount_eur": 45.00, "title": "Pro", "desc": "800 credits"},
 }
 
-
 def packs_list():
     return [{"sku": k, **v} for k, v in CREDITS_PACKS.items()]
 
-
 # ======================
-# Root (fix: "detail not found" on Chrome)
+# Root (για Chrome)
 # ======================
 @api.get("/")
 async def root():
     return RedirectResponse(url="/profile")
 
-
 # ======================
-# Telegram WebApp initData verification
+# Telegram WebApp initData verification (FIXED)
 # ======================
-def verify_telegram_init_data(init_data: str) -> dict:
 def verify_telegram_init_data(init_data: str) -> dict:
     if not init_data:
         raise HTTPException(401, "Missing initData")
 
-    # ✅ σωστό parse + decode
     data = dict(parse_qsl(init_data, keep_blank_values=True))
 
     hash_received = data.pop("hash", None)
     if not hash_received:
         raise HTTPException(401, "No hash")
 
-    # Telegram requirement: sort keys and join with "\n"
     data_check_string = "\n".join(f"{k}={data[k]}" for k in sorted(data.keys()))
-
     secret_key = hashlib.sha256(BOT_TOKEN.encode("utf-8")).digest()
     h = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
 
-    # ✅ constant-time compare
     if not hmac.compare_digest(h, hash_received):
         raise HTTPException(401, "Invalid initData signature")
 
@@ -86,17 +76,11 @@ def verify_telegram_init_data(init_data: str) -> dict:
         raise HTTPException(401, "No user")
 
     try:
-        # user field είναι JSON (με quotes κλπ)
         return json.loads(user_json)
     except Exception:
         raise HTTPException(401, "Bad user json")
 
-
 def db_user_from_webapp(init_data: str):
-    """
-    Ensures user exists in DB based on initData.
-    Returns DB user row (dict).
-    """
     tg_user = verify_telegram_init_data(init_data)
     tg_id = int(tg_user["id"])
     ensure_user(tg_id, tg_user.get("username"), tg_user.get("first_name"))
@@ -104,31 +88,20 @@ def db_user_from_webapp(init_data: str):
     dbu = get_user(tg_id)
     if not dbu:
         raise HTTPException(500, "User not found after ensure_user")
-
     return dbu
-
 
 # ======================
 # Pages
 # ======================
 @api.get("/profile", response_class=HTMLResponse)
 async def profile_page(request: Request):
-    """
-    Telegram WebApp provides initData via JS.
-    We render the page and page JS calls /api/me to load user data.
-    """
     return templates.TemplateResponse(
         "profile.html",
-        {
-            "request": request,
-            "credits": "—",
-            "packs": packs_list(),
-        },
+        {"request": request, "credits": "—", "packs": packs_list()},
     )
 
-
 # ======================
-# API: load current user (credits)
+# API: me
 # ======================
 @api.post("/api/me")
 async def me(payload: dict):
@@ -145,32 +118,25 @@ async def me(payload: dict):
         "packs": packs_list(),
     }
 
-
 # ======================
-# API: Telegram avatar helper
+# API: Telegram avatar
 # ======================
-# small in-memory cache: user_id -> (url, expires_at)
 _AVATAR_CACHE: Dict[int, Tuple[str, float]] = {}
-_AVATAR_TTL_SECONDS = 60 * 30  # 30 minutes
-
+_AVATAR_TTL_SECONDS = 60 * 30
 
 async def _get_telegram_file_url(file_id: str) -> Optional[str]:
     if not file_id:
         return None
-
     base = f"https://api.telegram.org/bot{BOT_TOKEN}"
     async with httpx.AsyncClient(timeout=15) as client:
         r = await client.get(f"{base}/getFile", params={"file_id": file_id})
         data = r.json()
         if not data.get("ok"):
             return None
-
         file_path = (data.get("result") or {}).get("file_path")
         if not file_path:
             return None
-
         return f"{base}/file/{file_path}"
-
 
 async def _fetch_telegram_avatar_url(tg_user_id: int) -> Optional[str]:
     base = f"https://api.telegram.org/bot{BOT_TOKEN}"
@@ -182,19 +148,14 @@ async def _fetch_telegram_avatar_url(tg_user_id: int) -> Optional[str]:
         data = r.json()
         if not data.get("ok"):
             return None
-
-        result = data.get("result") or {}
-        photos = result.get("photos") or []
+        photos = (data.get("result") or {}).get("photos") or []
         if not photos or not photos[0]:
             return None
-
-        best = photos[0][-1]  # biggest size
+        best = photos[0][-1]
         file_id = best.get("file_id")
         if not file_id:
             return None
-
         return await _get_telegram_file_url(file_id)
-
 
 @api.post("/api/avatar")
 async def avatar(payload: dict):
@@ -215,7 +176,6 @@ async def avatar(payload: dict):
     _AVATAR_CACHE[tg_id] = (url, now + _AVATAR_TTL_SECONDS)
     return {"ok": True, "url": url}
 
-
 # ======================
 # Stripe
 # ======================
@@ -232,12 +192,11 @@ async def stripe_checkout(payload: dict):
     if not STRIPE_WEBHOOK_SECRET:
         raise HTTPException(500, "Stripe not configured: STRIPE_WEBHOOK_SECRET missing")
     if not WEBAPP_URL:
-        raise HTTPException(500, "WEBAPP_URL missing (needed for success/cancel urls)")
+        raise HTTPException(500, "WEBAPP_URL missing")
 
     dbu = db_user_from_webapp(init_data)
     pack = CREDITS_PACKS[sku]
 
-    # Create pending order
     with get_conn() as conn:
         cur = conn.cursor()
         cur.execute(
@@ -251,20 +210,19 @@ async def stripe_checkout(payload: dict):
         order_id = cur.fetchone()["id"]
         conn.commit()
 
+    base = WEBAPP_URL.rstrip("/")
     session = stripe.checkout.Session.create(
         mode="payment",
-        success_url=f"{WEBAPP_URL.rstrip('/')}/profile?success=1",
-        cancel_url=f"{WEBAPP_URL.rstrip('/')}/profile?canceled=1",
-        line_items=[
-            {
-                "price_data": {
-                    "currency": "eur",
-                    "product_data": {"name": f'{pack["title"]} - {pack["desc"]}'},
-                    "unit_amount": int(round(pack["amount_eur"] * 100)),
-                },
-                "quantity": 1,
-            }
-        ],
+        success_url=f"{base}/profile?success=1",
+        cancel_url=f"{base}/profile?canceled=1",
+        line_items=[{
+            "price_data": {
+                "currency": "eur",
+                "product_data": {"name": f'{pack["title"]} - {pack["desc"]}'},
+                "unit_amount": int(round(pack["amount_eur"] * 100)),
+            },
+            "quantity": 1,
+        }],
         metadata={"order_id": str(order_id), "sku": sku},
     )
 
@@ -274,7 +232,6 @@ async def stripe_checkout(payload: dict):
         conn.commit()
 
     return {"url": session.url}
-
 
 @api.post("/api/stripe/webhook")
 async def stripe_webhook(request: Request):
@@ -320,7 +277,6 @@ async def stripe_webhook(request: Request):
             conn.commit()
 
     return JSONResponse({"ok": True})
-
 
 # ======================
 # CryptoCloud
@@ -380,7 +336,6 @@ async def cryptocloud_invoice(payload: dict):
 
     return {"url": pay_url}
 
-
 @api.post("/api/cryptocloud/webhook")
 async def cryptocloud_webhook(request: Request):
     body = await request.body()
@@ -405,8 +360,7 @@ async def cryptocloud_webhook(request: Request):
                 conn.commit()
                 return JSONResponse({"ok": True})
 
-            sku = order["sku"]
-            pack = CREDITS_PACKS.get(sku)
+            pack = CREDITS_PACKS.get(order["sku"])
             if not pack:
                 conn.commit()
                 return JSONResponse({"ok": True})
@@ -418,7 +372,7 @@ async def cryptocloud_webhook(request: Request):
                 INSERT INTO credit_ledger (user_id, delta, reason, provider, provider_ref)
                 VALUES (%s,%s,%s,'cryptocloud',%s)
                 """,
-                (order["user_id"], pack["credits"], f"Purchase {sku}", order.get("provider_ref")),
+                (order["user_id"], pack["credits"], f"Purchase {order['sku']}", order.get("provider_ref")),
             )
             conn.commit()
 
