@@ -42,7 +42,6 @@ async def send_start_card(update: Update, context: ContextTypes.DEFAULT_TYPE):
     hero_exists = HERO_PATH.exists()
 
     try:
-        # /start ή νέο μήνυμα
         if update.message:
             if hero_exists:
                 await update.message.reply_photo(
@@ -57,7 +56,6 @@ async def send_start_card(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
             return
 
-        # callback (επιστροφή στο home)
         if update.callback_query:
             q = update.callback_query
             await q.answer()
@@ -75,7 +73,6 @@ async def send_start_card(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
     except Exception as e:
-        # 🔴 Αν κάτι πάει στραβά, το δείχνουμε στο Telegram
         if update.message:
             await update.message.reply_text(f"Start error: {e}")
         elif update.callback_query:
@@ -84,8 +81,8 @@ async def send_start_card(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def edit_start_card(q, caption: str, reply_markup):
     """
-    Αλλάζει το caption του ίδιου START card (όπως VeoSeeBot).
-    Αν δεν γίνεται edit, στέλνει νέο μήνυμα.
+    Αλλάζει το caption του ίδιου START card.
+    Αν δεν γίνεται edit (π.χ. είναι παλιό), στέλνει νέο.
     """
     msg = q.message
     try:
@@ -117,16 +114,10 @@ async def on_menu_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     data = q.data or ""
 
-    # ----------------
-    # HOME
-    # ----------------
     if data == "menu:home":
         await edit_start_card(q, texts.START_CAPTION, start_inline_menu())
         return
 
-    # ----------------
-    # PROFILE (text + webapp button)
-    # ----------------
     if data == "menu:profile":
         dbu = get_user(u.id) or {
             "tg_user_id": u.id,
@@ -145,9 +136,6 @@ async def on_menu_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ----------------
-    # VIDEO / IMAGES / AUDIO
-    # ----------------
     if data == "menu:video":
         await edit_start_card(q, "👇 Επίλεξε μοντέλο AI για ΒΙΝΤΕΟ:", video_models_menu())
         return
@@ -160,10 +148,6 @@ async def on_menu_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await edit_start_card(q, "👇 Επίλεξε μοντέλο AI για ΗΧΟ:", audio_models_menu())
         return
 
-    # ----------------
-    # SET MODEL
-    # menu:set:video:kling_26
-    # ----------------
     if data.startswith("menu:set:"):
         parts = data.split(":")
         if len(parts) == 4:
