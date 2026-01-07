@@ -585,4 +585,100 @@
 
     async function loadMe(){
       const me = await apiPost("/api/me", { initData });
-      const u = me.us
+      const u = me.user;
+
+      $("name").innerText = (u.username || u.id || "User");
+      $("uid").innerText = u.id || "—";
+      $("credits").innerText = (u.credits ?? 0);
+
+      // load avatar
+      try{
+        const av = await apiPost("/api/avatar", { initData });
+        if (av?.url){
+          const img = $("avatar");
+          img.src = av.url;
+          img.style.display = "block";
+        }
+      }catch(e){}
+
+      renderPlans();
+    }
+
+    // Buy extra credits (Stripe only now)
+    $("btn-buy-extra").onclick = async () => {
+      const method = PAY_METHODS.find(m => m.id === selectedMethod);
+      if (!method || !method.enabled) return;
+
+      // we’ll use stripe checkout with our sku
+      try{
+        $("btn-buy-extra").disabled = true;
+        $("btn-buy-extra").innerText = "…";
+
+        const sku = selectedPack.sku;
+
+        // Stripe checkout endpoint (already exists in your backend)
+        const data = await apiPost("/api/stripe/checkout", { initData, sku });
+        if (data?.url){
+          window.location.href = data.url;
+          return;
+        }
+        throw new Error("No checkout url");
+      } catch(e){
+        if (tg) tg.showAlert(String(e.message || e));
+        else alert(String(e.message || e));
+      } finally {
+        $("btn-buy-extra").disabled = false;
+        $("btn-buy-extra").innerText = "Оплатить";
+      }
+    };
+
+    // Partnership UI placeholders
+    function renderRefLinks(){
+      // placeholder list until we wire backend
+      const mock = [
+        { id: 1, url: "https://t.me/YourBot?start=ref_ABC123", invited: 0, bought: 0 },
+        { id: 2, url: "https://t.me/YourBot?start=ref_XYZ987", invited: 0, bought: 0 },
+      ];
+      $("ref-count").innerText = `${mock.length}/10`;
+      const host = $("ref-list");
+      host.innerHTML = "";
+      mock.forEach((r, idx) => {
+        const el = document.createElement("div");
+        el.className = "refcard";
+        el.innerHTML = `
+          <div class="muted" style="font-size:12px">ССЫЛКА <span style="float:right;color:#cfd3df;font-weight:900">#${idx+1}</span></div>
+          <div class="url">${r.url}</div>
+          <div class="mini">
+            <div class="box"><div class="k">Приглашено</div><div class="v">${r.invited}</div></div>
+            <div class="box"><div class="k">Куплено кредитов</div><div class="v">${r.bought}</div></div>
+          </div>
+          <button class="btn secondary" data-copy="1">Скопировать ссылку</button>
+        `;
+        el.querySelector("[data-copy]").onclick = async () => {
+          try{
+            await navigator.clipboard.writeText(r.url);
+            if (tg) tg.showAlert("Ссылка скопирована");
+          }catch(e){
+            if (tg) tg.showAlert("Не удалось скопировать");
+          }
+        };
+        host.appendChild(el);
+      });
+    }
+    $("btn-create-ref").onclick = () => {
+      if (tg) tg.showAlert("Рефералы подключим позже (UI уже готов).");
+      else alert("Referrals will be wired later.");
+    };
+
+    // Init
+    (async () => {
+      try{
+        await loadMe();
+        renderRefLinks();
+      }catch(e){
+        if (tg) tg.showAlert("Открой внутри Telegram (initData не найдено).");
+      }
+    })();
+  </script>
+</body>
+</html>
