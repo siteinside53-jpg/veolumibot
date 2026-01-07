@@ -37,10 +37,11 @@ templates = Jinja2Templates(directory="app/web_templates")
 # ======================
 # Packs
 # ======================
-CREDITS_PACKS: Dict[str, Dict[str, Any]] = {
-    "CREDITS_100": {"credits": 100, "amount_eur": 7.50, "title": "Start", "desc": "100 credits"},
-    "CREDITS_300": {"credits": 300, "amount_eur": 19.00, "title": "Boost", "desc": "300 credits"},
-    "CREDITS_800": {"credits": 800, "amount_eur": 45.00, "title": "Pro", "desc": "800 credits"},
+CREDITS_PACKS = {
+    "CREDITS_100":  {"credits": 100,  "amount_eur": 7.00,  "title": "Start",  "desc": "100 credits"},
+    "CREDITS_250":  {"credits": 250,  "amount_eur": 12.00, "title": "Middle", "desc": "250 credits"},
+    "CREDITS_500":  {"credits": 500,  "amount_eur": 22.00, "title": "Pro",    "desc": "500 credits"},
+    "CREDITS_1000": {"credits": 1000, "amount_eur": 40.00, "title": "Creator","desc": "1000 credits"},
 }
 
 def packs_list():
