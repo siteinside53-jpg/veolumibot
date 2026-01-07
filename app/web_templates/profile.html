@@ -1,246 +1,274 @@
 <!doctype html>
-<html lang="el">
+<html lang="ru">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>VeoLumi – Προφίλ</title>
+  <title>VeoLumi – Профиль</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
   <style>
     :root{
-      --bg:#0b0c10;
-      --card:#14161c;
-      --stroke:rgba(255,255,255,.08);
-      --text:#fff;
-      --muted:rgba(255,255,255,.65);
-      --purple:#7b2cff;
-      --purple2:#6a22ff;
-      --shadow:0 18px 45px rgba(0,0,0,.38);
-      --r:22px;
+      --bg:#0e0f12;
+      --card:#171a20;
+      --card2:#14171c;
+      --border:#232734;
+      --muted:#a7adbb;
+      --text:#ffffff;
+      --accent:#7c3aed; /* purple */
+      --accent2:#6d28d9;
+      --shadow: 0 14px 40px rgba(0,0,0,.45);
+      --radius:18px;
     }
     *{box-sizing:border-box}
     body{
       margin:0;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background:var(--bg);
       color:var(--text);
-      background:
-        radial-gradient(1100px 700px at 80% 20%, rgba(123,44,255,.18), transparent 60%),
-        radial-gradient(900px 600px at 10% 80%, rgba(123,44,255,.12), transparent 55%),
-        var(--bg);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
     }
-    .wrap{max-width:560px;margin:0 auto;padding:16px 14px 92px}
-
-    /* top user card */
-    .user{
-      display:flex;align-items:center;gap:12px;
-      background:rgba(255,255,255,.03);
-      border:1px solid var(--stroke);
-      border-radius:22px;
-      padding:10px 12px;
-      box-shadow:var(--shadow);
+    .wrap{max-width:520px;margin:0 auto;padding:14px 14px 88px;}
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:14px;
+      margin:10px 0;
+      box-shadow: none;
     }
+    .row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .muted{color:var(--muted)}
+    .h1{font-size:16px;font-weight:700}
+    .h2{font-size:14px;font-weight:700}
+    .pill{
+      display:inline-flex;align-items:center;gap:8px;
+      background:#10131a;border:1px solid var(--border);
+      padding:7px 10px;border-radius:999px;color:#d5d8e2;
+      font-size:12px;
+    }
+    .btn{
+      width:100%;
+      background:var(--accent);
+      color:#fff;
+      border:none;
+      border-radius:14px;
+      padding:12px 14px;
+      font-weight:800;
+      font-size:15px;
+      cursor:pointer;
+    }
+    .btn:active{transform:translateY(1px)}
+    .btn.secondary{
+      background:#1a1f2a;border:1px solid var(--border);color:#e8e8f1;
+      font-weight:700;
+    }
+    .btn.ghost{
+      background:transparent;border:1px solid var(--border);color:#e8e8f1;
+      font-weight:700;
+    }
+    .btn.disabled, .btn:disabled{opacity:.5;cursor:not-allowed}
     .avatar{
       width:44px;height:44px;border-radius:50%;
-      background:linear-gradient(135deg, rgba(123,44,255,.85), rgba(123,44,255,.25));
+      background:#2a2f3d;overflow:hidden;flex:0 0 auto;
       display:flex;align-items:center;justify-content:center;
-      font-weight:900;
-      flex:0 0 auto;
-      overflow:hidden;
+      border:1px solid #2f3647;
     }
-    .avatar img{width:100%;height:100%;object-fit:cover;display:none}
-    .meta{display:flex;flex-direction:column;gap:2px;min-width:0}
-    .name{font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .small{font-size:12px;color:var(--muted)}
-    .credits{
-      margin-left:auto;
-      display:flex;flex-direction:column;align-items:flex-end;gap:2px;
+    .avatar img{width:100%;height:100%;object-fit:cover}
+    .balance{
+      display:flex;flex-direction:column;align-items:flex-end;
+      gap:2px;
     }
-    .credits .num{font-size:22px;font-weight:900;line-height:1}
-
-    .section{
-      margin-top:14px;
-      background:rgba(255,255,255,.02);
-      border:1px solid var(--stroke);
-      border-radius:22px;
-      padding:14px;
-    }
-    .h1{margin:0;font-weight:900;font-size:18px}
-    .sub{margin-top:4px;font-size:13px;color:var(--muted)}
-    .btn-secondary{
-      width:100%;
-      margin-top:12px;
-      border:1px solid var(--stroke);
-      background:rgba(255,255,255,.03);
-      color:var(--text);
-      padding:14px 14px;
-      border-radius:16px;
-      font-weight:800;
+    .balance .num{font-size:22px;font-weight:900}
+    .balance .lbl{font-size:12px;color:var(--muted)}
+    .section-title{
+      margin:14px 2px 8px;
+      font-size:14px;font-weight:900;letter-spacing:.2px;
     }
 
-    /* carousel plans */
-    .h2{margin:16px 2px 10px;font-weight:900;font-size:18px}
-    .carousel{
-      display:flex;gap:12px;overflow:auto;
-      padding:10px 2px 6px;
-      scroll-snap-type:x mandatory;
-      -webkit-overflow-scrolling:touch;
-    }
+    /* Horizontal plans */
+    .scroll{display:flex;gap:12px;overflow:auto;padding-bottom:10px}
+    .scroll::-webkit-scrollbar{height:7px}
+    .scroll::-webkit-scrollbar-thumb{background:#242a38;border-radius:999px}
     .plan{
-      min-width:290px;
-      scroll-snap-align:start;
-      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
-      border:1px solid var(--stroke);
+      min-width:280px;
+      background:linear-gradient(180deg, var(--card) 0%, #13161c 100%);
+      border:1px solid var(--border);
       border-radius:22px;
       padding:14px;
-      box-shadow:var(--shadow);
+      position:relative;
     }
-    .plan-title{font-size:18px;font-weight:900}
-    .plan-desc{margin-top:3px;font-size:13px;color:var(--muted)}
-    .row{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap}
-    .pill{
-      padding:7px 10px;border-radius:12px;
-      border:1px solid var(--stroke);
-      background:rgba(255,255,255,.03);
-      font-weight:850;
-      font-size:13px;
+    .plan .name{font-size:18px;font-weight:950;margin:0 0 6px}
+    .plan .credits{font-size:14px;font-weight:700;color:#e6e7ef;margin:0 0 10px}
+    .tags{display:flex;gap:10px;margin:8px 0 12px}
+    .tag{
+      background:#111521;border:1px solid #2a3142;color:#fff;
+      padding:6px 10px;border-radius:12px;font-weight:800;font-size:13px;
     }
-    .more{
-      width:100%;margin-top:12px;
-      border:1px solid var(--stroke);
-      background:rgba(255,255,255,.03);
-      color:var(--text);
-      padding:13px 14px;
-      border-radius:16px;
-      font-weight:850;
-    }
-    .buy{
-      width:100%;
-      margin-top:10px;
-      border:none;
-      background:linear-gradient(90deg, var(--purple), var(--purple2));
-      color:#fff;
-      padding:14px 14px;
-      border-radius:16px;
-      font-weight:950;
-      letter-spacing:.2px;
-    }
-    .buy-ghost{
-      width:100%;
-      margin-top:8px;
-      border:1px solid var(--stroke);
-      background:rgba(255,255,255,.03);
-      color:var(--text);
-      padding:13px 14px;
-      border-radius:16px;
-      font-weight:900;
-    }
+    .features{margin:10px 0 14px;display:flex;flex-direction:column;gap:10px}
+    .feat{display:flex;gap:10px;color:#e9e9f3;font-size:14px}
+    .check{color:var(--accent);font-weight:900}
+    .plan .actions{display:flex;flex-direction:column;gap:10px}
+    .plan .btn{border-radius:16px}
 
-    /* bottom tabs */
+    /* Bottom tabs */
     .tabs{
       position:fixed;left:0;right:0;bottom:0;
-      background:rgba(12,13,18,.92);
-      border-top:1px solid var(--stroke);
-      backdrop-filter:blur(12px);
-      padding:10px 14px 12px;
+      background:rgba(11,12,15,.95);
+      border-top:1px solid var(--border);
+      padding:10px 14px;
+      backdrop-filter: blur(10px);
     }
-    .tabs-inner{max-width:560px;margin:0 auto;display:flex;gap:10px}
+    .tabs-inner{max-width:520px;margin:0 auto;display:flex;justify-content:space-between;gap:10px}
     .tab{
       flex:1;
-      border:1px solid var(--stroke);
-      background:rgba(255,255,255,.03);
-      color:var(--text);
-      padding:12px 10px;
+      background:#12151d;
+      border:1px solid var(--border);
+      color:#dfe2ee;
       border-radius:16px;
-      font-weight:900;
-      text-align:center;
-      user-select:none;
+      padding:10px 12px;
+      display:flex;align-items:center;justify-content:center;
+      font-weight:800;
+      cursor:pointer;
     }
-    .tab.active{
-      border-color:rgba(123,44,255,.45);
-      background:rgba(123,44,255,.14);
+    .tab.active{border-color:rgba(124,58,237,.7); box-shadow:0 0 0 2px rgba(124,58,237,.18) inset;}
+    .screen{display:none}
+    .screen.active{display:block}
+
+    /* Modal */
+    .overlay{
+      position:fixed;inset:0;
+      background:rgba(0,0,0,.55);
+      display:none;
+      align-items:center;justify-content:center;
+      padding:18px;
+      z-index:50;
     }
+    .overlay.show{display:flex}
+    .modal{
+      width:min(520px, 100%);
+      background:var(--card2);
+      border:1px solid var(--border);
+      border-radius:22px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .modal-h{
+      padding:14px 14px 10px;
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      border-bottom:1px solid var(--border);
+    }
+    .modal-h .t{font-weight:950;font-size:18px}
+    .x{
+      width:36px;height:36px;border-radius:12px;
+      background:#12151d;border:1px solid var(--border);
+      color:#fff;display:flex;align-items:center;justify-content:center;
+      cursor:pointer;font-weight:900;
+    }
+    .modal-b{padding:14px}
+    .field{
+      background:#0f1218;border:1px solid var(--border);
+      border-radius:16px;padding:12px;color:#fff;
+      width:100%;
+      outline:none;
+      font-size:14px;
+    }
+    .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:10px 0 14px}
+    .chip{
+      background:#151a23;border:1px solid var(--border);
+      border-radius:16px;padding:12px 0;text-align:center;
+      font-weight:950;cursor:pointer;
+    }
+    .chip.active{border-color:rgba(124,58,237,.8);box-shadow:0 0 0 2px rgba(124,58,237,.15) inset;}
+    .radio{
+      display:flex;flex-direction:column;gap:10px;margin:10px 0 12px;
+    }
+    .radio label{
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      background:#0f1218;border:1px solid var(--border);
+      padding:12px;border-radius:16px;cursor:pointer;
+      color:#e9e9f3;font-weight:750;
+    }
+    .radio label.disabled{opacity:.55;cursor:not-allowed}
+    .radio .left{display:flex;align-items:center;gap:10px}
+    .small{font-size:12px;color:var(--muted)}
+    .sumrow{display:flex;align-items:flex-end;justify-content:space-between;margin-top:10px}
+    .sumrow .price{font-size:22px;font-weight:950}
+    .hr{height:1px;background:var(--border);margin:12px 0}
+
+    /* Partnership */
+    .refbox{
+      background:#141821;border:1px dashed rgba(124,58,237,.6);
+      border-radius:20px;padding:14px;
+    }
+    .refcard{
+      margin-top:12px;
+      background:#10131a;border:1px solid var(--border);
+      border-radius:18px;padding:12px;
+    }
+    .refcard .url{
+      font-size:12px;color:#cfd3df;word-break:break-all;margin:6px 0 10px
+    }
+    .mini{
+      display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 12px;
+    }
+    .mini .box{
+      background:#0f1218;border:1px solid var(--border);border-radius:14px;padding:10px;
+    }
+    .mini .box .v{font-size:18px;font-weight:950}
+    .mini .box .k{font-size:12px;color:var(--muted)}
   </style>
 </head>
 
 <body>
   <div class="wrap">
 
-    <!-- User header -->
-    <div class="user">
-      <div class="avatar" id="avatarBox">
-        <img id="avatarImg" alt="avatar" />
-        <span id="avatarLetter">V</span>
+    <!-- Screen: Profile -->
+    <div id="screen-profile" class="screen active">
+
+      <!-- Header -->
+      <div class="card">
+        <div class="row">
+          <div class="row" style="justify-content:flex-start">
+            <div class="avatar"><img id="avatar" alt="" style="display:none"/></div>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <div id="name" class="h1">—</div>
+              <div class="muted" style="font-size:12px">ID: <span id="uid">—</span></div>
+            </div>
+          </div>
+
+          <div class="balance">
+            <div class="lbl">Баланс кредитов</div>
+            <div class="num" id="credits">—</div>
+          </div>
+        </div>
       </div>
 
-      <div class="meta">
-        <div class="name" id="name">VeoLumi</div>
+      <!-- Current plan -->
+      <div class="card">
+        <div class="muted" style="font-size:12px;margin-bottom:6px">Текущий тариф</div>
+        <div class="h1" style="font-size:22px;margin-bottom:10px">Free</div>
+        <button class="btn secondary" id="btn-extra">Купить дополнительные кредиты</button>
       </div>
 
-      <div class="credits">
-        <div class="small">Credits</div>
-        <div class="num" id="credits">—</div>
-      </div>
+      <!-- Subscriptions -->
+      <div class="section-title">Подписки</div>
+      <div class="scroll" id="plans"></div>
     </div>
 
-    <!-- Current plan -->
-    <div class="section">
-      <div class="h1">Τρέχον πακέτο</div>
-      <div class="sub">Δωρεάν</div>
+    <!-- Screen: Partnership -->
+    <div id="screen-partnership" class="screen">
+      <div class="card">
+        <div class="h1" style="font-size:18px">Отправляйте друзьям свои уникальные ссылки и зарабатывайте вместе с ботом.</div>
 
-      <button class="btn-secondary" onclick="openCreditsInfo()">
-        Αγορά επιπλέον credits
-      </button>
-
-      <div class="sub" style="margin-top:10px">
-        Διάλεξε πακέτο. Πληρωμή με κάρτα ή crypto.
-      </div>
-    </div>
-
-    <!-- Subscriptions -->
-    <div class="h2">Συνδρομές</div>
-
-    <div class="carousel">
-      <!-- 1η κάρτα Free (όπως στη φωτό, με dynamic credits) -->
-      <div class="plan">
-        <div class="plan-title">Free</div>
-        <div class="row">
-          <span class="pill" id="freeCreditsPill">Credits: —</span>
-          <span class="pill">Δωρεάν</span>
+        <div class="refbox" style="margin-top:12px">
+          <button class="btn" id="btn-create-ref">Создать ссылку</button>
+          <div style="height:10px"></div>
+          <button class="btn secondary" id="btn-priv">Привилегии</button>
         </div>
 
-        <div class="plan-desc" style="margin-top:12px;line-height:1.3">
-          ✓ Μπορείς να δοκιμάσεις μοντέλα με εικόνες<br/>
-          ✓ Nano Banana, Midjourney, Flux κ.ά.
-        </div>
+        <div class="section-title" style="margin-top:14px">Мои реферальные ссылки <span class="muted" id="ref-count">0/10</span></div>
 
-        <button class="more" onclick="showIncludes('Free', '✓ Μπορείς να δοκιμάσεις μοντέλα με εικόνες\\n✓ Nano Banana, Midjourney, Flux κ.ά.')">
-          Τι περιλαμβάνει το πακέτο
-        </button>
+        <div id="ref-list"></div>
       </div>
-
-      <!-- Τα δικά σου packs -->
-      {% for p in packs %}
-      <div class="plan">
-        <div class="plan-title">{{ p.title }}</div>
-        <div class="plan-desc">{{ p.desc }}</div>
-
-        <div class="row">
-          <span class="pill">Credits: {{ p.credits }}</span>
-          <span class="pill">{{ "%.2f"|format(p.amount_eur) }}€</span>
-        </div>
-
-        <button class="more" onclick="showIncludes('{{ p.title|e }}', '{{ p.desc|e }}')">
-          Τι περιλαμβάνει
-        </button>
-
-        <button class="buy" onclick="buyStripe('{{ p.sku }}')">
-          Αγορά με κάρτα
-        </button>
-
-        <button class="buy-ghost" onclick="buyCrypto('{{ p.sku }}')">
-          Αγορά με Crypto
-        </button>
-      </div>
-      {% endfor %}
     </div>
 
   </div>
@@ -248,102 +276,313 @@
   <!-- Bottom tabs -->
   <div class="tabs">
     <div class="tabs-inner">
-      <div class="tab active" id="tab_profile" onclick="switchTab('profile')">👤 Το προφίλ μου</div>
-      <div class="tab" id="tab_aff" onclick="switchTab('aff')">🤝 Συνεργασία</div>
+      <div id="tab-profile" class="tab active">Мой профиль</div>
+      <div id="tab-partnership" class="tab">Партнёрство</div>
     </div>
   </div>
 
-<script>
-  const tg = window.Telegram?.WebApp;
+  <!-- Modal: Extra credits purchase -->
+  <div id="ov-extra" class="overlay" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modal-h">
+        <div class="t">Покупка дополнительных кредитов</div>
+        <div class="x" data-close="ov-extra">✕</div>
+      </div>
+      <div class="modal-b">
+        <div class="muted" style="font-size:12px;margin-bottom:8px">E-mail для чека/связи</div>
+        <input class="field" id="buyer-email" placeholder="you@example.com" />
 
-  if (tg) {
-    tg.ready();
-    tg.expand();
-    tg.setHeaderColor("#0b0c10");
-    tg.setBackgroundColor("#0b0c10");
+        <div style="height:10px"></div>
+        <div class="muted" style="font-size:12px;margin-bottom:8px">Пакет кредитов</div>
+        <div class="grid4" id="extra-packs"></div>
 
-    const u = tg.initDataUnsafe?.user;
-    if (u) {
-      document.getElementById("name").textContent = u.first_name || "VeoLumi";
-      document.getElementById("avatarLetter").textContent = (u.first_name || "V").slice(0,1).toUpperCase();
-    }
-  }
+        <div class="muted" style="font-size:12px;margin-bottom:8px">Метод оплаты</div>
+        <div class="radio" id="pay-methods"></div>
 
-  function initData(){ return tg ? tg.initData : ""; }
+        <div class="hr"></div>
 
-  function popup(title, message){
-    if (tg?.showPopup) tg.showPopup({ title, message, buttons: [{type:"ok"}] });
-    else alert(title + "\n\n" + message);
-  }
+        <div class="sumrow">
+          <div class="muted">Сумма</div>
+          <div class="price"><span id="extra-price">—</span> €</div>
+        </div>
 
-  async function loadMe(){
-    try{
-      const r = await fetch('/api/me', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ initData: initData() })
-      });
+        <div style="height:12px"></div>
+        <button class="btn" id="btn-buy-extra">Оплатить</button>
+        <div class="small" style="margin-top:10px">
+          PayPal и Crypto будут добавлены позже. Сейчас работает Stripe.
+        </div>
+      </div>
+    </div>
+  </div>
 
-      if(!r.ok){
-        popup("API σφάλμα", `/api/me: ${r.status} ${r.statusText}`);
-        return;
-      }
+  <!-- Modal: Tariff details -->
+  <div id="ov-tariff" class="overlay" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modal-h">
+        <div class="t">Что входит в тариф</div>
+        <div class="x" data-close="ov-tariff">✕</div>
+      </div>
+      <div class="modal-b" style="max-height:70vh;overflow:auto">
+        <div id="tariff-content"></div>
+      </div>
+    </div>
+  </div>
 
-      const data = await r.json();
-      if(!data?.ok){
-        popup("API σφάλμα", "Η απάντηση δεν είχε ok:true");
-        return;
-      }
+  <!-- Modal: Partnership privileges -->
+  <div id="ov-priv" class="overlay" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modal-h">
+        <div class="t">Партнёрские привилегии</div>
+        <div class="x" data-close="ov-priv">✕</div>
+      </div>
+      <div class="modal-b">
+        <div class="feat"><span class="check">✓</span> 5 ₽ за каждый старт бота по вашей ссылке.</div>
+        <div class="feat"><span class="check">✓</span> 10% от каждого пополнения вашими пользователями — пожизненно.</div>
+        <div class="feat"><span class="check">✓</span> Автотрекинг и уведомления в реальном времени.</div>
+        <div class="feat"><span class="check">✓</span> Вывод средств — через менеджера.</div>
+      </div>
+    </div>
+  </div>
 
-      const credits = Number(data.user?.credits ?? 0);
-      document.getElementById("credits").textContent = credits.toString();
-
-      const pill = document.getElementById("freeCreditsPill");
-      if (pill) pill.textContent = "Credits: " + credits.toString();
-    }catch(e){
-      popup("JS σφάλμα", String(e));
-    }
-  }
-
-  async function loadAvatar(){
-  try{
+  <script>
+    // ===== Telegram initData =====
     const tg = window.Telegram?.WebApp;
-    const u = tg?.initDataUnsafe?.user;
+    if (tg) tg.expand();
+    const initData = tg?.initData || "";
 
-    // ✅ 1) Άμεση φωτό από Telegram (αν υπάρχει)
-    const direct = u?.photo_url;
-    if (direct){
-      const img = document.getElementById("avatarImg");
-      img.src = direct;
-      img.style.display = "block";
-      document.getElementById("avatarLetter").style.display = "none";
-      return;
-    }
+    // ===== Data (EUR only) =====
+    // Extra credits packs (modal)
+    const EXTRA_PACKS = [
+      { sku: "CREDITS_100", credits: 100, price: 7.00 },
+      { sku: "CREDITS_250", credits: 250, price: 12.00 },
+      { sku: "CREDITS_500", credits: 500, price: 22.00 },
+      { sku: "CREDITS_1000", credits: 1000, price: 40.00 },
+    ];
 
-    // 🔁 2) Fallback στο backend
-    const r = await fetch('/api/avatar', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ initData: tg ? tg.initData : "" })
+    // Subscriptions cards (UI only for now)
+    const SUBSCRIPTIONS = [
+      {
+        name: "Start",
+        credits: 100,
+        price: 7.0,
+        features: [
+          "Доступ ко всем нейросетям",
+          "5% к выплате в реферальной программе",
+        ]
+      },
+      {
+        name: "Middle",
+        credits: 250,
+        price: 12.0,
+        features: [
+          "Доступ ко всем нейросетям",
+          "10% к выплате в реферальной программе",
+        ]
+      },
+      {
+        name: "Pro",
+        credits: 500,
+        price: 22.0,
+        features: [
+          "Доступ ко всем нейросетям",
+          "15% к выплате в реферальной программе",
+        ]
+      },
+      {
+        name: "Creator",
+        credits: 1000,
+        price: 57.0,
+        features: [
+          "Доступ ко всем нейросетям",
+          "20% к выплате в реферальной программе",
+        ]
+      },
+      {
+        name: "ULTRA PRO",
+        credits: 2000,
+        price: 95.0,
+        features: [
+          "Доступ ко всем нейросетям",
+          "Sora 2 — безлимит",
+          "Veo 3.1 — безлимит",
+          "Veo 3 — безлимит",
+          "Nano Banano — безлимит",
+          "Flux Kontext — безлимит",
+          "30% к выплате в реферальной программе",
+        ]
+      },
+    ];
+
+    // Tariff “what includes” list
+    const TARIFF_ITEMS = [
+      { group: "ВИДЕО", items: [
+        ["Kling 2.6 Motion", "20–75 кредитов"],
+        ["Kling 01", "15–25 кредитов"],
+        ["Kling V1 Avatar", "16–32 кредитов"],
+        ["Kling 2.6", "11–44 кредитов"],
+        ["Kling 2.1", "5–64 кредитов"],
+        ["Sora 2 PRO", "18–60 кредитов"],
+        ["VEO 3.1", "12 кредитов"],
+        ["Sora 2", "6 кредитов"],
+        ["Veo 3", "10 кредитов"],
+        ["Midjourney", "2–13 кредитов"],
+        ["Runway Aleph", "22 кредита"],
+        ["Runway", "6 кредитов"],
+        ["Seedance", "1–20 кредитов"],
+        ["Kling 2.5 Turbo", "8–17 кредитов"],
+        ["Wan 2.5", "12–30 кредитов"],
+        ["Hailuo 02", "6–12 кредитов"],
+      ]},
+      { group: "ФОТО", items: [
+        ["Flux", "1–6 кредитов"],
+        ["SDXL", "1–5 кредитов"],
+        ["Nano Banana", "1–6 кредитов"],
+      ]},
+    ];
+
+    // Payment methods list (Stripe works now)
+    const PAY_METHODS = [
+      { id: "card",  title: "Карта VISA/MasterCard", note: "(Stripe)", enabled: true, provider: "stripe" },
+      { id: "stripe", title: "Stripe", note: "(Весь мир)", enabled: true, provider: "stripe" },
+      { id: "paypal", title: "PayPal", note: "", enabled: false, provider: "paypal" },
+      { id: "crypto", title: "Криптовалюта", note: "(Bitcoin/Ethereum)", enabled: false, provider: "crypto" },
+    ];
+
+    // ===== UI helpers =====
+    const $ = (id) => document.getElementById(id);
+    function show(ovId){ $(ovId).classList.add("show"); }
+    function hide(ovId){ $(ovId).classList.remove("show"); }
+
+    document.addEventListener("click", (e) => {
+      const close = e.target?.getAttribute?.("data-close");
+      if (close) hide(close);
+      if (e.target.classList.contains("overlay")) e.target.classList.remove("show");
     });
 
-    if(!r.ok) return;
-
-    const data = await r.json();
-    const url = data?.url || "";
-    if(url){
-      const img = document.getElementById("avatarImg");
-      img.src = url;
-      img.style.display = "block";
-      document.getElementById("avatarLetter").style.display = "none";
+    // Tabs
+    function setTab(which){
+      $("tab-profile").classList.toggle("active", which==="profile");
+      $("tab-partnership").classList.toggle("active", which==="partnership");
+      $("screen-profile").classList.toggle("active", which==="profile");
+      $("screen-partnership").classList.toggle("active", which==="partnership");
     }
-  }catch(e){}
-}
+    $("tab-profile").onclick = () => setTab("profile");
+    $("tab-partnership").onclick = () => setTab("partnership");
 
-  (async () => {
-    await loadMe();
-    await loadAvatar();
-  })();
-</script>        
-</body>
-</html>
+    // ===== Render subscriptions =====
+    function renderPlans(){
+      const host = $("plans");
+      host.innerHTML = "";
+      SUBSCRIPTIONS.forEach((p) => {
+        const el = document.createElement("div");
+        el.className = "plan";
+        el.innerHTML = `
+          <div class="name">${p.name}</div>
+          <div class="credits">Кредитов: <b>${p.credits}</b></div>
+          <div class="tags">
+            <div class="tag">${p.price.toFixed(0)} €</div>
+          </div>
+          <div class="features">
+            ${p.features.map(f => `<div class="feat"><span class="check">✓</span> ${f}</div>`).join("")}
+          </div>
+          <div class="actions">
+            <button class="btn ghost" data-tariff="1">Что входит в тариф</button>
+            <button class="btn" data-buy-sub="1">Купить</button>
+          </div>
+        `;
+        el.querySelector("[data-tariff]").onclick = () => openTariffModal();
+        el.querySelector("[data-buy-sub]").onclick = () => {
+          // UI only for now (we’ll wire subscriptions later)
+          if (tg) tg.showAlert("Подписки подключим позже. Сейчас работают дополнительные кредиты.");
+          else alert("Subscriptions will be wired later. Extra credits works now.");
+        };
+        host.appendChild(el);
+      });
+    }
+
+    function openTariffModal(){
+      const wrap = document.createElement("div");
+      wrap.innerHTML = TARIFF_ITEMS.map(g => `
+        <div class="pill" style="margin-bottom:10px"><b>${g.group}</b></div>
+        <div class="card" style="margin:0 0 12px; padding:10px">
+          ${g.items.map(([a,b]) => `
+            <div class="row" style="padding:8px 6px; border-bottom:1px solid #202433">
+              <div style="font-weight:800">${a}</div>
+              <div class="muted" style="font-weight:800">${b}</div>
+            </div>
+          `).join("")}
+        </div>
+      `).join("");
+      $("tariff-content").innerHTML = "";
+      $("tariff-content").appendChild(wrap);
+      show("ov-tariff");
+    }
+
+    // ===== Extra credits modal =====
+    let selectedPack = EXTRA_PACKS[0];
+    let selectedMethod = PAY_METHODS.find(x => x.enabled)?.id || "card";
+
+    function renderExtraPacks(){
+      const host = $("extra-packs");
+      host.innerHTML = "";
+      EXTRA_PACKS.forEach((p) => {
+        const chip = document.createElement("div");
+        chip.className = "chip" + (p.sku === selectedPack.sku ? " active" : "");
+        chip.innerText = p.credits;
+        chip.onclick = () => { selectedPack = p; renderExtraPacks(); updateExtraPrice(); };
+        host.appendChild(chip);
+      });
+    }
+
+    function renderPayMethods(){
+      const host = $("pay-methods");
+      host.innerHTML = "";
+      PAY_METHODS.forEach((m) => {
+        const lbl = document.createElement("label");
+        lbl.className = m.enabled ? "" : "disabled";
+        lbl.innerHTML = `
+          <div class="left">
+            <input type="radio" name="pay" ${m.id===selectedMethod?"checked":""} ${m.enabled?"":"disabled"} />
+            <div>
+              <div>${m.title}</div>
+              <div class="small">${m.note || ""}</div>
+            </div>
+          </div>
+        `;
+        lbl.onclick = (e) => {
+          if (!m.enabled) return;
+          selectedMethod = m.id;
+          renderPayMethods();
+        };
+        host.appendChild(lbl);
+      });
+    }
+
+    function updateExtraPrice(){
+      $("extra-price").innerText = selectedPack.price.toFixed(2);
+    }
+
+    $("btn-extra").onclick = () => {
+      renderExtraPacks();
+      renderPayMethods();
+      updateExtraPrice();
+      show("ov-extra");
+    };
+
+    $("btn-priv").onclick = () => show("ov-priv");
+
+    // ===== API calls =====
+    async function apiPost(url, body){
+      const r = await fetch(url, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(body),
+      });
+      const data = await r.json().catch(()=> ({}));
+      if (!r.ok) throw new Error(data?.detail || "Request failed");
+      return data;
+    }
+
+    async function loadMe(){
+      const me = await apiPost("/api/me", { initData });
+      const u = me.us
