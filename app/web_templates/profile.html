@@ -416,12 +416,28 @@
 
     // -------- API helper
     async function apiPost(path, body) {
-      const res = await fetch(path, {
-        method: "POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify(body || {})
-      });
-      return await res.json();
+  try {
+    const res = await fetch(path, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(body || {})
+    });
+
+    const text = await res.text(); // ΠΑΝΤΑ διάβασε raw text πρώτα
+    let json = null;
+    try { json = JSON.parse(text); } catch {}
+
+    // DEBUG
+    alert(`API ${path}\nstatus=${res.status}\nbody=${text.slice(0, 400)}`);
+
+    if (!res.ok) {
+      return { ok:false, error:`http_${res.status}`, raw:text };
+    }
+    return json ?? { ok:false, error:"not_json", raw:text };
+  } catch (e) {
+    alert(`FETCH ERROR ${path}\n${e?.message || e}`);
+    return { ok:false, error:"network", message:String(e) };
+  }
     }
 
     // -------- Load user + credits + avatar
