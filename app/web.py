@@ -3,18 +3,14 @@ import hmac
 import hashlib
 import json
 import time
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Optional, Tuple
 from urllib.parse import parse_qsl
-from .db import (
-  get_conn, ensure_user, get_user, add_credits_by_user_id,
-  create_referral_link, list_referrals
-)
+
+import httpx
+import stripe
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-
-import stripe
-import httpx
 
 from .config import (
     BOT_TOKEN,
@@ -26,8 +22,14 @@ from .config import (
     CRYPTOCLOUD_WEBHOOK_SECRET,
 )
 
-# ✅ ΜΟΝΟ αυτά τα imports από db.py (όχι διπλά)
-from .db import get_conn, ensure_user, get_user, add_credits_by_user_id
+from .db import (
+    get_conn,
+    ensure_user,
+    get_user,
+    add_credits_by_user_id,
+    create_referral_link,
+    list_referrals,
+)
 
 # ======================
 # Init
@@ -51,16 +53,21 @@ def packs_list():
     return [{"sku": k, **v} for k, v in CREDITS_PACKS.items()]
 
 # ======================
-# Root (για Chrome)
+# Root
 # ======================
 @api.get("/")
 async def root():
     return RedirectResponse(url="/profile")
 
 # ======================
-# Telegram WebApp initData verification (CORRECT)
+# Telegram WebApp initData verification (FIXED)
 # ======================
 def verify_telegram_init_data(init_data: str) -> dict:
+    """
+    Telegram WebApp auth:
+    secret_key = HMAC_SHA256(key=bot_token, msg="WebAppData")
+    hash = HMAC_SHA256(key=secret_key, msg=data_check_string)
+    """
     if not init_data:
         raise HTTPException(401, "Missing initData (open inside Telegram)")
 
@@ -72,11 +79,20 @@ def verify_telegram_init_data(init_data: str) -> dict:
 
     data_check_string = "\n".join(f"{k}={data[k]}" for k in sorted(data.keys()))
 
-    # ✅ secret_key = HMAC_SHA256(bot_token, "WebAppData")
-    secret_key = hmac.new(b"WebAppData", BOT_TOKEN.encode("utf-8"), hashlib.sha256).digest()
-    h = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
+    # ✅ CORRECT order:
+    secret_key = hmac.new(
+        key=BOT_TOKEN.encode("utf-8"),
+        msg=b"WebAppData",
+        digestmod=hashlib.sha256
+    ).digest()
 
-    if not hmac.compare_digest(h, hash_received):
+    computed_hash = hmac.new(
+        key=secret_key,
+        msg=data_check_string.encode("utf-8"),
+        digestmod=hashlib.sha256
+    ).hexdigest()
+
+    if not hmac.compare_digest(computed_hash, hash_received):
         raise HTTPException(401, "Invalid initData signature")
 
     user_json = data.get("user")
@@ -265,7 +281,7 @@ async def stripe_webhook(request: Request):
         if not (order_id and pack):
             return JSONResponse({"ok": True})
 
-        # ✅ Παίρνουμε order + κάνουμε paid μέσα σε transaction
+        # lock + mark paid once
         with get_conn() as conn:
             cur = conn.cursor()
             cur.execute("SELECT * FROM orders WHERE id=%s FOR UPDATE", (order_id,))
@@ -278,7 +294,6 @@ async def stripe_webhook(request: Request):
             cur.execute("UPDATE orders SET status='paid' WHERE id=%s", (order_id,))
             conn.commit()
 
-        # ✅ ΕΔΩ ΓΙΝΕΤΑΙ το credit update + ledger entry (atomic μέσα στο db.py)
         add_credits_by_user_id(
             order["user_id"],
             pack["credits"],
@@ -352,6 +367,7 @@ async def cryptocloud_webhook(request: Request):
     body = await request.body()
     signature = request.headers.get("Signature", "")
 
+    # NOTE: Αν το CryptoCloud σου δίνει άλλο format signature, το προσαρμόζουμε.
     if CRYPTOCLOUD_WEBHOOK_SECRET:
         calc = hmac.new(CRYPTOCLOUD_WEBHOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
         if calc != signature:
@@ -379,7 +395,6 @@ async def cryptocloud_webhook(request: Request):
             cur.execute("UPDATE orders SET status='paid' WHERE id=%s", (order_id,))
             conn.commit()
 
-        # ✅ ΕΔΩ ΓΙΝΕΤΑΙ το credit update + ledger entry
         add_credits_by_user_id(
             order["user_id"],
             pack["credits"],
@@ -402,7 +417,6 @@ async def ref_create(payload: dict):
     if not r.get("ok"):
         return {"ok": False, "error": r.get("error")}
 
-    # το link του bot σου (άλλαξε το VeoSeeBot σε δικό σου username bot)
     url = f"https://t.me/veolumi_bot?start=ref_{r['code']}"
     return {"ok": True, "ref": {"code": r["code"], "url": url}}
 
@@ -412,7 +426,6 @@ async def ref_list(payload: dict):
     dbu = db_user_from_webapp(init_data)
 
     rows = list_referrals(dbu["id"])
-    # map για UI
     out = []
     for x in rows:
         out.append({
