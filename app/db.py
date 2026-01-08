@@ -15,66 +15,27 @@ if not DATABASE_URL:
 MIGRATIONS_DIR = Path(__file__).parent / "migrations"
 MAX_REF_LINKS = 10
 
-# Start credits for new users
 START_FREE_CREDITS = Decimal("5.00")
 
 
 def _conn_autocommit():
-    # Για migrations / απλά queries
     return psycopg.connect(DATABASE_URL, autocommit=True)
 
 
 def get_conn():
-    # Για web.py (dict_row) + transactions (default autocommit=False)
     return psycopg.connect(DATABASE_URL, row_factory=psycopg.rows.dict_row)
 
 
 def run_migrations():
     """
-    Ensures base tables exist even if migrations folder is missing.
-    Then applies .sql migrations if present.
+    Εφαρμόζει ΟΛΑ τα .sql migrations που υπάρχουν στον φάκελο app/migrations.
+    (Τα migrations πρέπει να είναι idempotent: CREATE TABLE IF NOT EXISTS, ADD COLUMN IF NOT EXISTS κλπ)
     """
     print(">>> RUNNING MIGRATIONS <<<", flush=True)
     print(f">>> migrations dir = {MIGRATIONS_DIR}", flush=True)
 
-    with _conn_autocommit() as conn:
-        with conn.cursor() as cur:
-            # users
-            cur.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-              id SERIAL PRIMARY KEY,
-              tg_user_id BIGINT UNIQUE NOT NULL,
-              tg_username TEXT,
-              tg_first_name TEXT,
-              credits NUMERIC(10,2) NOT NULL DEFAULT 0,
-              created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            );
-            """)
-
-            # credit_ledger
-            cur.execute("""
-            CREATE TABLE IF NOT EXISTS credit_ledger (
-              id SERIAL PRIMARY KEY,
-              user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-              delta NUMERIC(10,2) NOT NULL,
-              balance_after NUMERIC(10,2) NOT NULL,
-              reason TEXT NOT NULL,
-              provider TEXT,
-              provider_ref TEXT,
-              created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            );
-            """)
-
-            cur.execute("""
-            CREATE INDEX IF NOT EXISTS idx_credit_ledger_user_id_created_at
-            ON credit_ledger(user_id, created_at DESC);
-            """)
-
-            print(">>> ensured tables users + credit_ledger exist", flush=True)
-
-    # Apply .sql migrations if any
     if not MIGRATIONS_DIR.exists():
-        print(">>> migrations folder ΔΕΝ βρέθηκε — συνεχίζουμε χωρίς crash", flush=True)
+        print(">>> migrations folder ΔΕΝ βρέθηκε — συνεχίζουμε", flush=True)
         return
 
     sql_files = sorted(MIGRATIONS_DIR.glob("*.sql"))
@@ -97,11 +58,9 @@ def ensure_user(tg_user_id: int, tg_username: Optional[str], tg_first_name: Opti
     Creates user if missing.
     If new user -> gives START_FREE_CREDITS and writes credit_ledger entry.
     Always updates username/first_name on existing users.
-    Returns user row (dict).
     """
     with get_conn() as conn:
         with conn.cursor() as cur:
-            # 1) Try insert NEW user with starting credits
             cur.execute(
                 """
                 INSERT INTO users (tg_user_id, tg_username, tg_first_name, credits)
@@ -114,7 +73,6 @@ def ensure_user(tg_user_id: int, tg_username: Optional[str], tg_first_name: Opti
             inserted = cur.fetchone()
 
             if inserted:
-                # New user: write ledger (+5)
                 cur.execute(
                     """
                     INSERT INTO credit_ledger (user_id, delta, balance_after, reason, provider, provider_ref)
@@ -132,7 +90,6 @@ def ensure_user(tg_user_id: int, tg_username: Optional[str], tg_first_name: Opti
                 conn.commit()
                 return inserted
 
-            # 2) Existing user: update basic fields + return row
             cur.execute(
                 """
                 UPDATE users
@@ -156,7 +113,7 @@ def get_user(tg_user_id: int) -> Optional[Dict[str, Any]]:
 
 
 # ======================
-# Credits + Ledger (atomic)
+# Credits + Ledger
 # ======================
 def _to_decimal(x) -> Decimal:
     if isinstance(x, Decimal):
@@ -171,17 +128,12 @@ def add_credits_by_user_id(
     provider: Optional[str] = None,
     provider_ref: Optional[str] = None,
 ) -> Decimal:
-    """
-    Adds credits and writes credit_ledger entry atomically.
-    Returns new balance (Decimal).
-    """
     amount = _to_decimal(amount)
     if amount <= 0:
         raise ValueError("amount must be > 0")
 
     with get_conn() as conn:
         with conn.cursor() as cur:
-            # lock user row
             cur.execute("SELECT id, credits FROM users WHERE id=%s FOR UPDATE", (user_id,))
             u = cur.fetchone()
             if not u:
@@ -197,7 +149,6 @@ def add_credits_by_user_id(
                 """,
                 (user_id, amount, new_balance, reason, provider, provider_ref),
             )
-
             conn.commit()
             return new_balance
 
@@ -209,11 +160,6 @@ def spend_credits_by_user_id(
     provider: Optional[str] = None,
     provider_ref: Optional[str] = None,
 ) -> Decimal:
-    """
-    Subtracts credits (spend) and writes credit_ledger entry atomically.
-    Raises HTTP-ish RuntimeError if insufficient.
-    Returns new balance.
-    """
     amount = _to_decimal(amount)
     if amount <= 0:
         raise ValueError("amount must be > 0")
@@ -239,59 +185,14 @@ def spend_credits_by_user_id(
                 """,
                 (user_id, -amount, new_balance, reason, provider, provider_ref),
             )
-
             conn.commit()
             return new_balance
 
 
-def add_credits_by_tg_id(
-    tg_user_id: int,
-    amount,
-    reason: str,
-    provider: Optional[str] = None,
-    provider_ref: Optional[str] = None,
-) -> Decimal:
-    u = get_user(tg_user_id)
-    if not u:
-        raise RuntimeError("User not found")
-    return add_credits_by_user_id(u["id"], amount, reason, provider, provider_ref)
-
-
-def spend_credits_by_tg_id(
-    tg_user_id: int,
-    amount,
-    reason: str,
-    provider: Optional[str] = None,
-    provider_ref: Optional[str] = None,
-) -> Decimal:
-    u = get_user(tg_user_id)
-    if not u:
-        raise RuntimeError("User not found")
-    return spend_credits_by_user_id(u["id"], amount, reason, provider, provider_ref)
-
-
-def get_ledger_by_tg_id(tg_user_id: int, limit: int = 50) -> List[Dict[str, Any]]:
-    u = get_user(tg_user_id)
-    if not u:
-        return []
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT id, delta, balance_after, reason, provider, provider_ref, created_at
-                FROM credit_ledger
-                WHERE user_id=%s
-                ORDER BY created_at DESC
-                LIMIT %s
-                """,
-                (u["id"], limit),
-            )
-            return cur.fetchall()
-
+# ======================
+# Referrals
+# ======================
 def create_referral_link(owner_user_id: int) -> dict:
-    """
-    Δημιουργεί νέο referral link για τον user, μέχρι MAX_REF_LINKS.
-    """
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT COUNT(*) AS c FROM referrals WHERE owner_user_id=%s", (owner_user_id,))
@@ -299,7 +200,6 @@ def create_referral_link(owner_user_id: int) -> dict:
             if c >= MAX_REF_LINKS:
                 return {"ok": False, "error": "limit_reached"}
 
-            # safe random code (short)
             code = secrets.token_urlsafe(8).replace("-", "").replace("_", "")
             cur.execute(
                 "INSERT INTO referrals (owner_user_id, code) VALUES (%s,%s) RETURNING id, code, created_at",
@@ -309,10 +209,8 @@ def create_referral_link(owner_user_id: int) -> dict:
             conn.commit()
             return {"ok": True, **row}
 
+
 def list_referrals(owner_user_id: int) -> list:
-    """
-    Λίστα links + μετρήσεις (starts, purchases_amount)
-    """
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -330,10 +228,8 @@ def list_referrals(owner_user_id: int) -> list:
             )
             return cur.fetchall()
 
+
 def record_referral_start(code: str) -> bool:
-    """
-    Καταγράφει event start για code.
-    """
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT id FROM referrals WHERE code=%s", (code,))
@@ -347,10 +243,8 @@ def record_referral_start(code: str) -> bool:
             conn.commit()
             return True
 
+
 def record_referral_purchase(code: str, amount_eur) -> bool:
-    """
-    Καταγράφει purchase amount για code.
-    """
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT id FROM referrals WHERE code=%s", (code,))
