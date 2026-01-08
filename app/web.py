@@ -64,10 +64,7 @@ async def root():
 # ======================
 def verify_telegram_init_data(init_data: str) -> dict:
     """
-    Telegram WebApp auth:
-    secret_key = HMAC_SHA256(key=bot_token, msg="WebAppData")
-    hash = HMAC_SHA256(key=secret_key, msg=data_check_string)
-    """
+def verify_telegram_init_data(init_data: str) -> dict:
     if not init_data:
         raise HTTPException(401, "Missing initData (open inside Telegram)")
 
@@ -79,20 +76,21 @@ def verify_telegram_init_data(init_data: str) -> dict:
 
     data_check_string = "\n".join(f"{k}={data[k]}" for k in sorted(data.keys()))
 
-    # ✅ CORRECT order:
+    # ✅ Telegram WebAppData:
+    # secret_key = HMAC_SHA256(key=bot_token, msg="WebAppData")
     secret_key = hmac.new(
         key=BOT_TOKEN.encode("utf-8"),
         msg=b"WebAppData",
         digestmod=hashlib.sha256
     ).digest()
 
-    computed_hash = hmac.new(
+    h = hmac.new(
         key=secret_key,
         msg=data_check_string.encode("utf-8"),
         digestmod=hashlib.sha256
     ).hexdigest()
 
-    if not hmac.compare_digest(computed_hash, hash_received):
+    if not hmac.compare_digest(h, hash_received):
         raise HTTPException(401, "Invalid initData signature")
 
     user_json = data.get("user")
