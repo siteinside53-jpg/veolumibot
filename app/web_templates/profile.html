@@ -383,6 +383,9 @@
   </div>
 
   <script>
+    window.addEventListener("error", (e) => {
+  alert("JS ERROR: " + e.message);
+});
     const $ = (id) => document.getElementById(id);
 
     // Telegram init
@@ -614,8 +617,10 @@
 }
 
 async function createRef() {
+  alert("click ok");
   const initData = tg?.initData || "";
   const data = await apiPost("/api/ref/create", { initData });
+  alert(JSON.stringify(data));
 
   if (!data?.ok) {
     if (data?.error === "limit_reached") {
