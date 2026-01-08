@@ -389,3 +389,37 @@ async def cryptocloud_webhook(request: Request):
         )
 
     return JSONResponse({"ok": True})
+
+# ======================
+# API: referrals
+# ======================
+@api.post("/api/ref/create")
+async def ref_create(payload: dict):
+    init_data = payload.get("initData", "")
+    dbu = db_user_from_webapp(init_data)
+
+    r = create_referral_link(dbu["id"])
+    if not r.get("ok"):
+        return {"ok": False, "error": r.get("error")}
+
+    # το link του bot σου (άλλαξε το VeoSeeBot σε δικό σου username bot)
+    url = f"https://t.me/veolumi_bot?start=ref_{r['code']}"
+    return {"ok": True, "ref": {"code": r["code"], "url": url}}
+
+@api.post("/api/ref/list")
+async def ref_list(payload: dict):
+    init_data = payload.get("initData", "")
+    dbu = db_user_from_webapp(init_data)
+
+    rows = list_referrals(dbu["id"])
+    # map για UI
+    out = []
+    for x in rows:
+        out.append({
+            "code": x["code"],
+            "url": f"https://t.me/veolumi_bot?start=ref_{x['code']}",
+            "invited": int(x["starts"] or 0),
+            "purchased_eur": float(x["purchases_amount"] or 0),
+        })
+
+    return {"ok": True, "items": out, "limit": 10}
