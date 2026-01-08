@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE IF NOT EXISTS users (
   id BIGSERIAL PRIMARY KEY,
-  tg_user_id INTEGER UNIQUE NOT NULL,
+  tg_user_id BIGINT UNIQUE NOT NULL,
   tg_username TEXT,
   tg_first_name TEXT,
   credits NUMERIC(12,2) NOT NULL DEFAULT 0,
