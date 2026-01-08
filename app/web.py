@@ -62,8 +62,7 @@ async def root():
 # ======================
 # Telegram WebApp initData verification (FIXED)
 # ======================
-def verify_telegram_init_data(init_data: str) -> dict:
-    """
+
 def verify_telegram_init_data(init_data: str) -> dict:
     if not init_data:
         raise HTTPException(401, "Missing initData (open inside Telegram)")
