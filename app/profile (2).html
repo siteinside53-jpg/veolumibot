@@ -1,0 +1,658 @@
+<!-- app/web_templates/profile.html -->
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VeoLumi – Προφίλ</title>
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <style>
+    :root{
+      --bg:#0e0f12;
+      --card:#171a20;
+      --card2:#141820;
+      --border:#232734;
+      --muted:#9aa3b2;
+      --text:#ffffff;
+      --purple:#7c3aed;
+      --purple2:#6d28d9;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
+    .wrap{max-width:540px;margin:0 auto;padding:14px 14px 80px}
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0)) , var(--card);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:14px;
+      margin-bottom:14px;
+      box-shadow:var(--shadow);
+    }
+    .row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .muted{color:var(--muted)}
+    .h1{font-size:18px;font-weight:800;margin:0}
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;
+      padding:12px 14px;border-radius:14px;border:1px solid var(--border);
+      background:rgba(255,255,255,.03);
+      color:var(--text);
+      font-weight:800;
+      cursor:pointer;
+      width:100%;
+      transition:.15s transform, .15s opacity, .15s background;
+      user-select:none;
+    }
+    .btn:active{transform:scale(.99)}
+    .btn.primary{
+      background:linear-gradient(180deg,var(--purple),var(--purple2));
+      border-color:rgba(255,255,255,.08);
+    }
+    .btn.disabled{opacity:.55;cursor:not-allowed}
+    .avatar{
+      width:54px;height:54px;border-radius:50%;
+      background:#2a2f3d;
+      border:1px solid rgba(255,255,255,.06);
+      display:flex;align-items:center;justify-content:center;
+      overflow:hidden;flex:0 0 auto;
+    }
+    .avatar img{width:100%;height:100%;object-fit:cover;display:none}
+    .avatar span{font-size:18px;font-weight:950;color:#cfd3df}
+    .balance{text-align:right;display:flex;flex-direction:column;gap:2px}
+    .balance .num{font-size:22px;font-weight:950}
+    .section-title{margin:14px 0 10px 0;color:#cfd3df;font-weight:900;letter-spacing:.2px}
+
+    /* Horizontal plan slider */
+    .plans{display:flex;gap:12px;overflow:auto;padding-bottom:6px;scroll-snap-type:x mandatory}
+    .plan{
+      min-width:290px;
+      scroll-snap-align:start;
+      background:linear-gradient(180deg, rgba(124,58,237,.12), rgba(255,255,255,0)) , var(--card2);
+      border:1px solid var(--border);
+      border-radius:22px;
+      padding:14px;
+      position:relative;
+    }
+    .plan .name{font-size:20px;font-weight:950;margin:0 0 6px 0}
+    .plan .credits{font-weight:900;color:#cfd3df;margin-bottom:8px}
+    .tags{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+    .tag{
+      padding:7px 10px;border-radius:12px;border:1px solid var(--border);
+      background:rgba(255,255,255,.03);font-weight:900;
+    }
+    .checks{margin:10px 0 12px 0;display:flex;flex-direction:column;gap:8px}
+    .check{display:flex;gap:10px;align-items:flex-start;color:#d8deea}
+    .check .dot{
+      width:18px;height:18px;border-radius:7px;
+      background:rgba(124,58,237,.18);
+      border:1px solid rgba(124,58,237,.35);
+      display:flex;align-items:center;justify-content:center;
+      flex:0 0 auto;margin-top:1px;
+    }
+    .check .dot::after{content:"✓";font-weight:950;color:#bda8ff;font-size:12px}
+    .plan .btn{margin-top:10px}
+    .plan .btn.secondary{background:rgba(255,255,255,.03);border-color:var(--border);font-weight:900}
+
+    /* Bottom tabs */
+    .tabs{
+      position:fixed;left:0;right:0;bottom:0;
+      background:rgba(14,15,18,.88);
+      backdrop-filter: blur(10px);
+      border-top:1px solid rgba(255,255,255,.06);
+      padding:10px 14px;
+    }
+    .tabs-inner{max-width:540px;margin:0 auto;display:flex;gap:10px}
+    .tab{
+      flex:1;border:1px solid rgba(255,255,255,.06);
+      background:rgba(255,255,255,.03);
+      color:#cfd3df;
+      padding:10px 12px;border-radius:16px;
+      font-weight:900;text-align:center;cursor:pointer;user-select:none;
+    }
+    .tab.active{
+      background:rgba(124,58,237,.18);
+      border-color:rgba(124,58,237,.35);
+      color:#ffffff;
+    }
+
+    /* Modal */
+    .modal-backdrop{
+      position:fixed;inset:0;background:rgba(0,0,0,.55);
+      display:none;align-items:center;justify-content:center;
+      padding:18px;z-index:50;
+    }
+    .modal{
+      width:min(520px, 100%);
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:22px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .modal-head{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:14px 14px 10px 14px;
+      border-bottom:1px solid rgba(255,255,255,.06);
+    }
+    .modal-title{font-weight:950}
+    .x{
+      width:34px;height:34px;border-radius:12px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.03);
+      color:#fff;font-weight:950;cursor:pointer;
+    }
+    .modal-body{padding:14px}
+    .input,.select{
+      width:100%;
+      padding:12px 12px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.03);
+      color:#fff;
+      outline:none;
+      font-weight:900;
+    }
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}
+    .opt{
+      padding:12px 10px;border-radius:14px;border:1px solid var(--border);
+      background:rgba(255,255,255,.03);
+      text-align:center;font-weight:950;cursor:pointer;user-select:none;
+    }
+    .opt.active{background:rgba(124,58,237,.18);border-color:rgba(124,58,237,.35)}
+    .price-line{margin-top:10px;display:flex;align-items:center;justify-content:space-between;color:#cfd3df;font-weight:900}
+    .price-line .price{font-size:18px;font-weight:950;color:#fff}
+
+    .tools-box{
+      background:rgba(255,255,255,.03);
+      border:1px solid rgba(255,255,255,.06);
+      border-radius:18px;
+      padding:12px;
+    }
+    .tools-head{display:flex;align-items:center;justify-content:space-between;font-weight:950;color:#cfd3df;margin-bottom:10px}
+    .tool{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:9px 10px;border-radius:14px;
+      border:1px solid rgba(255,255,255,.06);
+      background:rgba(0,0,0,.12);
+      margin-bottom:8px;gap:10px;
+    }
+    .tool:last-child{margin-bottom:0}
+    .tool .nm{font-weight:950}
+    .tool .c{color:#cfd3df;font-weight:900}
+
+    .page{display:none}
+    .page.active{display:block}
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+
+    <!-- Header -->
+    <div class="card">
+      <div class="row">
+        <div class="row" style="gap:12px">
+          <div class="avatar">
+            <span id="avatarFallback">?</span>
+            <img id="avatarImg" alt="avatar" />
+          </div>
+          <div>
+            <div id="name" class="h1">—</div>
+            <div class="muted" style="font-weight:800;margin-top:2px" id="subtitle">Ο λογαριασμός σου</div>
+          </div>
+        </div>
+
+        <div class="balance">
+          <div class="muted" style="font-weight:900">Credits</div>
+          <div class="num" id="credits">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Current plan -->
+    <div class="card">
+      <div class="muted" style="font-weight:900;margin-bottom:6px">Τρέχον πακέτο</div>
+      <div class="h1" style="font-size:22px" id="currentPlanName">Δωρεάν</div>
+      <div style="height:10px"></div>
+      <button class="btn" id="btnExtraCredits">Αγορά επιπλέον credits</button>
+    </div>
+
+    <!-- PROFILE -->
+    <div id="page-profile" class="page active">
+      <div class="section-title">Συνδρομές</div>
+      <div class="plans" id="plans"></div>
+    </div>
+
+    <!-- PARTNERS -->
+    <div id="page-partners" class="page">
+      <div class="card">
+        <div style="font-weight:950;font-size:16px;margin-bottom:10px">
+          Στείλε στους φίλους σου το μοναδικό σου link και κέρδιζε μαζί με το VeoLumi.
+        </div>
+
+        <div style="display:flex;gap:10px">
+          <button class="btn primary" style="flex:1" id="btnCreateRef">Δημιουργία link</button>
+          <button class="btn" style="flex:1" id="btnPartnerBenefits">Προνόμια</button>
+        </div>
+      </div>
+
+      <div class="card">
+  <div class="row" style="margin-bottom:10px">
+    <div class="h2" style="margin:0">Τα referral links μου</div>
+    <div class="muted" style="font-weight:900" id="refCount">0/10</div>
+  </div>
+
+  <div class="plans" id="refsSlider" style="gap:12px"></div>
+
+  <div class="muted" style="margin-top:10px;font-weight:900">
+    Σύρε δεξιά/αριστερά για να δεις όλα τα links.
+  </div>
+
+  <div style="height:10px"></div>
+
+  <div class="row" style="gap:10px">
+    <div style="flex:1;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:10px;background:rgba(0,0,0,.12)">
+      <div class="muted" style="font-weight:900">Προσκληθέντες χρήστες</div>
+      <div style="font-weight:950;font-size:18px" id="refTotalInvited">0</div>
+    </div>
+    <div style="flex:1;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:10px;background:rgba(0,0,0,.12)">
+      <div class="muted" style="font-weight:900">Αγορές (€)</div>
+      <div style="font-weight:950;font-size:18px" id="refTotalPurchased">0</div>
+    </div>
+  </div>
+</div>
+
+        <div style="border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:12px;background:rgba(255,255,255,.03)">
+          <div class="muted" style="font-weight:900;margin-bottom:8px">URL</div>
+          <div style="font-weight:900;word-break:break-all">—</div>
+          <div style="height:10px"></div>
+          <div class="row" style="gap:10px">
+            <div style="flex:1;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:10px;background:rgba(0,0,0,.12)">
+              <div class="muted" style="font-weight:900">Προσκληθέντες</div>
+              <div style="font-weight:950;font-size:18px">0</div>
+            </div>
+            <div style="flex:1;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:10px;background:rgba(0,0,0,.12)">
+              <div class="muted" style="font-weight:900">Αγορές credits</div>
+              <div style="font-weight:950;font-size:18px">0</div>
+            </div>
+          </div>
+
+          <div style="height:12px"></div>
+          <button class="btn">Αντιγραφή link</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tabs-inner">
+      <div class="tab active" id="tabProfile">Το προφίλ μου</div>
+      <div class="tab" id="tabPartners">Συνεργασία</div>
+    </div>
+  </div>
+
+  <!-- Modal: Extra credits -->
+  <div class="modal-backdrop" id="modalExtra">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="modal-title">Αγορά επιπλέον credits</div>
+        <button class="x" id="closeExtra">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="muted" style="font-weight:900;margin-bottom:8px">E-mail για απόδειξη/επικοινωνία</div>
+        <input class="input" id="email" placeholder="you@example.com" />
+
+        <div style="height:14px"></div>
+        <div class="muted" style="font-weight:900;margin-bottom:8px">Πακέτο credits</div>
+        <div class="grid" id="extraPacks"></div>
+
+        <div style="height:14px"></div>
+        <div class="muted" style="font-weight:900;margin-bottom:8px">Τρόπος πληρωμής</div>
+        <select class="select" id="payMethod">
+          <option value="card">Κάρτα VISA/Mastercard</option>
+          <option value="stripe">Stripe</option>
+          <option value="paypal">PayPal</option>
+          <option value="crypto">Κρυπτονόμισμα (Bitcoin/Ethereum)</option>
+        </select>
+
+        <div class="price-line">
+          <div>Σύνολο</div>
+          <div class="price" id="totalPrice">— €</div>
+        </div>
+
+        <div style="height:12px"></div>
+        <button class="btn primary" id="btnBuyExtra">Αγορά</button>
+
+        <div class="muted" style="margin-top:10px;font-weight:800">
+          * Το UI είναι έτοιμο. Θα συνδέσουμε backend στο επόμενο βήμα.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Tools -->
+  <div class="modal-backdrop" id="modalTools">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="modal-title">Τι περιλαμβάνει το πακέτο</div>
+        <button class="x" id="closeTools">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="tools-box">
+          <div class="tools-head"><div>Βίντεο</div><div class="muted">κόστος (credits)</div></div>
+          <div class="tool"><div class="nm">Kling 2.6 Motion</div><div class="c">20–75</div></div>
+          <div class="tool"><div class="nm">Kling 01</div><div class="c">15–25</div></div>
+          <div class="tool"><div class="nm">Veo 3.1</div><div class="c">12</div></div>
+          <div class="tool"><div class="nm">Veo 3</div><div class="c">10</div></div>
+          <div class="tool"><div class="nm">Sora 2</div><div class="c">6</div></div>
+
+          <div style="height:12px;border-top:1px solid rgba(255,255,255,.06);margin:12px 0"></div>
+
+          <div class="tools-head"><div>Φωτο</div><div class="muted">κόστος (credits)</div></div>
+          <div class="tool"><div class="nm">Flux</div><div class="c">—</div></div>
+          <div class="tool"><div class="nm">Midjourney</div><div class="c">—</div></div>
+          <div class="tool"><div class="nm">Nano Banana</div><div class="c">—</div></div>
+
+          <div class="muted" style="margin-top:10px;font-weight:800">
+            * Θα βάλουμε ακριβή κόστη ανά εργαλείο όταν κλειδώσει τιμοκατάλογος.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Benefits -->
+  <div class="modal-backdrop" id="modalBenefits">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="modal-title">Προνόμια συνεργασίας</div>
+        <button class="x" id="closeBenefits">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="check"><div class="dot"></div><div>Μπόνους για κάθε νέο χρήστη που ξεκινάει από το link σου.</div></div>
+        <div class="check"><div class="dot"></div><div>Ποσοστό από κάθε αγορά credits των χρηστών σου, για πάντα.</div></div>
+        <div class="check"><div class="dot"></div><div>Παρακολούθηση σε πραγματικό χρόνο & ειδοποιήσεις.</div></div>
+        <div class="check"><div class="dot"></div><div>Ανάληψη κερδών μέσω διαχειριστή.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.addEventListener("error", (e) => {
+  alert("JS ERROR: " + e.message);
+});
+    const $ = (id) => document.getElementById(id);
+
+    // Telegram init
+    const tg = window.Telegram?.WebApp;
+    if (tg) { tg.expand(); tg.ready(); }
+
+    // Extra credits packs (μόνο στο modal)
+    const EXTRA_PACKS = [
+      { sku: "CREDITS_100",  credits: 100,  price: 7.00 },
+      { sku: "CREDITS_250",  credits: 250,  price: 12.00 },
+      { sku: "CREDITS_500",  credits: 500,  price: 22.00 },
+      { sku: "CREDITS_1000", credits: 1000, price: 40.00 },
+    ];
+
+    // Subscriptions UI (κάτω slider) – ίδια τιμολόγηση για τώρα
+    const SUBSCRIPTIONS = [
+      { name: "Δωρεάν",  credits: 5,    price: 0.00,  features: ["Δοκιμή εργαλείων", "Nano Banana, Midjourney, Flux κ.ά."] },
+      { name: "Start",   credits: 100,  price: 7.00,  features: ["Πρόσβαση σε εργαλεία AI", "Βασική υποστήριξη"] },
+      { name: "Middle",  credits: 250,  price: 12.00, features: ["Πρόσβαση σε εργαλεία AI", "Προτεραιότητα στην ουρά"] },
+      { name: "Pro",     credits: 500,  price: 22.00, features: ["Πρόσβαση σε όλα", "Καλύτερη προτεραιότητα"] },
+      { name: "Creator", credits: 1000, price: 40.00, features: ["Πρόσβαση σε όλα", "Premium προτεραιότητα"] },
+      { name: "ULTRA PRO", credits: 2000, price: 95.00, features: ["Πρόσβαση σε όλα τα εργαλεία AI", "Sora 2 – απεριόριστα", "Veo 3.1 – απεριόριστα", "Veo 3 – απεριόριστα",  "Nano Banana – απεριόριστα", "Flux Kontext – απεριόριστα", "30% κέρδος στο referral πρόγραμμα"] },
+    ];
+
+    // -------- Modals
+    function openModal(id){ $(id).style.display = "flex"; }
+    function closeModal(id){ $(id).style.display = "none"; }
+
+    // -------- API helper
+    async function apiPost(path, body) {
+  try {
+    const res = await fetch(path, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(body || {})
+    });
+
+    const text = await res.text(); // ΠΑΝΤΑ διάβασε raw text πρώτα
+    let json = null;
+    try { json = JSON.parse(text); } catch {}
+
+    // DEBUG
+    alert(`API ${path}\nstatus=${res.status}\nbody=${text.slice(0, 400)}`);
+
+    if (!res.ok) {
+      return { ok:false, error:`http_${res.status}`, raw:text };
+    }
+    return json ?? { ok:false, error:"not_json", raw:text };
+  } catch (e) {
+    alert(`FETCH ERROR ${path}\n${e?.message || e}`);
+    return { ok:false, error:"network", message:String(e) };
+  }
+    }
+
+    // -------- Load user + credits + avatar
+    async function loadMe() {
+      const initData = tg?.initData || "";
+
+      // 1) Όνομα από Telegram (πάντα σωστό)
+      const u = tg?.initDataUnsafe?.user;
+      const firstName = (u?.first_name || "").trim();
+      const username = (u?.username || "").trim();
+
+      const displayName = firstName || (username ? "@"+username : "Χρήστης");
+      $("name").innerText = displayName;
+
+      const letter = (firstName || username || "U").trim()[0]?.toUpperCase() || "U";
+      $("avatarFallback").innerText = letter;
+
+      // 2) Credits από backend
+      const me = await apiPost("/api/me", { initData });
+      if (me?.ok) {
+        const credits = Number(me.user?.credits ?? 0);
+        $("credits").innerText = String(Math.floor(credits));
+      }
+
+      // 3) Avatar: πρώτα direct, μετά backend
+      const direct = u?.photo_url;
+      if (direct) {
+        $("avatarImg").src = direct;
+        $("avatarImg").style.display = "block";
+        $("avatarFallback").style.display = "none";
+        return;
+      }
+
+      const av = await apiPost("/api/avatar", { initData });
+      if (av?.ok && av.url) {
+        $("avatarImg").src = av.url;
+        $("avatarImg").style.display = "block";
+        $("avatarFallback").style.display = "none";
+      }
+    }
+
+    // -------- Render plans slider
+    function renderPlans() {
+      const host = $("plans");
+      host.innerHTML = "";
+
+      SUBSCRIPTIONS.forEach((p) => {
+        const plan = document.createElement("div");
+        plan.className = "plan";
+
+        const tags = p.price === 0
+          ? `<div class="tag">Δωρεάν</div>`
+          : `<div class="tag">${p.price.toFixed(0)} €</div>`;
+
+        plan.innerHTML = `
+          <div class="name">${p.name}</div>
+          <div class="credits">Credits: ${p.credits}</div>
+
+          <div class="tags">${tags}</div>
+
+          <div class="checks">
+            ${p.features.map(t => `<div class="check"><div class="dot"></div><div>${t}</div></div>`).join("")}
+          </div>
+
+          <button class="btn secondary" data-tools="1">Τι περιλαμβάνει το πακέτο</button>
+          <button class="btn ${p.price === 0 ? "disabled" : "primary"}" ${p.price === 0 ? "disabled" : ""} data-buy-sub="1">
+            ${p.price === 0 ? "Δωρεάν" : "Αγορά"}
+          </button>
+        `;
+
+        plan.querySelector('[data-tools="1"]').addEventListener("click", () => openModal("modalTools"));
+        plan.querySelector('[data-buy-sub="1"]').addEventListener("click", () => {
+          if (p.price === 0) return;
+          alert("Σύντομα: αγορά συνδρομής. (Backend στο επόμενο βήμα)");
+        });
+
+        host.appendChild(plan);
+      });
+    }
+
+    // -------- Extra credits modal UI
+    let selectedExtra = EXTRA_PACKS[0];
+
+    function renderExtraPacks(){
+      const host = $("extraPacks");
+      host.innerHTML = "";
+
+      EXTRA_PACKS.forEach((p) => {
+        const el = document.createElement("div");
+        el.className = "opt" + (p.sku === selectedExtra.sku ? " active" : "");
+        el.innerHTML = `${p.credits}<div class="muted" style="font-weight:900;margin-top:4px">${p.price.toFixed(0)}€</div>`;
+        el.onclick = () => {
+          selectedExtra = p;
+          renderExtraPacks();
+          $("totalPrice").innerText = `${p.price.toFixed(2)} €`;
+        };
+        host.appendChild(el);
+      });
+
+      $("totalPrice").innerText = `${selectedExtra.price.toFixed(2)} €`;
+    }
+
+    // -------- Tabs
+    function setTab(which){
+      const isProfile = which === "profile";
+      $("page-profile").classList.toggle("active", isProfile);
+      $("page-partners").classList.toggle("active", !isProfile);
+      $("tabProfile").classList.toggle("active", isProfile);
+      $("tabPartners").classList.toggle("active", !isProfile);
+      if (!isProfile) loadRefs(); // <-- αυτό
+    }
+
+    // -------- Events
+    $("btnExtraCredits").addEventListener("click", () => openModal("modalExtra"));
+    $("closeExtra").addEventListener("click", () => closeModal("modalExtra"));
+    $("closeTools").addEventListener("click", () => closeModal("modalTools"));
+    $("btnPartnerBenefits").addEventListener("click", () => openModal("modalBenefits"));
+    $("closeBenefits").addEventListener("click", () => closeModal("modalBenefits"));
+
+    $("tabProfile").addEventListener("click", () => setTab("profile"));
+    $("tabPartners").addEventListener("click", () => setTab("partners"));
+
+    $("btnBuyExtra").addEventListener("click", async () => {
+      // εδώ στο επόμενο βήμα θα το δέσουμε με backend
+      alert(`Αγορά extra pack: ${selectedExtra.credits} credits (${selectedExtra.price}€) / Μέθοδος: ${$("payMethod").value}`);
+    });
+
+    // init
+    (async () => {
+      renderPlans();
+      renderExtraPacks();
+      await loadMe();
+    })();
+    async function loadRefs() {
+  const initData = tg?.initData || "";
+  const data = await apiPost("/api/ref/list", { initData });
+  if (!data?.ok) return;
+
+  const items = data.items || [];
+  $("refCount").innerText = `${items.length}/${data.limit || 10}`;
+
+  // totals
+  let totalInv = 0;
+  let totalPur = 0;
+
+  const slider = $("refsSlider");
+  slider.innerHTML = "";
+
+  items.forEach((it, idx) => {
+    totalInv += (it.invited || 0);
+    totalPur += (it.purchased_eur || 0);
+
+    const card = document.createElement("div");
+    card.className = "plan";
+    card.style.minWidth = "310px";
+    card.innerHTML = `
+      <div class="muted" style="font-weight:900;margin-bottom:6px">#${idx+1}</div>
+
+      <div class="muted" style="font-weight:900;margin-bottom:6px">URL</div>
+      <div style="font-weight:900;word-break:break-all">${it.url}</div>
+
+      <div style="height:10px"></div>
+
+      <div class="row" style="gap:10px">
+        <div style="flex:1;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:10px;background:rgba(0,0,0,.12)">
+          <div class="muted" style="font-weight:900">Προσκληθέντες</div>
+          <div style="font-weight:950;font-size:18px">${it.invited || 0}</div>
+        </div>
+        <div style="flex:1;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:10px;background:rgba(0,0,0,.12)">
+          <div class="muted" style="font-weight:900">Αγορές (€)</div>
+          <div style="font-weight:950;font-size:18px">${(it.purchased_eur || 0).toFixed(2)}</div>
+        </div>
+      </div>
+
+      <div style="height:12px"></div>
+      <button class="btn" data-copy="${encodeURIComponent(it.url)}">Αντιγραφή link</button>
+    `;
+
+    card.querySelector("[data-copy]").addEventListener("click", async (e) => {
+      const url = decodeURIComponent(e.currentTarget.getAttribute("data-copy"));
+      try {
+        await navigator.clipboard.writeText(url);
+        if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+      } catch {}
+      alert("Αντιγράφηκε!");
+    });
+
+    slider.appendChild(card);
+  });
+
+  $("refTotalInvited").innerText = String(totalInv);
+  $("refTotalPurchased").innerText = totalPur.toFixed(2);
+}
+
+async function createRef() {
+  alert("click ok");
+  const initData = tg?.initData || "";
+  const data = await apiPost("/api/ref/create", { initData });
+  alert(JSON.stringify(data));
+
+  if (!data?.ok) {
+    if (data?.error === "limit_reached") {
+      alert("Έχεις φτάσει το όριο (10 links).");
+      return;
+    }
+    alert("Αποτυχία δημιουργίας link.");
+    return;
+  }
+
+  await loadRefs();
+  alert("Δημιουργήθηκε νέο link!");
+}
+    $("btnCreateRef")?.addEventListener("click", createRef);
+$("btnPartnerBenefits")?.addEventListener("click", () => openModal("modalBenefits"));
+    
+  </script>
+</body>
+</html>
