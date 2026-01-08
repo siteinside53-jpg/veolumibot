@@ -528,6 +528,7 @@
       $("page-partners").classList.toggle("active", !isProfile);
       $("tabProfile").classList.toggle("active", isProfile);
       $("tabPartners").classList.toggle("active", !isProfile);
+      if (!isProfile) loadRefs(); // <-- αυτό
     }
 
     // -------- Events
