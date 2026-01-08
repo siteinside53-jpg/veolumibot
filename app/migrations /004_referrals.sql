@@ -1,9 +1,4 @@
--- app/migrations/010_referrals.sql
-
--- Ποιος έφερε ποιον (optional)
-ALTER TABLE users
-ADD COLUMN IF NOT EXISTS referred_by_user_id BIGINT REFERENCES users(id);
-
+-- app/migrations/004_referrals.sql
 CREATE TABLE IF NOT EXISTS referrals (
   id BIGSERIAL PRIMARY KEY,
   owner_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
