@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from decimal import Decimal
 from typing import Optional, List, Dict, Any
+import secrets
 
 import psycopg
 import psycopg.rows
@@ -12,6 +13,7 @@ if not DATABASE_URL:
     raise RuntimeError("Λείπει το DATABASE_URL")
 
 MIGRATIONS_DIR = Path(__file__).parent / "migrations"
+MAX_REF_LINKS = 10
 
 # Start credits for new users
 START_FREE_CREDITS = Decimal("5.00")
@@ -285,3 +287,79 @@ def get_ledger_by_tg_id(tg_user_id: int, limit: int = 50) -> List[Dict[str, Any]
                 (u["id"], limit),
             )
             return cur.fetchall()
+
+def create_referral_link(owner_user_id: int) -> dict:
+    """
+    Δημιουργεί νέο referral link για τον user, μέχρι MAX_REF_LINKS.
+    """
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) AS c FROM referrals WHERE owner_user_id=%s", (owner_user_id,))
+            c = cur.fetchone()["c"]
+            if c >= MAX_REF_LINKS:
+                return {"ok": False, "error": "limit_reached"}
+
+            # safe random code (short)
+            code = secrets.token_urlsafe(8).replace("-", "").replace("_", "")
+            cur.execute(
+                "INSERT INTO referrals (owner_user_id, code) VALUES (%s,%s) RETURNING id, code, created_at",
+                (owner_user_id, code),
+            )
+            row = cur.fetchone()
+            conn.commit()
+            return {"ok": True, **row}
+
+def list_referrals(owner_user_id: int) -> list:
+    """
+    Λίστα links + μετρήσεις (starts, purchases_amount)
+    """
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT r.id, r.code, r.created_at,
+                  COALESCE(SUM(CASE WHEN e.event_type='start' THEN 1 ELSE 0 END),0) AS starts,
+                  COALESCE(SUM(CASE WHEN e.event_type='purchase' THEN e.amount_eur ELSE 0 END),0) AS purchases_amount
+                FROM referrals r
+                LEFT JOIN referral_events e ON e.referral_id = r.id
+                WHERE r.owner_user_id=%s
+                GROUP BY r.id
+                ORDER BY r.created_at DESC
+                """,
+                (owner_user_id,),
+            )
+            return cur.fetchall()
+
+def record_referral_start(code: str) -> bool:
+    """
+    Καταγράφει event start για code.
+    """
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id FROM referrals WHERE code=%s", (code,))
+            r = cur.fetchone()
+            if not r:
+                return False
+            cur.execute(
+                "INSERT INTO referral_events (referral_id, event_type) VALUES (%s,'start')",
+                (r["id"],),
+            )
+            conn.commit()
+            return True
+
+def record_referral_purchase(code: str, amount_eur) -> bool:
+    """
+    Καταγράφει purchase amount για code.
+    """
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id FROM referrals WHERE code=%s", (code,))
+            r = cur.fetchone()
+            if not r:
+                return False
+            cur.execute(
+                "INSERT INTO referral_events (referral_id, event_type, amount_eur) VALUES (%s,'purchase',%s)",
+                (r["id"], amount_eur),
+            )
+            conn.commit()
+            return True
