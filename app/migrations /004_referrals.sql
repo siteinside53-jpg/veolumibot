@@ -9,7 +9,7 @@ ADD COLUMN IF NOT EXISTS referred_by_user_id BIGINT REFERENCES users(id);
 -- Τα referral links του χρήστη (μέχρι 10)
 CREATE TABLE IF NOT EXISTS referrals (
   id BIGSERIAL PRIMARY KEY,
-  owner_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  owner_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   code TEXT UNIQUE NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -19,7 +19,7 @@ CREATE INDEX IF NOT EXISTS idx_referrals_owner ON referrals(owner_user_id);
 -- Μετρήσεις για κάθε code
 CREATE TABLE IF NOT EXISTS referral_events (
   id BIGSERIAL PRIMARY KEY,
-  referral_id BIGINT NOT NULL REFERENCES referrals(id) ON DELETE CASCADE,
+  referral_id INTEGER NOT NULL REFERENCES referrals(id) ON DELETE CASCADE,
   event_type TEXT NOT NULL,          -- start | purchase
   amount_eur NUMERIC(12,2),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
