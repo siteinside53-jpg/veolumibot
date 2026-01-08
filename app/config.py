@@ -1,7 +1,8 @@
+# app/config.py
 import os
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
-DATABASE_URL = os.getenv("DATABASE_URL", "")
+
 WEBAPP_URL = os.getenv("WEBAPP_URL", "").rstrip("/")
 
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
