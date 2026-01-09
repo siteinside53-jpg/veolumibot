@@ -341,23 +341,7 @@
         <button class="x" id="closeTools">✕</button>
       </div>
       <div class="modal-body">
-        <div class="tools-box">
-          <div class="tools-head"><div>Βίντεο</div><div class="muted">κόστος (credits)</div></div>
-          <div class="tool"><div class="nm">Kling 2.6 Motion</div><div class="c">20–75</div></div>
-          <div class="tool"><div class="nm">Kling 01</div><div class="c">15–25</div></div>
-          <div class="tool"><div class="nm">Veo 3.1</div><div class="c">12</div></div>
-          <div class="tool"><div class="nm">Veo 3</div><div class="c">10</div></div>
-          <div class="tool"><div class="nm">Sora 2</div><div class="c">6</div></div>
-
-          <div style="height:12px;border-top:1px solid rgba(255,255,255,.06);margin:12px 0"></div>
-
-          <div class="tools-head"><div>Φωτο</div><div class="muted">κόστος (credits)</div></div>
-          <div class="tool"><div class="nm">Flux</div><div class="c">—</div></div>
-          <div class="tool"><div class="nm">Midjourney</div><div class="c">—</div></div>
-          <div class="tool"><div class="nm">Nano Banana</div><div class="c">—</div></div>
-
-          <div class="muted" style="margin-top:10px;font-weight:800">
-            * Θα βάλουμε ακριβή κόστη ανά εργαλείο όταν κλειδώσει τιμοκατάλογος.
+        <div class="tools-box" id="toolsBox">  <div class="muted" style="font-weight:900">Φόρτωση…</div></div>
           </div>
         </div>
       </div>
@@ -568,6 +552,14 @@
       if (!isProfile) loadRefs();
     }
 
+    //--------TOOLS LIST
+    function renderToolsList(tools){  const box = $("toolsBox");  if (!box) return;
+  const section = (title, items) => `    <div class="tools-head"><div>${title}</div><div class="muted">κόστος (credits)</div></div>    ${(items||[]).map(it => `      <div class="tool">        <div class="nm">${it.name}</div>        <div class="c">${it.credits}</div>      </div>    `).join("")}  `;
+  box.innerHTML = `    ${section("Βίντεο", tools.video)}    <div style="height:12px;border-top:1px solid rgba(255,255,255,.06);margin:12px 0"></div>    ${section("Φωτο", tools.photo)}    <div style="height:12px;border-top:1px solid rgba(255,255,255,.06);margin:12px 0"></div>    ${section("Audio", tools.audio)}  `;}
+async function loadTools(){  try{    const res = await fetch("/api/tools");    const data = await res.json();    if (data?.ok) renderToolsList(data.tools);    else $("toolsBox").innerHTML = `<div class="muted" style="font-weight:900">Αποτυχία φόρτωσης</div>`;  }catch{    $("toolsBox").innerHTML = `<div class="muted" style="font-weight:900">Αποτυχία φόρτωσης</div>`;  }}
+
+    
+
     // -------- Refs
     async function loadRefs() {
       const initData = tg?.initData || "";
@@ -678,6 +670,7 @@
       renderPlans();
       renderExtraPacks();
       await loadMe();
+      await loadTools();
     })();
   </script>
 </body>
