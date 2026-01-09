@@ -27,7 +27,6 @@ from .config import (
 )
 
 # ✅ ΜΟΝΟ αυτά τα imports από db.py (όχι διπλά)
-from .db import get_conn, ensure_user, get_user, add_credits_by_user_id
 
 # ======================
 # Init
