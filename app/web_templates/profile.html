@@ -65,7 +65,6 @@
     .balance .num{font-size:22px;font-weight:950}
     .section-title{margin:14px 0 10px 0;color:#cfd3df;font-weight:900;letter-spacing:.2px}
 
-    /* Horizontal plan slider */
     .plans{display:flex;gap:12px;overflow:auto;padding-bottom:6px;scroll-snap-type:x mandatory}
     .plan{
       min-width:290px;
@@ -96,7 +95,6 @@
     .plan .btn{margin-top:10px}
     .plan .btn.secondary{background:rgba(255,255,255,.03);border-color:var(--border);font-weight:900}
 
-    /* Bottom tabs */
     .tabs{
       position:fixed;left:0;right:0;bottom:0;
       background:rgba(14,15,18,.88);
@@ -118,7 +116,6 @@
       color:#ffffff;
     }
 
-    /* Modal */
     .modal-backdrop{
       position:fixed;inset:0;background:rgba(0,0,0,.55);
       display:none;align-items:center;justify-content:center;
@@ -185,6 +182,24 @@
 
     .page{display:none}
     .page.active{display:block}
+
+    /* Toast */
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:74px;
+      transform:translateX(-50%);
+      background:rgba(0,0,0,.75);
+      border:1px solid rgba(255,255,255,.10);
+      color:#fff;
+      padding:10px 12px;
+      border-radius:14px;
+      font-weight:900;
+      max-width:min(520px, calc(100% - 28px));
+      box-shadow:var(--shadow);
+      display:none;
+      z-index:60;
+    }
   </style>
 </head>
 
@@ -240,48 +255,28 @@
       </div>
 
       <div class="card">
-  <div class="row" style="margin-bottom:10px">
-    <div class="h2" style="margin:0">Τα referral links μου</div>
-    <div class="muted" style="font-weight:900" id="refCount">0/10</div>
-  </div>
+        <div class="row" style="margin-bottom:10px">
+          <div class="h2" style="margin:0">Τα referral links μου</div>
+          <div class="muted" style="font-weight:900" id="refCount">0/10</div>
+        </div>
 
-  <div class="plans" id="refsSlider" style="gap:12px"></div>
+        <div class="plans" id="refsSlider" style="gap:12px"></div>
 
-  <div class="muted" style="margin-top:10px;font-weight:900">
-    Σύρε δεξιά/αριστερά για να δεις όλα τα links.
-  </div>
+        <div class="muted" style="margin-top:10px;font-weight:900">
+          Σύρε δεξιά/αριστερά για να δεις όλα τα links.
+        </div>
 
-  <div style="height:10px"></div>
+        <div style="height:10px"></div>
 
-  <div class="row" style="gap:10px">
-    <div style="flex:1;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:10px;background:rgba(0,0,0,.12)">
-      <div class="muted" style="font-weight:900">Προσκληθέντες χρήστες</div>
-      <div style="font-weight:950;font-size:18px" id="refTotalInvited">0</div>
-    </div>
-    <div style="flex:1;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:10px;background:rgba(0,0,0,.12)">
-      <div class="muted" style="font-weight:900">Αγορές (€)</div>
-      <div style="font-weight:950;font-size:18px" id="refTotalPurchased">0</div>
-    </div>
-  </div>
-</div>
-
-        <div style="border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:12px;background:rgba(255,255,255,.03)">
-          <div class="muted" style="font-weight:900;margin-bottom:8px">URL</div>
-          <div style="font-weight:900;word-break:break-all">—</div>
-          <div style="height:10px"></div>
-          <div class="row" style="gap:10px">
-            <div style="flex:1;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:10px;background:rgba(0,0,0,.12)">
-              <div class="muted" style="font-weight:900">Προσκληθέντες</div>
-              <div style="font-weight:950;font-size:18px">0</div>
-            </div>
-            <div style="flex:1;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:10px;background:rgba(0,0,0,.12)">
-              <div class="muted" style="font-weight:900">Αγορές credits</div>
-              <div style="font-weight:950;font-size:18px">0</div>
-            </div>
+        <div class="row" style="gap:10px">
+          <div style="flex:1;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:10px;background:rgba(0,0,0,.12)">
+            <div class="muted" style="font-weight:900">Προσκληθέντες χρήστες</div>
+            <div style="font-weight:950;font-size:18px" id="refTotalInvited">0</div>
           </div>
-
-          <div style="height:12px"></div>
-          <button class="btn">Αντιγραφή link</button>
+          <div style="flex:1;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:10px;background:rgba(0,0,0,.12)">
+            <div class="muted" style="font-weight:900">Αγορές (€)</div>
+            <div style="font-weight:950;font-size:18px" id="refTotalPurchased">0</div>
+          </div>
         </div>
       </div>
     </div>
@@ -295,6 +290,9 @@
       <div class="tab" id="tabPartners">Συνεργασία</div>
     </div>
   </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
 
   <!-- Modal: Extra credits -->
   <div class="modal-backdrop" id="modalExtra">
@@ -383,14 +381,26 @@
   </div>
 
   <script>
-    window.addEventListener("error", (e) => {
-  alert("JS ERROR: " + e.message);
-});
     const $ = (id) => document.getElementById(id);
 
     // Telegram init
     const tg = window.Telegram?.WebApp;
     if (tg) { tg.expand(); tg.ready(); }
+
+    // Toast helper
+    let toastTimer = null;
+    function toast(msg){
+      const el = $("toast");
+      if (!el) return;
+      el.textContent = msg;
+      el.style.display = "block";
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { el.style.display = "none"; }, 1600);
+    }
+
+    // -------- Modals
+    function openModal(id){ $(id).style.display = "flex"; }
+    function closeModal(id){ $(id).style.display = "none"; }
 
     // Extra credits packs (μόνο στο modal)
     const EXTRA_PACKS = [
@@ -400,7 +410,7 @@
       { sku: "CREDITS_1000", credits: 1000, price: 40.00 },
     ];
 
-    // Subscriptions UI (κάτω slider) – ίδια τιμολόγηση για τώρα
+    // Subscriptions UI (κάτω slider)
     const SUBSCRIPTIONS = [
       { name: "Δωρεάν",  credits: 5,    price: 0.00,  features: ["Δοκιμή εργαλείων", "Nano Banana, Midjourney, Flux κ.ά."] },
       { name: "Start",   credits: 100,  price: 7.00,  features: ["Πρόσβαση σε εργαλεία AI", "Βασική υποστήριξη"] },
@@ -410,41 +420,51 @@
       { name: "ULTRA PRO", credits: 2000, price: 95.00, features: ["Πρόσβαση σε όλα τα εργαλεία AI", "Sora 2 – απεριόριστα", "Veo 3.1 – απεριόριστα", "Veo 3 – απεριόριστα",  "Nano Banana – απεριόριστα", "Flux Kontext – απεριόριστα", "30% κέρδος στο referral πρόγραμμα"] },
     ];
 
-    // -------- Modals
-    function openModal(id){ $(id).style.display = "flex"; }
-    function closeModal(id){ $(id).style.display = "none"; }
-
-    // -------- API helper
+    // -------- API helper (χωρίς alerts)
     async function apiPost(path, body) {
-  try {
-    const res = await fetch(path, {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify(body || {})
-    });
+      try {
+        const res = await fetch(path, {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify(body || {})
+        });
 
-    const text = await res.text(); // ΠΑΝΤΑ διάβασε raw text πρώτα
-    let json = null;
-    try { json = JSON.parse(text); } catch {}
+        const text = await res.text();
+        let json = null;
+        try { json = JSON.parse(text); } catch {}
 
-    // DEBUG
-    alert(`API ${path}\nstatus=${res.status}\nbody=${text.slice(0, 400)}`);
-
-    if (!res.ok) {
-      return { ok:false, error:`http_${res.status}`, raw:text };
+        if (!res.ok) {
+          return { ok:false, error:`http_${res.status}`, raw:text };
+        }
+        return json ?? { ok:false, error:"not_json", raw:text };
+      } catch (e) {
+        return { ok:false, error:"network", message:String(e) };
+      }
     }
-    return json ?? { ok:false, error:"not_json", raw:text };
-  } catch (e) {
-    alert(`FETCH ERROR ${path}\n${e?.message || e}`);
-    return { ok:false, error:"network", message:String(e) };
-  }
+
+    // -------- Clipboard helper (Telegram first, fallback to browser)
+    async function copyText(text){
+      try{
+        if (tg && typeof tg.setClipboardText === "function") {
+          tg.setClipboardText(text);
+          if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+          return true;
+        }
+      }catch{}
+
+      try{
+        await navigator.clipboard.writeText(text);
+        if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+        return true;
+      }catch{
+        return false;
+      }
     }
 
     // -------- Load user + credits + avatar
     async function loadMe() {
       const initData = tg?.initData || "";
 
-      // 1) Όνομα από Telegram (πάντα σωστό)
       const u = tg?.initDataUnsafe?.user;
       const firstName = (u?.first_name || "").trim();
       const username = (u?.username || "").trim();
@@ -455,14 +475,12 @@
       const letter = (firstName || username || "U").trim()[0]?.toUpperCase() || "U";
       $("avatarFallback").innerText = letter;
 
-      // 2) Credits από backend
       const me = await apiPost("/api/me", { initData });
       if (me?.ok) {
         const credits = Number(me.user?.credits ?? 0);
         $("credits").innerText = String(Math.floor(credits));
       }
 
-      // 3) Avatar: πρώτα direct, μετά backend
       const direct = u?.photo_url;
       if (direct) {
         $("avatarImg").src = direct;
@@ -511,7 +529,7 @@
         plan.querySelector('[data-tools="1"]').addEventListener("click", () => openModal("modalTools"));
         plan.querySelector('[data-buy-sub="1"]').addEventListener("click", () => {
           if (p.price === 0) return;
-          alert("Σύντομα: αγορά συνδρομής. (Backend στο επόμενο βήμα)");
+          toast("Σύντομα: αγορά συνδρομής (θα δέσουμε backend).");
         });
 
         host.appendChild(plan);
@@ -547,7 +565,96 @@
       $("page-partners").classList.toggle("active", !isProfile);
       $("tabProfile").classList.toggle("active", isProfile);
       $("tabPartners").classList.toggle("active", !isProfile);
-      if (!isProfile) loadRefs(); // <-- αυτό
+      if (!isProfile) loadRefs();
+    }
+
+    // -------- Refs
+    async function loadRefs() {
+      const initData = tg?.initData || "";
+      const data = await apiPost("/api/ref/list", { initData });
+      if (!data?.ok) return;
+
+      const items = data.items || [];
+      $("refCount").innerText = `${items.length}/${data.limit || 10}`;
+
+      let totalInv = 0;
+      let totalPur = 0;
+
+      const slider = $("refsSlider");
+      slider.innerHTML = "";
+
+      items.forEach((it, idx) => {
+        totalInv += (it.invited || 0);
+        totalPur += (it.purchased_eur || 0);
+
+        const card = document.createElement("div");
+        card.className = "plan";
+        card.style.minWidth = "310px";
+        card.innerHTML = `
+          <div class="muted" style="font-weight:900;margin-bottom:6px">#${idx+1}</div>
+
+          <div class="muted" style="font-weight:900;margin-bottom:6px">URL</div>
+          <div style="font-weight:900;word-break:break-all">${it.url}</div>
+
+          <div style="height:10px"></div>
+
+          <div class="row" style="gap:10px">
+            <div style="flex:1;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:10px;background:rgba(0,0,0,.12)">
+              <div class="muted" style="font-weight:900">Προσκληθέντες</div>
+              <div style="font-weight:950;font-size:18px">${it.invited || 0}</div>
+            </div>
+            <div style="flex:1;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:10px;background:rgba(0,0,0,.12)">
+              <div class="muted" style="font-weight:900">Αγορές (€)</div>
+              <div style="font-weight:950;font-size:18px">${(it.purchased_eur || 0).toFixed(2)}</div>
+            </div>
+          </div>
+
+          <div style="height:12px"></div>
+          <button class="btn" data-copy="${encodeURIComponent(it.url)}">Αντιγραφή link</button>
+        `;
+
+        card.querySelector("[data-copy]").addEventListener("click", async (e) => {
+          const url = decodeURIComponent(e.currentTarget.getAttribute("data-copy"));
+          const ok = await copyText(url);
+          toast(ok ? "Αντιγράφηκε!" : "Δεν μπόρεσα να αντιγράψω.");
+        });
+
+        slider.appendChild(card);
+      });
+
+      $("refTotalInvited").innerText = String(totalInv);
+      $("refTotalPurchased").innerText = totalPur.toFixed(2);
+    }
+
+    let creatingRef = false;
+    async function createRef() {
+      if (creatingRef) return;
+
+      const btn = $("btnCreateRef");
+      creatingRef = true;
+      btn.classList.add("disabled");
+      btn.disabled = true;
+
+      try{
+        const initData = tg?.initData || "";
+        const data = await apiPost("/api/ref/create", { initData });
+
+        if (!data?.ok) {
+          if (data?.error === "limit_reached") {
+            toast("Έφτασες το όριο (10 links).");
+            return;
+          }
+          toast("Αποτυχία δημιουργίας link.");
+          return;
+        }
+
+        await loadRefs();
+        toast("Δημιουργήθηκε νέο link!");
+      } finally {
+        creatingRef = false;
+        btn.classList.remove("disabled");
+        btn.disabled = false;
+      }
     }
 
     // -------- Events
@@ -561,9 +668,10 @@
     $("tabPartners").addEventListener("click", () => setTab("partners"));
 
     $("btnBuyExtra").addEventListener("click", async () => {
-      // εδώ στο επόμενο βήμα θα το δέσουμε με backend
-      alert(`Αγορά extra pack: ${selectedExtra.credits} credits (${selectedExtra.price}€) / Μέθοδος: ${$("payMethod").value}`);
+      toast(`Σύντομα: αγορά ${selectedExtra.credits} credits (${selectedExtra.price}€).`);
     });
+
+    $("btnCreateRef")?.addEventListener("click", createRef);
 
     // init
     (async () => {
@@ -571,88 +679,6 @@
       renderExtraPacks();
       await loadMe();
     })();
-    async function loadRefs() {
-  const initData = tg?.initData || "";
-  const data = await apiPost("/api/ref/list", { initData });
-  if (!data?.ok) return;
-
-  const items = data.items || [];
-  $("refCount").innerText = `${items.length}/${data.limit || 10}`;
-
-  // totals
-  let totalInv = 0;
-  let totalPur = 0;
-
-  const slider = $("refsSlider");
-  slider.innerHTML = "";
-
-  items.forEach((it, idx) => {
-    totalInv += (it.invited || 0);
-    totalPur += (it.purchased_eur || 0);
-
-    const card = document.createElement("div");
-    card.className = "plan";
-    card.style.minWidth = "310px";
-    card.innerHTML = `
-      <div class="muted" style="font-weight:900;margin-bottom:6px">#${idx+1}</div>
-
-      <div class="muted" style="font-weight:900;margin-bottom:6px">URL</div>
-      <div style="font-weight:900;word-break:break-all">${it.url}</div>
-
-      <div style="height:10px"></div>
-
-      <div class="row" style="gap:10px">
-        <div style="flex:1;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:10px;background:rgba(0,0,0,.12)">
-          <div class="muted" style="font-weight:900">Προσκληθέντες</div>
-          <div style="font-weight:950;font-size:18px">${it.invited || 0}</div>
-        </div>
-        <div style="flex:1;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:10px;background:rgba(0,0,0,.12)">
-          <div class="muted" style="font-weight:900">Αγορές (€)</div>
-          <div style="font-weight:950;font-size:18px">${(it.purchased_eur || 0).toFixed(2)}</div>
-        </div>
-      </div>
-
-      <div style="height:12px"></div>
-      <button class="btn" data-copy="${encodeURIComponent(it.url)}">Αντιγραφή link</button>
-    `;
-
-    card.querySelector("[data-copy]").addEventListener("click", async (e) => {
-      const url = decodeURIComponent(e.currentTarget.getAttribute("data-copy"));
-      try {
-        await navigator.clipboard.writeText(url);
-        if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-      } catch {}
-      alert("Αντιγράφηκε!");
-    });
-
-    slider.appendChild(card);
-  });
-
-  $("refTotalInvited").innerText = String(totalInv);
-  $("refTotalPurchased").innerText = totalPur.toFixed(2);
-}
-
-async function createRef() {
-  alert("click ok");
-  const initData = tg?.initData || "";
-  const data = await apiPost("/api/ref/create", { initData });
-  alert(JSON.stringify(data));
-
-  if (!data?.ok) {
-    if (data?.error === "limit_reached") {
-      alert("Έχεις φτάσει το όριο (10 links).");
-      return;
-    }
-    alert("Αποτυχία δημιουργίας link.");
-    return;
-  }
-
-  await loadRefs();
-  alert("Δημιουργήθηκε νέο link!");
-}
-    $("btnCreateRef")?.addEventListener("click", createRef);
-$("btnPartnerBenefits")?.addEventListener("click", () => openModal("modalBenefits"));
-    
   </script>
 </body>
 </html>
