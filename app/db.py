@@ -147,6 +147,82 @@ def ensure_user(tg_user_id: int, tg_username: Optional[str], tg_first_name: Opti
             conn.commit()
             return row
 
+def apply_referral_start(invited_user_id: int, code: str, bonus_credits: int = 1) -> dict:
+    """
+    Αν ο invited_user ΔΕΝ έχει ξαναμπεί από referral, τότε:
+    - καταγράφει join
+    - γράφει referral_event start
+    - δίνει bonus credits στον owner του referral
+    Επιστρέφει: {ok, credited, owner_user_id, owner_tg_user_id, bonus}
+    """
+    with get_conn() as conn:
+        cur = conn.cursor()
+
+        # βρες referral + owner
+        cur.execute(
+            """
+            SELECT r.id AS referral_id, r.owner_user_id, u.tg_user_id AS owner_tg_user_id
+            FROM referrals r
+            JOIN users u ON u.id = r.owner_user_id
+            WHERE r.code = %s
+            """,
+            (code,),
+        )
+        row = cur.fetchone()
+        if not row:
+            conn.commit()
+            return {"ok": False, "error": "bad_code"}
+
+        referral_id = row["referral_id"]
+        owner_user_id = row["owner_user_id"]
+        owner_tg_user_id = row["owner_tg_user_id"]
+
+        # μην δίνεις bonus στον ίδιο χρήστη αν άνοιξε το δικό του link
+        if owner_user_id == invited_user_id:
+            conn.commit()
+            return {"ok": True, "credited": False, "reason": "self_ref"}
+
+        # προσπάθησε να γράψεις join (αν έχει ήδη invited_user_id, θα αποτύχει λόγω UNIQUE)
+        try:
+            cur.execute(
+                """
+                INSERT INTO referral_joins (referral_id, invited_user_id)
+                VALUES (%s, %s)
+                """,
+                (referral_id, invited_user_id),
+            )
+        except Exception:
+            # ήδη έχει μετρήσει
+            conn.rollback()
+            return {"ok": True, "credited": False, "reason": "already_joined"}
+
+        # γράψε event start
+        cur.execute(
+            """
+            INSERT INTO referral_events (referral_id, event_type, amount_eur)
+            VALUES (%s, 'start', NULL)
+            """,
+            (referral_id,),
+        )
+
+        conn.commit()
+
+    # δώσε bonus στον owner (γράφει και ledger)
+    add_credits_by_user_id(
+        owner_user_id,
+        bonus_credits,
+        f"Referral bonus (+{bonus_credits}) από νέο χρήστη",
+        "referral",
+        code,
+    )
+
+    return {
+        "ok": True,
+        "credited": True,
+        "owner_user_id": owner_user_id,
+        "owner_tg_user_id": owner_tg_user_id,
+        "bonus": bonus_credits,
+    }
 
 def get_user(tg_user_id: int) -> Optional[Dict[str, Any]]:
     with get_conn() as conn:
