@@ -94,7 +94,6 @@ async def edit_start_card(q, caption: str, reply_markup):
             reply_markup=reply_markup,
         )
 
-@start_command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     tg_id = update.effective_user.id
     username = update.effective_user.username
