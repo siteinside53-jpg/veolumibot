@@ -94,7 +94,34 @@ async def edit_start_card(q, caption: str, reply_markup):
             reply_markup=reply_markup,
         )
 
+@start_command
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    tg_id = update.effective_user.id
+    username = update.effective_user.username
+    first_name = update.effective_user.first_name
 
+    ensure_user(tg_id, username, first_name)
+    dbu = get_user(tg_id)  # να επιστρέφει row με id
+
+    # /start args
+    arg = (context.args[0] if context.args else "").strip()
+
+    if arg.startswith("ref_"):
+        code = arg.replace("ref_", "", 1)
+
+        res = apply_referral_start(dbu["id"], code, bonus_credits=1)
+
+        if res.get("ok") and res.get("credited"):
+            # μήνυμα στον inviter (αυτόν που έχει το referral link)
+            try:
+                await context.bot.send_message(
+                    chat_id=res["owner_tg_user_id"],
+                    text=f"✅ Σου πιστώθηκε {res['bonus']} credit από χρήστη που μπήκε από το referral link σου."
+                )
+            except Exception:
+                pass
+
+    await update.message.reply_text("Καλώς ήρθες! ✅")
 # ======================
 # Handlers
 # ======================
