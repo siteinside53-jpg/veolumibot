@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VeoLumi – Δημιουργία Εικόνας</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg:#0e0f12;--card:#171a20;--border:#232734;--muted:#9aa3b2;
+      --text:#fff;--purple:#7c3aed;--purple2:#6d28d9;--radius:18px;
+      --shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background:var(--bg);color:var(--text)}
+    .wrap{max-width:520px;margin:0 auto;padding:16px}
+    .card{
+      background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0)),var(--card);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:16px;box-shadow:var(--shadow);
+    }
+    .row{display:flex;justify-content:space-between;align-items:center}
+    select,textarea{width:100%;border-radius:14px;border:1px solid var(--border);
+      background:rgba(255,255,255,.03);color:#fff;padding:10px;font-weight:900;
+      font-size:15px;outline:none}
+    textarea{resize:none;height:120px}
+    label{display:block;font-weight:900;margin:10px 0 6px;color:#cfd3df}
+    .btn{
+      margin-top:14px;width:100%;padding:12px;border-radius:14px;
+      border:1px solid var(--border);background:linear-gradient(180deg,var(--purple),var(--purple2));
+      color:#fff;font-weight:900;cursor:pointer;text-align:center;
+    }
+    .btn:active{transform:scale(.99)}
+    .price-line{margin-top:10px;display:flex;justify-content:space-between;font-weight:900;color:#cfd3df}
+    .price-line .price{font-size:18px;color:#fff}
+    .preview{margin-top:16px;border:1px solid var(--border);border-radius:14px;overflow:hidden;display:none}
+    .preview img{width:100%;display:block}
+    .toast{
+      position:fixed;left:50%;bottom:80px;transform:translateX(-50%);
+      background:rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.1);
+      color:#fff;padding:10px 14px;border-radius:14px;font-weight:900;display:none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="row"><h2>GPT Image 1.5</h2><div>Τιμή: <b>2 credits</b></div></div>
+
+      <label for="mode">Λειτουργία</label>
+      <select id="mode">
+        <option value="text2img">Κείμενο σε Εικόνα</option>
+        <option value="img2img">Εικόνα σε Εικόνα</option>
+      </select>
+
+      <label for="prompt">Prompt</label>
+      <textarea id="prompt" maxlength="1000" placeholder="Πληκτρολόγησε prompt (έως 1000 χαρακτήρες)..."></textarea>
+      <div id="promptErr" style="color:#f66;font-weight:800;display:none">Το prompt είναι υποχρεωτικό (1–1000 χαρακτήρες).</div>
+
+      <label for="ratio">Αναλογία πλευρών</label>
+      <select id="ratio">
+        <option value="1:1">1:1</option>
+        <option value="2:3">2:3</option>
+        <option value="3:2">3:2</option>
+      </select>
+
+      <label for="quality">Ποιότητα</label>
+      <select id="quality">
+        <option value="medium">Μεσαία</option>
+        <option value="high">Υψηλή</option>
+      </select>
+
+      <div class="price-line">
+        <div>Κόστος</div><div class="price">2 credits</div>
+      </div>
+
+      <button class="btn" id="btnGenerate">Δημιουργία</button>
+      <div class="preview" id="preview"><img id="previewImg" alt="preview" /></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const tg = window.Telegram?.WebApp;
+    if (tg) { tg.expand(); tg.ready(); }
+
+    function toast(msg){
+      const el = $("toast"); el.textContent = msg;
+      el.style.display = "block";
+      setTimeout(()=> el.style.display="none", 1800);
+    }
+
+    async function generate(){
+      const prompt = $("prompt").value.trim();
+      if (prompt.length < 1){ $("promptErr").style.display="block"; return; }
+      $("promptErr").style.display="none";
+
+      const body = {
+        initData: tg?.initData || "",
+        mode: $("mode").value,
+        prompt,
+        ratio: $("ratio").value,
+        quality: $("quality").value,
+      };
+
+      $("btnGenerate").disabled = true;
+      $("btnGenerate").textContent = "⏳ Δημιουργία...";
+      try {
+        const res = await fetch("/api/gpt_image/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || "Αποτυχία");
+        const url = data.url;
+        $("previewImg").src = url;
+        $("preview").style.display = "block";
+        toast("Η εικόνα δημιουργήθηκε επιτυχώς!");
+        if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+      } catch(e){
+        toast("Αποτυχία δημιουργίας εικόνας");
+      } finally {
+        $("btnGenerate").disabled = false;
+        $("btnGenerate").textContent = "Δημιουργία";
+      }
+    }
+
+    $("btnGenerate").addEventListener("click", generate);
+  </script>
+</body>
+</html>ιμ
