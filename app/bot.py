@@ -17,26 +17,15 @@ from . import texts
 from .keyboards import (
     start_inline_menu,
     open_profile_webapp_kb,
-    open_image_webapp_kb,
     video_models_menu,
     image_models_menu,
     audio_models_menu,
 )
 
-# ======================
-# Assets
-# ======================
 HERO_PATH = Path(__file__).parent / "assets" / "hero.png"
 
 
-# ======================
-# Helpers
-# ======================
 async def send_start_card(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Στέλνει το START card (photo + caption + inline menu)
-    με ασφαλές fallback αν λείπει η εικόνα.
-    """
     u = update.effective_user
     ensure_user(u.id, u.username, u.first_name)
 
@@ -81,15 +70,11 @@ async def send_start_card(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def edit_start_card(q, caption: str, reply_markup):
-    """
-    Αλλάζει το caption του ίδιου START card.
-    Αν δεν γίνεται edit (π.χ. είναι παλιό), στέλνει νέο.
-    """
     msg = q.message
     try:
         await msg.edit_caption(caption=caption, reply_markup=reply_markup)
     except BadRequest:
-        # fallback: στέλνει νέο
+        # fallback: στείλε νέο μήνυμα
         if HERO_PATH.exists():
             await msg.reply_photo(
                 photo=HERO_PATH.open("rb"),
@@ -100,16 +85,10 @@ async def edit_start_card(q, caption: str, reply_markup):
             await msg.reply_text(caption, reply_markup=reply_markup)
 
 
-# ======================
-# Commands
-# ======================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_start_card(update, context)
 
 
-# ======================
-# Callback handler
-# ======================
 async def on_menu_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     if not q:
@@ -126,8 +105,7 @@ async def on_menu_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await edit_start_card(q, texts.START_CAPTION, start_inline_menu())
         return
 
-    # Αν κρατάς παλιό menu:profile (δεν το χρειάζεσαι πλέον γιατί Profile ανοίγει web_app),
-    # το αφήνω για συμβατότητα.
+    # NOTE: menu:profile θα δουλέψει μόνο αν υπάρχει κουμπί με callback_data="menu:profile"
     if data == "menu:profile":
         dbu = get_user(u.id) or {
             "tg_user_id": u.id,
@@ -143,14 +121,6 @@ async def on_menu_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ),
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=open_profile_webapp_kb(),
-        )
-        return
-
-    # ΝΕΟ: αν ποτέ θες να ανοίγεις GPT Image και με callback (προαιρετικό)
-    if data == "menu:gpt_image":
-        await q.message.reply_text(
-            "Άνοιξε το GPT Image WebApp:",
-            reply_markup=open_image_webapp_kb(),
         )
         return
 
@@ -180,9 +150,6 @@ async def on_menu_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
 
-# ======================
-# Main
-# ======================
 def main():
     if not BOT_TOKEN:
         raise RuntimeError("Missing BOT_TOKEN")
