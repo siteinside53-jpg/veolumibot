@@ -20,7 +20,7 @@ def _webapp_profile_url() -> str:
     return f"{_base_url()}/profile"
 
 def _webapp_gpt_image_url() -> str:
-    return f"{_base_webapp_url()}/gpt-image"
+    return f"{_base_url()}/gpt-image"
 
 def start_inline_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
