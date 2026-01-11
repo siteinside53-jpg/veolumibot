@@ -11,20 +11,27 @@ from .texts import (
 )
 from .config import WEBAPP_URL
 
+# ΝΕΟ: κουμπί για GPT Image (WebApp page)
+BTN_GPT_IMAGE = "🧠 GPT Image"
+
 # Σταθερό fallback domain show
 FALLBACK_WEBAPP_BASE = "https://veolumibot-production.up.railway.app"
 
 
-def _webapp_profile_url() -> str:
-    """
-    Βγάζει το σωστό URL για το Telegram WebApp.
-    - Αν έχεις WEBAPP_URL στο env, το χρησιμοποιεί.
-    - Αλλιώς χρησιμοποιεί fallback.
-    """
+def _webapp_base() -> str:
     base = (WEBAPP_URL or "").strip().rstrip("/")
     if not base:
         base = FALLBACK_WEBAPP_BASE
-    return f"{base}/profile"
+    return base
+
+
+def _webapp_profile_url() -> str:
+    return f"{_webapp_base()}/profile"
+
+
+def _webapp_image_url() -> str:
+    # WebApp page για GPT Image
+    return f"{_webapp_base()}/image"
 
 
 # -----------------------
@@ -33,13 +40,12 @@ def _webapp_profile_url() -> str:
 def start_inline_menu() -> InlineKeyboardMarkup:
     """
     Κεντρικό inline menu κάτω από το START card.
-    ΣΗΜΑΝΤΙΚΟ:
-    - Το κουμπί Profile εδώ ανοίγει WebApp (όχι callback_data),
-      άρα ΔΕΝ θα περνάει από on_menu_click.
+    Profile + GPT Image ανοίγουν WebApp (όχι callback_data).
     """
     return InlineKeyboardMarkup(
         [
             [InlineKeyboardButton(BTN_PROFILE, web_app=WebAppInfo(url=_webapp_profile_url()))],
+            [InlineKeyboardButton(BTN_GPT_IMAGE, web_app=WebAppInfo(url=_webapp_image_url()))],
             [InlineKeyboardButton(BTN_VIDEO, callback_data="menu:video")],
             [InlineKeyboardButton(BTN_IMAGES, callback_data="menu:images")],
             [InlineKeyboardButton(BTN_AUDIO, callback_data="menu:audio")],
@@ -87,11 +93,19 @@ def audio_models_menu() -> InlineKeyboardMarkup:
 
 
 # -----------------------
-# EXTRA: button κάτω από Profile text (αν το κρατάς)
+# EXTRA
 # -----------------------
 def open_profile_webapp_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
             [InlineKeyboardButton("👤 Άνοιγμα Προφίλ / Αγορά Credits", web_app=WebAppInfo(url=_webapp_profile_url()))]
         ]
-            )
+    )
+
+
+def open_image_webapp_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("🧠 Άνοιγμα GPT Image", web_app=WebAppInfo(url=_webapp_image_url()))]
+        ]
+    )
