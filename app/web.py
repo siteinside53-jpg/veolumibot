@@ -140,6 +140,10 @@ async def health():
 async def root():
     return RedirectResponse(url="/profile")
 
+@api.get("/gpt-image", response_class=HTMLResponse)
+async def gpt_image_page(request: Request):
+    return templates.TemplateResponse("gpt-image.html", {"request": request})
+
 # ======================
 # Tools API
 # ======================
