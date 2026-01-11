@@ -473,3 +473,55 @@ async def ref_list(payload: dict):
         })
 
     return {"ok": True, "items": out, "limit": 10}
+
+@api.post("/api/gpt_image/generate")
+async def gpt_image_generate(payload: dict):
+    init_data = payload.get("initData", "")
+    prompt = (payload.get("prompt") or "").strip()
+    ratio = payload.get("ratio", "1:1")
+    quality = payload.get("quality", "medium")
+
+    if not prompt:
+        return {"ok": False, "error": "empty_prompt"}
+
+    dbu = db_user_from_webapp(init_data)
+
+    COST = 2
+
+    try:
+        spend_credits_by_user_id(
+            dbu["id"], COST,
+            "GPT Image generation",
+            "openai", "gpt-image"
+        )
+    except:
+        return {"ok": False, "error": "not_enough_credits"}
+
+    size_map = {
+        "1:1": "1024x1024",
+        "2:3": "768x1152",
+        "3:2": "1152x768",
+    }
+    size = size_map.get(ratio, "1024x1024")
+
+    try:
+        res = client.images.generate(
+            model="gpt-image-1",
+            prompt=prompt,
+            size=size,
+            quality=("high" if quality == "high" else "medium"),
+        )
+
+        b64 = res.data[0].b64_json
+        img = base64.b64decode(b64)
+
+        name = f"{uuid.uuid4().hex}.png"
+        path = IMAGES_DIR / name
+        path.write_bytes(img)
+
+        return {"ok": True, "url": f"/static/images/{name}"}
+
+    except Exception as e:
+        add_credits_by_user_id(dbu["id"], COST, "Refund GPT Image fail", "system", None)
+        return {"ok": False, "error": "generation_failed", "detail": str(e)}
+
