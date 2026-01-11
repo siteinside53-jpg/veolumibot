@@ -17,6 +17,7 @@ from . import texts
 from .keyboards import (
     start_inline_menu,
     open_profile_webapp_kb,
+    open_image_webapp_kb,
     video_models_menu,
     image_models_menu,
     audio_models_menu,
@@ -88,46 +89,27 @@ async def edit_start_card(q, caption: str, reply_markup):
     try:
         await msg.edit_caption(caption=caption, reply_markup=reply_markup)
     except BadRequest:
-        await msg.reply_photo(
-            photo=HERO_PATH.open("rb"),
-            caption=caption,
-            reply_markup=reply_markup,
-        )
+        # fallback: στέλνει νέο
+        if HERO_PATH.exists():
+            await msg.reply_photo(
+                photo=HERO_PATH.open("rb"),
+                caption=caption,
+                reply_markup=reply_markup,
+            )
+        else:
+            await msg.reply_text(caption, reply_markup=reply_markup)
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    tg_id = update.effective_user.id
-    username = update.effective_user.username
-    first_name = update.effective_user.first_name
 
-    ensure_user(tg_id, username, first_name)
-    dbu = get_user(tg_id)  # να επιστρέφει row με id
-
-    # /start args
-    arg = (context.args[0] if context.args else "").strip()
-
-    if arg.startswith("ref_"):
-        code = arg.replace("ref_", "", 1)
-
-        res = apply_referral_start(dbu["id"], code, bonus_credits=1)
-
-        if res.get("ok") and res.get("credited"):
-            # μήνυμα στον inviter (αυτόν που έχει το referral link)
-            try:
-                await context.bot.send_message(
-                    chat_id=res["owner_tg_user_id"],
-                    text=f"✅ Σου πιστώθηκε {res['bonus']} credit από χρήστη που μπήκε από το referral link σου."
-                )
-            except Exception:
-                pass
-
-    await update.message.reply_text("Καλώς ήρθες! ✅")
 # ======================
-# Handlers
+# Commands
 # ======================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_start_card(update, context)
 
 
+# ======================
+# Callback handler
+# ======================
 async def on_menu_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
     if not q:
@@ -144,6 +126,8 @@ async def on_menu_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await edit_start_card(q, texts.START_CAPTION, start_inline_menu())
         return
 
+    # Αν κρατάς παλιό menu:profile (δεν το χρειάζεσαι πλέον γιατί Profile ανοίγει web_app),
+    # το αφήνω για συμβατότητα.
     if data == "menu:profile":
         dbu = get_user(u.id) or {
             "tg_user_id": u.id,
@@ -159,6 +143,14 @@ async def on_menu_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ),
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=open_profile_webapp_kb(),
+        )
+        return
+
+    # ΝΕΟ: αν ποτέ θες να ανοίγεις GPT Image και με callback (προαιρετικό)
+    if data == "menu:gpt_image":
+        await q.message.reply_text(
+            "Άνοιξε το GPT Image WebApp:",
+            reply_markup=open_image_webapp_kb(),
         )
         return
 
