@@ -520,30 +520,27 @@ async def ref_list(payload: dict):
 # ======================
 # API: OpenAI Image (credits)
 # ======================
+# ======================
+# API: OpenAI Image (credits)
+# ======================
 @app.post("/api/gpt_image/generate")
 async def gpt_image_generate(payload: dict):
     init_data = payload.get("initData", "")
     prompt = (payload.get("prompt") or "").strip()
     ratio = payload.get("ratio", "1:1")
-    quality = payload.get("quality", "medium")
+    quality = (payload.get("quality") or "medium").lower().strip()
 
     if not prompt:
         return {"ok": False, "error": "empty_prompt"}
 
     if client is None:
-        return {"ok": False, "error": "openai_not_configured"}  # missing OPENAI_API_KEY
+        return {"ok": False, "error": "openai_not_configured"}
 
     dbu = db_user_from_webapp(init_data)
 
-    COST = 2  # credits
+    COST = 2
     try:
-        spend_credits_by_user_id(
-            dbu["id"],
-            COST,
-            "GPT Image generation",
-            "openai",
-            "gpt-image-1",
-        )
+        spend_credits_by_user_id(dbu["id"], COST, "GPT Image generation", "openai", "gpt-image-1.5")
     except Exception:
         return {"ok": False, "error": "not_enough_credits"}
 
@@ -553,14 +550,17 @@ async def gpt_image_generate(payload: dict):
         "3:2": "1152x768",
     }
     size = size_map.get(ratio, "1024x1024")
-    q = "high" if str(quality).lower() == "high" else "medium"
+
+    # gpt-image-1.5 δέχεται quality low|medium|high (σύμφωνα με το guide)
+    if quality not in ("low", "medium", "high"):
+        quality = "medium"
 
     try:
         res = client.images.generate(
-            model="gpt-image-1",
+            model="gpt-image-1.5",
             prompt=prompt,
             size=size,
-            quality=q,
+            quality=quality,
         )
 
         b64 = res.data[0].b64_json
@@ -573,6 +573,6 @@ async def gpt_image_generate(payload: dict):
         return {"ok": True, "url": f"/static/images/{name}"}
 
     except Exception as e:
-        # refund on failure
         add_credits_by_user_id(dbu["id"], COST, "Refund GPT Image fail", "system", None)
         return {"ok": False, "error": "generation_failed", "detail": str(e)}
+    
