@@ -55,10 +55,10 @@ def start_inline_menu() -> InlineKeyboardMarkup:
 def video_models_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("🟢 Kling 2.6 (11–44 credits)  □", callback_data="menu:set:video:kling_26")],
-            [InlineKeyboardButton("🌀 Wan 2.6 (14–56 credits)    □", callback_data="menu:set:video:wan_26")],
-            [InlineKeyboardButton("🛰 Sora 2 PRO (18–80 credits) □", callback_data="menu:set:video:sora2pro")],
-            [InlineKeyboardButton("🎥 Veo 3.1 (12 credits)       □", callback_data="menu:set:video:veo31")],
+            [InlineKeyboardButton("🟢 Kling 2.6 (11–44 credits)  ", callback_data="menu:set:video:kling_26")],
+            [InlineKeyboardButton("🌀 Wan 2.6 (14–56 credits)    ", callback_data="menu:set:video:wan_26")],
+            [InlineKeyboardButton("🛰 Sora 2 PRO (18–80 credits) ", callback_data="menu:set:video:sora2pro")],
+            [InlineKeyboardButton("🎥 Veo 3.1 (12 credits)       ", callback_data="menu:set:video:veo31")],
             [InlineKeyboardButton("← Πίσω", callback_data="menu:home")],
         ]
     )
@@ -67,10 +67,10 @@ def video_models_menu() -> InlineKeyboardMarkup:
 def image_models_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("🍌 Nano Banana PRO           □", callback_data="menu:set:image:nano_banana_pro")],
-            [InlineKeyboardButton("🟣 Midjourney                □", callback_data="menu:set:image:midjourney")],
-            [InlineKeyboardButton("🧪 Flux Kontext              □", callback_data="menu:set:image:flux_kontext")],
-            [InlineKeyboardButton("⚪ Grok Imagine (0.8–4)      □", callback_data="menu:set:image:grok_imagine")],
+            [InlineKeyboardButton("🍌 Nano Banana PRO           ", callback_data="menu:set:image:nano_banana_pro")],
+            [InlineKeyboardButton("🟣 Midjourney                ", callback_data="menu:set:image:midjourney")],
+            [InlineKeyboardButton("🧪 Flux Kontext              ", callback_data="menu:set:image:flux_kontext")],
+            [InlineKeyboardButton("⚪ Grok Imagine (0.8–4)      ", callback_data="menu:set:image:grok_imagine")],
             [InlineKeyboardButton("← Πίσω", callback_data="menu:home")],
         ]
     )
@@ -79,8 +79,8 @@ def image_models_menu() -> InlineKeyboardMarkup:
 def audio_models_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("🎵 Suno V5                    □", callback_data="menu:set:audio:suno_v5")],
-            [InlineKeyboardButton("🗣 ElevenLabs                 □", callback_data="menu:set:audio:elevenlabs")],
+            [InlineKeyboardButton("🎵 Suno V5                    ", callback_data="menu:set:audio:suno_v5")],
+            [InlineKeyboardButton("🗣 ElevenLabs                 ", callback_data="menu:set:audio:elevenlabs")],
             [InlineKeyboardButton("← Πίσω", callback_data="menu:home")],
         ]
     )
