@@ -25,6 +25,11 @@ from .config import (
     CRYPTOCLOUD_SHOP_ID,
     CRYPTOCLOUD_WEBHOOK_SECRET,
 )
+from openai import OpenAI
+import base64
+import uuid
+from pathlib import Path
+from .db import spend_credits_by_user_id
 
 # ✅ ΜΟΝΟ αυτά τα imports από db.py (όχι διπλά)
 
@@ -36,6 +41,9 @@ stripe.api_key = STRIPE_SECRET_KEY
 api = FastAPI()
 templates = Jinja2Templates(directory="app/web_templates")
 
+from fastapi.staticfiles import StaticFiles
+api.mount("/static", StaticFiles(directory="app/static"), name="static")
+
 # ======================
 # Packs
 # ======================
@@ -45,6 +53,12 @@ CREDITS_PACKS = {
     "CREDITS_500":  {"credits": 500,  "amount_eur": 22.00, "title": "Pro",    "desc": "500 credits"},
     "CREDITS_1000": {"credits": 1000, "amount_eur": 40.00, "title": "Creator","desc": "1000 credits"},
 }
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+client = OpenAI(api_key=OPENAI_API_KEY)
+
+IMAGES_DIR = Path("app/static/images")
+IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 
 def packs_list():
     return [{"sku": k, **v} for k, v in CREDITS_PACKS.items()]
