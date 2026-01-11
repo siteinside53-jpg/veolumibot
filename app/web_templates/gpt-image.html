@@ -21,8 +21,8 @@
       border-radius:var(--radius);
       padding:16px;box-shadow:var(--shadow);
     }
-    .row{display:flex;justify-content:space-between;align-items:center}
-    select,textarea{width:100%;border-radius:14px;border:1px solid var(--border);
+    .row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+    select,textarea,input[type="file"]{width:100%;border-radius:14px;border:1px solid var(--border);
       background:rgba(255,255,255,.03);color:#fff;padding:10px;font-weight:900;
       font-size:15px;outline:none}
     textarea{resize:none;height:120px}
@@ -33,10 +33,13 @@
       color:#fff;font-weight:900;cursor:pointer;text-align:center;
     }
     .btn:active{transform:scale(.99)}
+    .btn[disabled]{opacity:.6;cursor:not-allowed}
     .price-line{margin-top:10px;display:flex;justify-content:space-between;font-weight:900;color:#cfd3df}
     .price-line .price{font-size:18px;color:#fff}
     .preview{margin-top:16px;border:1px solid var(--border);border-radius:14px;overflow:hidden;display:none}
     .preview img{width:100%;display:block}
+    .hint{margin-top:8px;color:var(--muted);font-weight:800;font-size:13px;line-height:1.35}
+    .err{color:#f66;font-weight:900;display:none;margin-top:6px}
     .toast{
       position:fixed;left:50%;bottom:80px;transform:translateX(-50%);
       background:rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.1);
@@ -48,17 +51,39 @@
 <body>
   <div class="wrap">
     <div class="card">
-      <div class="row"><h2>GPT Image 1.5</h2><div>Τιμή: <b>2 credits</b></div></div>
+      <div class="row">
+        <h2 style="margin:0">GPT Image 1.5</h2>
+        <div>Τιμή: <b>2 credits</b></div>
+      </div>
 
       <label for="mode">Λειτουργία</label>
       <select id="mode">
         <option value="text2img">Κείμενο σε Εικόνα</option>
-        <option value="img2img">Εικόνα σε Εικόνα</option>
+        <option value="img2img">Εικόνα σε Εικόνα (Edit)</option>
       </select>
 
+      <!-- IMG2IMG BOX -->
+      <div id="imgBox" style="display:none">
+        <label for="imageFile">Εικόνα εισόδου (PNG/JPG)</label>
+        <input id="imageFile" type="file" accept="image/png,image/jpeg,image/jpg" />
+        <div class="hint">Όριο 8MB. Για καλύτερα edits: καθαρή εικόνα, όχι πολύ μικρή.</div>
+        <div id="imgErr" class="err">Πρέπει να ανεβάσεις μία εικόνα για img2img.</div>
+
+        <div class="preview" id="inputPreview" style="display:none">
+          <img id="inputPreviewImg" alt="input preview" />
+        </div>
+
+        <label for="inputFidelity">Input fidelity</label>
+        <select id="inputFidelity">
+          <option value="low">low</option>
+          <option value="high" selected>high</option>
+        </select>
+        <div class="hint">“high” κρατά καλύτερα λεπτομέρειες/ταυτότητα στο edit.</div>
+      </div>
+
       <label for="prompt">Prompt</label>
-      <textarea id="prompt" maxlength="1000" placeholder="Πληκτρολόγησε prompt (έως 1000 χαρακτήρες)..."></textarea>
-      <div id="promptErr" style="color:#f66;font-weight:800;display:none">Το prompt είναι υποχρεωτικό (1–1000 χαρακτήρες).</div>
+      <textarea id="prompt" maxlength="1500" placeholder="Πληκτρολόγησε prompt (έως 1500 χαρακτήρες)..."></textarea>
+      <div id="promptErr" class="err">Το prompt είναι υποχρεωτικό (1–1500 χαρακτήρες).</div>
 
       <label for="ratio">Αναλογία πλευρών</label>
       <select id="ratio">
@@ -69,7 +94,8 @@
 
       <label for="quality">Ποιότητα</label>
       <select id="quality">
-        <option value="medium">Μεσαία</option>
+        <option value="low">Χαμηλή</option>
+        <option value="medium" selected>Μεσαία</option>
         <option value="high">Υψηλή</option>
       </select>
 
@@ -78,6 +104,7 @@
       </div>
 
       <button class="btn" id="btnGenerate">Δημιουργία</button>
+
       <div class="preview" id="preview"><img id="previewImg" alt="preview" /></div>
     </div>
   </div>
@@ -90,22 +117,69 @@
     if (tg) { tg.expand(); tg.ready(); }
 
     function toast(msg){
-      const el = $("toast"); el.textContent = msg;
+      const el = $("toast");
+      el.textContent = msg;
       el.style.display = "block";
       setTimeout(()=> el.style.display="none", 1800);
     }
 
+    function fileToDataURL(file){
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result); // data:<mime>;base64,...
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function setModeUI(){
+      const mode = $("mode").value;
+      $("imgBox").style.display = (mode === "img2img") ? "block" : "none";
+      $("imgErr").style.display = "none";
+    }
+
+    $("mode").addEventListener("change", setModeUI);
+    setModeUI();
+
+    // Input preview
+    $("imageFile").addEventListener("change", () => {
+      const f = $("imageFile").files?.[0];
+      $("imgErr").style.display = "none";
+      if (!f) { $("inputPreview").style.display="none"; return; }
+      const url = URL.createObjectURL(f);
+      $("inputPreviewImg").src = url;
+      $("inputPreview").style.display = "block";
+    });
+
     async function generate(){
+      const mode = $("mode").value;
       const prompt = $("prompt").value.trim();
+
       if (prompt.length < 1){ $("promptErr").style.display="block"; return; }
       $("promptErr").style.display="none";
 
+      let imageDataUrl = "";
+      let inputFidelity = "high";
+
+      if (mode === "img2img"){
+        const f = $("imageFile").files?.[0];
+        if (!f){ $("imgErr").style.display="block"; return; }
+        if (f.size > 8 * 1024 * 1024){
+          toast("Η εικόνα είναι πολύ μεγάλη (max 8MB).");
+          return;
+        }
+        imageDataUrl = await fileToDataURL(f);
+        inputFidelity = $("inputFidelity").value || "high";
+      }
+
       const body = {
         initData: tg?.initData || "",
-        mode: $("mode").value,
+        mode,
         prompt,
         ratio: $("ratio").value,
         quality: $("quality").value,
+        input_fidelity: inputFidelity,   // μόνο για edits (θα αγνοηθεί στο text2img)
+        image_data_url: imageDataUrl      // μόνο για img2img
       };
 
       $("btnGenerate").disabled = true;
@@ -116,10 +190,11 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body)
         });
+
         const data = await res.json();
         if (!data.ok) throw new Error(data.error || "Αποτυχία");
-        const url = data.url;
-        $("previewImg").src = url;
+
+        $("previewImg").src = data.url;
         $("preview").style.display = "block";
         toast("Η εικόνα δημιουργήθηκε επιτυχώς!");
         if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
