@@ -42,27 +42,42 @@ from .db import (
 # ======================
 stripe.api_key = STRIPE_SECRET_KEY
 
-api = FastAPI()
-templates = Jinja2Templates(directory="app/web_templates")
+# IMPORTANT: να λέγεται app για να ταιριάζει με uvicorn app.web:app
+app = FastAPI()
+api = app  # alias για συμβατότητα αν κάπου έχεις uvicorn app.web:api
+
+# ----------------------
+# Paths
+# ----------------------
+BASE_DIR = Path(__file__).resolve().parent                 # /app/app
+TEMPLATES_DIR = BASE_DIR / "web_templates"                 # /app/app/web_templates
+STATIC_DIR = BASE_DIR / "static"                           # /app/app/static
+IMAGES_DIR = STATIC_DIR / "images"                         # /app/app/static/images
+
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 # ----------------------
 # Static files (NO CRASH)
 # ----------------------
-BASE_DIR = Path(__file__).resolve().parent
-STATIC_DIR = BASE_DIR / "static"
-IMAGES_DIR = STATIC_DIR / "images"
+def _ensure_dir(path: Path):
+    """
+    Φτιάχνει directory.
+    Αν υπάρχει FILE με ίδιο όνομα, το σβήνει και το ξαναφτιάχνει ως directory.
+    """
+    if path.exists() and path.is_file():
+        path.unlink()
+    path.mkdir(parents=True, exist_ok=True)
 
-STATIC_DIR.mkdir(parents=True, exist_ok=True)
-IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+_ensure_dir(STATIC_DIR)
+_ensure_dir(IMAGES_DIR)
 
-api.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 # ----------------------
 # OpenAI
 # ----------------------
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
-
 
 # ======================
 # Packs
@@ -74,10 +89,8 @@ CREDITS_PACKS = {
     "CREDITS_1000": {"credits": 1000, "amount_eur": 40.00, "title": "Creator", "desc": "1000 credits"},
 }
 
-
 def packs_list():
     return [{"sku": k, **v} for k, v in CREDITS_PACKS.items()]
-
 
 TOOLS_CATALOG = {
     "video": [
@@ -113,19 +126,26 @@ TOOLS_CATALOG = {
     ],
 }
 
-
-@api.get("/api/tools")
-async def tools_catalog():
-    return {"ok": True, "tools": TOOLS_CATALOG}
-
+# ======================
+# Health
+# ======================
+@app.get("/health")
+async def health():
+    return {"ok": True}
 
 # ======================
 # Root
 # ======================
-@api.get("/")
+@app.get("/")
 async def root():
     return RedirectResponse(url="/profile")
 
+# ======================
+# Tools API
+# ======================
+@app.get("/api/tools")
+async def tools_catalog():
+    return {"ok": True, "tools": TOOLS_CATALOG}
 
 # ======================
 # Telegram WebApp initData verification
@@ -142,7 +162,6 @@ def verify_telegram_init_data(init_data: str) -> dict:
 
     data_check_string = "\n".join(f"{k}={data[k]}" for k in sorted(data.keys()))
 
-    # secret_key = HMAC_SHA256("WebAppData", bot_token)
     secret_key = hmac.new(b"WebAppData", BOT_TOKEN.encode("utf-8"), hashlib.sha256).digest()
     h = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
 
@@ -158,7 +177,6 @@ def verify_telegram_init_data(init_data: str) -> dict:
     except Exception:
         raise HTTPException(401, "Bad user json")
 
-
 def db_user_from_webapp(init_data: str):
     tg_user = verify_telegram_init_data(init_data)
     tg_id = int(tg_user["id"])
@@ -170,22 +188,21 @@ def db_user_from_webapp(init_data: str):
         raise HTTPException(500, "User not found after ensure_user")
     return dbu
 
-
 # ======================
 # Pages
 # ======================
-@api.get("/profile", response_class=HTMLResponse)
+@app.get("/profile", response_class=HTMLResponse)
 async def profile_page(request: Request):
+    # Αν δεν βρίσκει template, θα βγάλει 500 — αλλά όχι 404.
     return templates.TemplateResponse(
         "profile.html",
         {"request": request, "credits": "—", "packs": packs_list()},
     )
 
-
 # ======================
 # API: me
 # ======================
-@api.post("/api/me")
+@app.post("/api/me")
 async def me(payload: dict):
     init_data = payload.get("initData", "")
     dbu = db_user_from_webapp(init_data)
@@ -200,13 +217,11 @@ async def me(payload: dict):
         "packs": packs_list(),
     }
 
-
 # ======================
 # API: Telegram avatar
 # ======================
 _AVATAR_CACHE: Dict[int, Tuple[str, float]] = {}
 _AVATAR_TTL_SECONDS = 60 * 30
-
 
 async def _get_telegram_file_url(file_id: str) -> Optional[str]:
     if not file_id:
@@ -221,7 +236,6 @@ async def _get_telegram_file_url(file_id: str) -> Optional[str]:
         if not file_path:
             return None
         return f"{base}/file/{file_path}"
-
 
 async def _fetch_telegram_avatar_url(tg_user_id: int) -> Optional[str]:
     base = f"https://api.telegram.org/bot{BOT_TOKEN}"
@@ -242,8 +256,7 @@ async def _fetch_telegram_avatar_url(tg_user_id: int) -> Optional[str]:
             return None
         return await _get_telegram_file_url(file_id)
 
-
-@api.post("/api/avatar")
+@app.post("/api/avatar")
 async def avatar(payload: dict):
     init_data = payload.get("initData", "")
     tg_user = verify_telegram_init_data(init_data)
@@ -262,11 +275,10 @@ async def avatar(payload: dict):
     _AVATAR_CACHE[tg_id] = (url, now + _AVATAR_TTL_SECONDS)
     return {"ok": True, "url": url}
 
-
 # ======================
 # Stripe
 # ======================
-@api.post("/api/stripe/checkout")
+@app.post("/api/stripe/checkout")
 async def stripe_checkout(payload: dict):
     init_data = payload.get("initData", "")
     sku = payload.get("sku", "")
@@ -322,8 +334,7 @@ async def stripe_checkout(payload: dict):
 
     return {"url": session.url}
 
-
-@api.post("/api/stripe/webhook")
+@app.post("/api/stripe/webhook")
 async def stripe_webhook(request: Request):
     payload = await request.body()
     sig = request.headers.get("stripe-signature", "")
@@ -368,11 +379,10 @@ async def stripe_webhook(request: Request):
 
     return JSONResponse({"ok": True})
 
-
 # ======================
 # CryptoCloud
 # ======================
-@api.post("/api/cryptocloud/invoice")
+@app.post("/api/cryptocloud/invoice")
 async def cryptocloud_invoice(payload: dict):
     init_data = payload.get("initData", "")
     sku = payload.get("sku", "")
@@ -427,8 +437,7 @@ async def cryptocloud_invoice(payload: dict):
 
     return {"url": pay_url}
 
-
-@api.post("/api/cryptocloud/webhook")
+@app.post("/api/cryptocloud/webhook")
 async def cryptocloud_webhook(request: Request):
     body = await request.body()
     signature = request.headers.get("Signature", "")
@@ -470,11 +479,10 @@ async def cryptocloud_webhook(request: Request):
 
     return JSONResponse({"ok": True})
 
-
 # ======================
 # API: referrals
 # ======================
-@api.post("/api/ref/create")
+@app.post("/api/ref/create")
 async def ref_create(payload: dict):
     init_data = payload.get("initData", "")
     dbu = db_user_from_webapp(init_data)
@@ -486,8 +494,7 @@ async def ref_create(payload: dict):
     url = f"https://t.me/veolumi_bot?start=ref_{r['code']}"
     return {"ok": True, "ref": {"code": r["code"], "url": url}}
 
-
-@api.post("/api/ref/list")
+@app.post("/api/ref/list")
 async def ref_list(payload: dict):
     init_data = payload.get("initData", "")
     dbu = db_user_from_webapp(init_data)
@@ -506,11 +513,10 @@ async def ref_list(payload: dict):
 
     return {"ok": True, "items": out, "limit": 10}
 
-
 # ======================
 # API: OpenAI Image (credits)
 # ======================
-@api.post("/api/gpt_image/generate")
+@app.post("/api/gpt_image/generate")
 async def gpt_image_generate(payload: dict):
     init_data = payload.get("initData", "")
     prompt = (payload.get("prompt") or "").strip()
