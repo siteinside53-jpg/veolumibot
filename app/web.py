@@ -4,18 +4,19 @@ import hmac
 import hashlib
 import json
 import time
-from typing import Dict, Any, Optional, Tuple
+import base64
+import uuid
+from pathlib import Path
+from typing import Dict, Optional, Tuple
 from urllib.parse import parse_qsl
-from .db import (
-  get_conn, ensure_user, get_user, add_credits_by_user_id,
-  create_referral_link, list_referrals
-)
+
+import httpx
+import stripe
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-
-import stripe
-import httpx
+from openai import OpenAI
 
 from .config import (
     BOT_TOKEN,
@@ -26,13 +27,15 @@ from .config import (
     CRYPTOCLOUD_SHOP_ID,
     CRYPTOCLOUD_WEBHOOK_SECRET,
 )
-from openai import OpenAI
-import base64
-import uuid
-from pathlib import Path
-from .db import spend_credits_by_user_id
-
-# ✅ ΜΟΝΟ αυτά τα imports από db.py (όχι διπλά)
+from .db import (
+    get_conn,
+    ensure_user,
+    get_user,
+    add_credits_by_user_id,
+    spend_credits_by_user_id,
+    create_referral_link,
+    list_referrals,
+)
 
 # ======================
 # Init
@@ -42,27 +45,40 @@ stripe.api_key = STRIPE_SECRET_KEY
 api = FastAPI()
 templates = Jinja2Templates(directory="app/web_templates")
 
-from fastapi.staticfiles import StaticFiles
-api.mount("/static", StaticFiles(directory="app/static"), name="static")
+# ----------------------
+# Static files (NO CRASH)
+# ----------------------
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
+IMAGES_DIR = STATIC_DIR / "images"
+
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
+IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+
+api.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+# ----------------------
+# OpenAI
+# ----------------------
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
+client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+
 
 # ======================
 # Packs
 # ======================
 CREDITS_PACKS = {
-    "CREDITS_100":  {"credits": 100,  "amount_eur": 7.00,  "title": "Start",  "desc": "100 credits"},
-    "CREDITS_250":  {"credits": 250,  "amount_eur": 12.00, "title": "Middle", "desc": "250 credits"},
-    "CREDITS_500":  {"credits": 500,  "amount_eur": 22.00, "title": "Pro",    "desc": "500 credits"},
-    "CREDITS_1000": {"credits": 1000, "amount_eur": 40.00, "title": "Creator","desc": "1000 credits"},
+    "CREDITS_100": {"credits": 100, "amount_eur": 7.00, "title": "Start", "desc": "100 credits"},
+    "CREDITS_250": {"credits": 250, "amount_eur": 12.00, "title": "Middle", "desc": "250 credits"},
+    "CREDITS_500": {"credits": 500, "amount_eur": 22.00, "title": "Pro", "desc": "500 credits"},
+    "CREDITS_1000": {"credits": 1000, "amount_eur": 40.00, "title": "Creator", "desc": "1000 credits"},
 }
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-client = OpenAI(api_key=OPENAI_API_KEY)
-
-IMAGES_DIR = Path("app/static/images")
-IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 
 def packs_list():
     return [{"sku": k, **v} for k, v in CREDITS_PACKS.items()]
+
+
 TOOLS_CATALOG = {
     "video": [
         {"name": "Kling 2.6 Motion", "credits": "20–75"},
@@ -83,7 +99,7 @@ TOOLS_CATALOG = {
         {"name": "Hailuo 02", "credits": "6–12"},
     ],
     "photo": [
-        {"name": "GPT image 1.5", "credits": "1–5"},
+        {"name": "GPT image", "credits": "2"},
         {"name": "Seedream 4.5", "credits": "1.3"},
         {"name": "Nano Banana Pro", "credits": "4"},
         {"name": "Nano Banana", "credits": "0.5"},
@@ -97,18 +113,22 @@ TOOLS_CATALOG = {
     ],
 }
 
+
 @api.get("/api/tools")
 async def tools_catalog():
     return {"ok": True, "tools": TOOLS_CATALOG}
+
+
 # ======================
-# Root (για Chrome)
+# Root
 # ======================
 @api.get("/")
 async def root():
     return RedirectResponse(url="/profile")
 
+
 # ======================
-# Telegram WebApp initData verification (CORRECT)
+# Telegram WebApp initData verification
 # ======================
 def verify_telegram_init_data(init_data: str) -> dict:
     if not init_data:
@@ -122,7 +142,7 @@ def verify_telegram_init_data(init_data: str) -> dict:
 
     data_check_string = "\n".join(f"{k}={data[k]}" for k in sorted(data.keys()))
 
-    # ✅ secret_key = HMAC_SHA256(bot_token, "WebAppData")
+    # secret_key = HMAC_SHA256("WebAppData", bot_token)
     secret_key = hmac.new(b"WebAppData", BOT_TOKEN.encode("utf-8"), hashlib.sha256).digest()
     h = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
 
@@ -138,6 +158,7 @@ def verify_telegram_init_data(init_data: str) -> dict:
     except Exception:
         raise HTTPException(401, "Bad user json")
 
+
 def db_user_from_webapp(init_data: str):
     tg_user = verify_telegram_init_data(init_data)
     tg_id = int(tg_user["id"])
@@ -149,6 +170,7 @@ def db_user_from_webapp(init_data: str):
         raise HTTPException(500, "User not found after ensure_user")
     return dbu
 
+
 # ======================
 # Pages
 # ======================
@@ -158,6 +180,7 @@ async def profile_page(request: Request):
         "profile.html",
         {"request": request, "credits": "—", "packs": packs_list()},
     )
+
 
 # ======================
 # API: me
@@ -177,18 +200,20 @@ async def me(payload: dict):
         "packs": packs_list(),
     }
 
+
 # ======================
 # API: Telegram avatar
 # ======================
 _AVATAR_CACHE: Dict[int, Tuple[str, float]] = {}
 _AVATAR_TTL_SECONDS = 60 * 30
 
+
 async def _get_telegram_file_url(file_id: str) -> Optional[str]:
     if not file_id:
         return None
     base = f"https://api.telegram.org/bot{BOT_TOKEN}"
-    async with httpx.AsyncClient(timeout=15) as client:
-        r = await client.get(f"{base}/getFile", params={"file_id": file_id})
+    async with httpx.AsyncClient(timeout=15) as client_http:
+        r = await client_http.get(f"{base}/getFile", params={"file_id": file_id})
         data = r.json()
         if not data.get("ok"):
             return None
@@ -197,10 +222,11 @@ async def _get_telegram_file_url(file_id: str) -> Optional[str]:
             return None
         return f"{base}/file/{file_path}"
 
+
 async def _fetch_telegram_avatar_url(tg_user_id: int) -> Optional[str]:
     base = f"https://api.telegram.org/bot{BOT_TOKEN}"
-    async with httpx.AsyncClient(timeout=15) as client:
-        r = await client.get(
+    async with httpx.AsyncClient(timeout=15) as client_http:
+        r = await client_http.get(
             f"{base}/getUserProfilePhotos",
             params={"user_id": tg_user_id, "limit": 1},
         )
@@ -215,6 +241,7 @@ async def _fetch_telegram_avatar_url(tg_user_id: int) -> Optional[str]:
         if not file_id:
             return None
         return await _get_telegram_file_url(file_id)
+
 
 @api.post("/api/avatar")
 async def avatar(payload: dict):
@@ -234,6 +261,7 @@ async def avatar(payload: dict):
 
     _AVATAR_CACHE[tg_id] = (url, now + _AVATAR_TTL_SECONDS)
     return {"ok": True, "url": url}
+
 
 # ======================
 # Stripe
@@ -274,14 +302,16 @@ async def stripe_checkout(payload: dict):
         mode="payment",
         success_url=f"{base}/profile?success=1",
         cancel_url=f"{base}/profile?canceled=1",
-        line_items=[{
-            "price_data": {
-                "currency": "eur",
-                "product_data": {"name": f'{pack["title"]} - {pack["desc"]}'},
-                "unit_amount": int(round(pack["amount_eur"] * 100)),
-            },
-            "quantity": 1,
-        }],
+        line_items=[
+            {
+                "price_data": {
+                    "currency": "eur",
+                    "product_data": {"name": f'{pack["title"]} - {pack["desc"]}'},
+                    "unit_amount": int(round(pack["amount_eur"] * 100)),
+                },
+                "quantity": 1,
+            }
+        ],
         metadata={"order_id": str(order_id), "sku": sku},
     )
 
@@ -291,6 +321,7 @@ async def stripe_checkout(payload: dict):
         conn.commit()
 
     return {"url": session.url}
+
 
 @api.post("/api/stripe/webhook")
 async def stripe_webhook(request: Request):
@@ -315,7 +346,6 @@ async def stripe_webhook(request: Request):
         if not (order_id and pack):
             return JSONResponse({"ok": True})
 
-        # ✅ Παίρνουμε order + κάνουμε paid μέσα σε transaction
         with get_conn() as conn:
             cur = conn.cursor()
             cur.execute("SELECT * FROM orders WHERE id=%s FOR UPDATE", (order_id,))
@@ -328,7 +358,6 @@ async def stripe_webhook(request: Request):
             cur.execute("UPDATE orders SET status='paid' WHERE id=%s", (order_id,))
             conn.commit()
 
-        # ✅ ΕΔΩ ΓΙΝΕΤΑΙ το credit update + ledger entry (atomic μέσα στο db.py)
         add_credits_by_user_id(
             order["user_id"],
             pack["credits"],
@@ -338,6 +367,7 @@ async def stripe_webhook(request: Request):
         )
 
     return JSONResponse({"ok": True})
+
 
 # ======================
 # CryptoCloud
@@ -371,8 +401,8 @@ async def cryptocloud_invoice(payload: dict):
         order_id = cur.fetchone()["id"]
         conn.commit()
 
-    async with httpx.AsyncClient(timeout=20) as client:
-        resp = await client.post(
+    async with httpx.AsyncClient(timeout=20) as client_http:
+        resp = await client_http.post(
             "https://api.cryptocloud.plus/v2/invoice/create",
             headers={"Authorization": f"Token {CRYPTOCLOUD_API_KEY}"},
             json={
@@ -396,6 +426,7 @@ async def cryptocloud_invoice(payload: dict):
         conn.commit()
 
     return {"url": pay_url}
+
 
 @api.post("/api/cryptocloud/webhook")
 async def cryptocloud_webhook(request: Request):
@@ -429,7 +460,6 @@ async def cryptocloud_webhook(request: Request):
             cur.execute("UPDATE orders SET status='paid' WHERE id=%s", (order_id,))
             conn.commit()
 
-        # ✅ ΕΔΩ ΓΙΝΕΤΑΙ το credit update + ledger entry
         add_credits_by_user_id(
             order["user_id"],
             pack["credits"],
@@ -439,6 +469,7 @@ async def cryptocloud_webhook(request: Request):
         )
 
     return JSONResponse({"ok": True})
+
 
 # ======================
 # API: referrals
@@ -452,9 +483,9 @@ async def ref_create(payload: dict):
     if not r.get("ok"):
         return {"ok": False, "error": r.get("error")}
 
-    # το link του bot σου (άλλαξε το VeoSeeBot σε δικό σου username bot)
     url = f"https://t.me/veolumi_bot?start=ref_{r['code']}"
     return {"ok": True, "ref": {"code": r["code"], "url": url}}
+
 
 @api.post("/api/ref/list")
 async def ref_list(payload: dict):
@@ -462,18 +493,23 @@ async def ref_list(payload: dict):
     dbu = db_user_from_webapp(init_data)
 
     rows = list_referrals(dbu["id"])
-    # map για UI
     out = []
     for x in rows:
-        out.append({
-            "code": x["code"],
-            "url": f"https://t.me/veolumi_bot?start=ref_{x['code']}",
-            "invited": int(x["starts"] or 0),
-            "purchased_eur": float(x["purchases_amount"] or 0),
-        })
+        out.append(
+            {
+                "code": x["code"],
+                "url": f"https://t.me/veolumi_bot?start=ref_{x['code']}",
+                "invited": int(x["starts"] or 0),
+                "purchased_eur": float(x["purchases_amount"] or 0),
+            }
+        )
 
     return {"ok": True, "items": out, "limit": 10}
 
+
+# ======================
+# API: OpenAI Image (credits)
+# ======================
 @api.post("/api/gpt_image/generate")
 async def gpt_image_generate(payload: dict):
     init_data = payload.get("initData", "")
@@ -484,17 +520,21 @@ async def gpt_image_generate(payload: dict):
     if not prompt:
         return {"ok": False, "error": "empty_prompt"}
 
+    if client is None:
+        return {"ok": False, "error": "openai_not_configured"}  # missing OPENAI_API_KEY
+
     dbu = db_user_from_webapp(init_data)
 
-    COST = 2
-
+    COST = 2  # credits
     try:
         spend_credits_by_user_id(
-            dbu["id"], COST,
+            dbu["id"],
+            COST,
             "GPT Image generation",
-            "openai", "gpt-image"
+            "openai",
+            "gpt-image-1",
         )
-    except:
+    except Exception:
         return {"ok": False, "error": "not_enough_credits"}
 
     size_map = {
@@ -503,13 +543,14 @@ async def gpt_image_generate(payload: dict):
         "3:2": "1152x768",
     }
     size = size_map.get(ratio, "1024x1024")
+    q = "high" if str(quality).lower() == "high" else "medium"
 
     try:
         res = client.images.generate(
             model="gpt-image-1",
             prompt=prompt,
             size=size,
-            quality=("high" if quality == "high" else "medium"),
+            quality=q,
         )
 
         b64 = res.data[0].b64_json
@@ -522,6 +563,6 @@ async def gpt_image_generate(payload: dict):
         return {"ok": True, "url": f"/static/images/{name}"}
 
     except Exception as e:
+        # refund on failure
         add_credits_by_user_id(dbu["id"], COST, "Refund GPT Image fail", "system", None)
         return {"ok": False, "error": "generation_failed", "detail": str(e)}
-
