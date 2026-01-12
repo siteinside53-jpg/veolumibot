@@ -527,6 +527,7 @@ async def ref_list(payload: dict):
 @app.post("/api/gpt_image/generate")
 async def gpt_image_generate(payload: dict):
     init_data = payload.get("initData", "")
+    mode = (payload.get("mode") or "text2img").strip()
     prompt = (payload.get("prompt") or "").strip()
     ratio = payload.get("ratio", "1:1")
     quality = (payload.get("quality") or "medium").lower().strip()
@@ -537,26 +538,31 @@ async def gpt_image_generate(payload: dict):
     if client is None:
         return {"ok": False, "error": "openai_not_configured"}
 
-    dbu = db_user_from_webapp(init_data)
-
-    COST = 2
-    try:
-        spend_credits_by_user_id(dbu["id"], COST, "GPT Image generation", "openai", "gpt-image-1.5")
-    except Exception:
-        return {"ok": False, "error": "not_enough_credits"}
-
+    # ΕΓΚΥΡΑ sizes για GPT image models: 1024x1024, 1536x1024, 1024x1536, auto
     size_map = {
         "1:1": "1024x1024",
-        "2:3": "768x1152",
-        "3:2": "1152x768",
+        "2:3": "1024x1536",  # portrait
+        "3:2": "1536x1024",  # landscape
     }
     size = size_map.get(ratio, "1024x1024")
 
-    # gpt-image-1.5 δέχεται quality low|medium|high (σύμφωνα με το guide)
     if quality not in ("low", "medium", "high"):
         quality = "medium"
 
+    # Credits ανά ποιότητα
+    cost_map = {"low": 1, "medium": 2, "high": 5}
+    COST = cost_map[quality]
+
+    dbu = db_user_from_webapp(init_data)
+
     try:
+        spend_credits_by_user_id(dbu["id"], COST, f"GPT Image ({quality})", "openai", "gpt-image-1.5")
+    except Exception:
+        return {"ok": False, "error": "not_enough_credits"}
+
+    try:
+        # Για την ώρα: text2img
+        # (Αν θες πραγματικό img2img/edit, θέλει images edits endpoint — το φτιάχνουμε μετά σωστά.)
         res = client.images.generate(
             model="gpt-image-1.5",
             prompt=prompt,
@@ -571,9 +577,8 @@ async def gpt_image_generate(payload: dict):
         path = IMAGES_DIR / name
         path.write_bytes(img)
 
-        return {"ok": True, "url": f"/static/images/{name}"}
+        return {"ok": True, "url": f"/static/images/{name}", "cost": COST}
 
     except Exception as e:
         add_credits_by_user_id(dbu["id"], COST, "Refund GPT Image fail", "system", None)
         return {"ok": False, "error": "generation_failed", "detail": str(e)}
-    
