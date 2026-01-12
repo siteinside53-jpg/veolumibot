@@ -70,7 +70,44 @@ def run_migrations():
             ON credit_ledger(user_id, created_at DESC);
             """)
 
-            print(">>> ensured tables users + credit_ledger exist", flush=True)
+            # -------------------------
+            # REFERRALS TABLES (για το νέο σύστημα που δείχνεις στο web)
+            # -------------------------
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS referrals (
+              id SERIAL PRIMARY KEY,
+              owner_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              code TEXT UNIQUE NOT NULL,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+            """)
+
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS referral_joins (
+              id SERIAL PRIMARY KEY,
+              referral_id INTEGER NOT NULL REFERENCES referrals(id) ON DELETE CASCADE,
+              invited_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              UNIQUE(referral_id, invited_user_id)
+            );
+            """)
+
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS referral_events (
+              id SERIAL PRIMARY KEY,
+              referral_id INTEGER NOT NULL REFERENCES referrals(id) ON DELETE CASCADE,
+              event_type TEXT NOT NULL, -- 'start' | 'purchase'
+              amount_eur NUMERIC(10,2),
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+            """)
+
+            cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_referral_events_referral_id_created_at
+            ON referral_events(referral_id, created_at DESC);
+            """)
+
+            print(">>> ensured tables users + credit_ledger + referrals/referral_joins/referral_events exist", flush=True)
 
     # Apply .sql migrations if any
     if not MIGRATIONS_DIR.exists():
@@ -147,82 +184,6 @@ def ensure_user(tg_user_id: int, tg_username: Optional[str], tg_first_name: Opti
             conn.commit()
             return row
 
-def apply_referral_start(invited_user_id: int, code: str, bonus_credits: int = 1) -> dict:
-    """
-    Αν ο invited_user ΔΕΝ έχει ξαναμπεί από referral, τότε:
-    - καταγράφει join
-    - γράφει referral_event start
-    - δίνει bonus credits στον owner του referral
-    Επιστρέφει: {ok, credited, owner_user_id, owner_tg_user_id, bonus}
-    """
-    with get_conn() as conn:
-        cur = conn.cursor()
-
-        # βρες referral + owner
-        cur.execute(
-            """
-            SELECT r.id AS referral_id, r.owner_user_id, u.tg_user_id AS owner_tg_user_id
-            FROM referrals r
-            JOIN users u ON u.id = r.owner_user_id
-            WHERE r.code = %s
-            """,
-            (code,),
-        )
-        row = cur.fetchone()
-        if not row:
-            conn.commit()
-            return {"ok": False, "error": "bad_code"}
-
-        referral_id = row["referral_id"]
-        owner_user_id = row["owner_user_id"]
-        owner_tg_user_id = row["owner_tg_user_id"]
-
-        # μην δίνεις bonus στον ίδιο χρήστη αν άνοιξε το δικό του link
-        if owner_user_id == invited_user_id:
-            conn.commit()
-            return {"ok": True, "credited": False, "reason": "self_ref"}
-
-        # προσπάθησε να γράψεις join (αν έχει ήδη invited_user_id, θα αποτύχει λόγω UNIQUE)
-        try:
-            cur.execute(
-                """
-                INSERT INTO referral_joins (referral_id, invited_user_id)
-                VALUES (%s, %s)
-                """,
-                (referral_id, invited_user_id),
-            )
-        except Exception:
-            # ήδη έχει μετρήσει
-            conn.rollback()
-            return {"ok": True, "credited": False, "reason": "already_joined"}
-
-        # γράψε event start
-        cur.execute(
-            """
-            INSERT INTO referral_events (referral_id, event_type, amount_eur)
-            VALUES (%s, 'start', NULL)
-            """,
-            (referral_id,),
-        )
-
-        conn.commit()
-
-    # δώσε bonus στον owner (γράφει και ledger)
-    add_credits_by_user_id(
-        owner_user_id,
-        bonus_credits,
-        f"Referral bonus (+{bonus_credits}) από νέο χρήστη",
-        "referral",
-        code,
-    )
-
-    return {
-        "ok": True,
-        "credited": True,
-        "owner_user_id": owner_user_id,
-        "owner_tg_user_id": owner_tg_user_id,
-        "bonus": bonus_credits,
-    }
 
 def get_user(tg_user_id: int) -> Optional[Dict[str, Any]]:
     with get_conn() as conn:
@@ -287,7 +248,7 @@ def spend_credits_by_user_id(
 ) -> Decimal:
     """
     Subtracts credits (spend) and writes credit_ledger entry atomically.
-    Raises HTTP-ish RuntimeError if insufficient.
+    Raises RuntimeError if insufficient.
     Returns new balance.
     """
     amount = _to_decimal(amount)
@@ -364,6 +325,10 @@ def get_ledger_by_tg_id(tg_user_id: int, limit: int = 50) -> List[Dict[str, Any]
             )
             return cur.fetchall()
 
+
+# ======================
+# Referrals
+# ======================
 def create_referral_link(owner_user_id: int) -> dict:
     """
     Δημιουργεί νέο referral link για τον user, μέχρι MAX_REF_LINKS.
@@ -375,7 +340,6 @@ def create_referral_link(owner_user_id: int) -> dict:
             if c >= MAX_REF_LINKS:
                 return {"ok": False, "error": "limit_reached"}
 
-            # safe random code (short)
             code = secrets.token_urlsafe(8).replace("-", "").replace("_", "")
             cur.execute(
                 "INSERT INTO referrals (owner_user_id, code) VALUES (%s,%s) RETURNING id, code, created_at",
@@ -384,6 +348,7 @@ def create_referral_link(owner_user_id: int) -> dict:
             row = cur.fetchone()
             conn.commit()
             return {"ok": True, **row}
+
 
 def list_referrals(owner_user_id: int) -> list:
     """
@@ -406,22 +371,6 @@ def list_referrals(owner_user_id: int) -> list:
             )
             return cur.fetchall()
 
-def record_referral_start(code: str) -> bool:
-    """
-    Καταγράφει event start για code.
-    """
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT id FROM referrals WHERE code=%s", (code,))
-            r = cur.fetchone()
-            if not r:
-                return False
-            cur.execute(
-                "INSERT INTO referral_events (referral_id, event_type) VALUES (%s,'start')",
-                (r["id"],),
-            )
-            conn.commit()
-            return True
 
 def record_referral_purchase(code: str, amount_eur) -> bool:
     """
@@ -440,28 +389,85 @@ def record_referral_purchase(code: str, amount_eur) -> bool:
             conn.commit()
             return True
 
-def register_referral_start(inviter_user_id: int, invited_tg_id: int) -> bool:
+
+def apply_referral_start(invited_user_id: int, code: str, bonus_credits: int = 1) -> dict:
     """
-    Καταγράφει ότι invited_tg_id μπήκε από referral του inviter_user_id.
-    Επιστρέφει True αν είναι νέα καταγραφή, False αν υπήρχε ήδη.
+    Αν ο invited_user ΔΕΝ έχει ξαναμπεί από referral, τότε:
+    - καταγράφει join
+    - γράφει referral_event start
+    - δίνει bonus credits στον owner του referral
+    Επιστρέφει: {ok, credited, owner_user_id, owner_tg_user_id, bonus}
     """
     with get_conn() as conn:
         cur = conn.cursor()
+
+        # βρες referral + owner
         cur.execute(
             """
-            INSERT INTO referral_starts (inviter_id, invited_tg_id)
-            VALUES (%s, %s)
-            ON CONFLICT (inviter_id, invited_tg_id) DO NOTHING
-            RETURNING id
+            SELECT r.id AS referral_id, r.owner_user_id, u.tg_user_id AS owner_tg_user_id
+            FROM referrals r
+            JOIN users u ON u.id = r.owner_user_id
+            WHERE r.code = %s
             """,
-            (inviter_user_id, invited_tg_id),
+            (code,),
         )
         row = cur.fetchone()
+        if not row:
+            conn.commit()
+            return {"ok": False, "error": "bad_code"}
+
+        referral_id = row["referral_id"]
+        owner_user_id = row["owner_user_id"]
+        owner_tg_user_id = row["owner_tg_user_id"]
+
+        # μην δίνεις bonus στον ίδιο χρήστη αν άνοιξε το δικό του link
+        if owner_user_id == invited_user_id:
+            conn.commit()
+            return {"ok": True, "credited": False, "reason": "self_ref"}
+
+        # προσπάθησε να γράψεις join (αν έχει ήδη invited_user_id, θα αποτύχει λόγω UNIQUE)
+        try:
+            cur.execute(
+                """
+                INSERT INTO referral_joins (referral_id, invited_user_id)
+                VALUES (%s, %s)
+                """,
+                (referral_id, invited_user_id),
+            )
+        except Exception:
+            conn.rollback()
+            return {"ok": True, "credited": False, "reason": "already_joined"}
+
+        # γράψε event start
+        cur.execute(
+            """
+            INSERT INTO referral_events (referral_id, event_type, amount_eur)
+            VALUES (%s, 'start', NULL)
+            """,
+            (referral_id,),
+        )
+
         conn.commit()
-        return bool(row)
+
+    # δώσε bonus στον owner (γράφει και ledger)
+    add_credits_by_user_id(
+        owner_user_id,
+        bonus_credits,
+        f"Referral bonus (+{bonus_credits}) από νέο χρήστη",
+        "referral",
+        code,
+    )
+
+    return {
+        "ok": True,
+        "credited": True,
+        "owner_user_id": owner_user_id,
+        "owner_tg_user_id": owner_tg_user_id,
+        "bonus": bonus_credits,
+    }
 
 
-def get_referral_owner_by_code(code: str) -> dict | None:
+def get_referral_owner_by_code(code: str) -> Optional[Dict[str, Any]]:
     with get_conn() as conn:
         cur = conn.cursor()
         cur.execute("SELECT * FROM referrals WHERE code=%s", (code,))
