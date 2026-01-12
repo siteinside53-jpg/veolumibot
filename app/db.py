@@ -472,3 +472,31 @@ def get_referral_owner_by_code(code: str) -> Optional[Dict[str, Any]]:
         cur = conn.cursor()
         cur.execute("SELECT * FROM referrals WHERE code=%s", (code,))
         return cur.fetchone()
+
+def set_last_result(user_id: int, model: str, result_url: str) -> None:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO last_results (user_id, model, result_url)
+                VALUES (%s, %s, %s)
+                ON CONFLICT (user_id, model)
+                DO UPDATE SET result_url = EXCLUDED.result_url, created_at = now()
+                """,
+                (user_id, model, result_url),
+            )
+            conn.commit()
+
+
+def get_last_result_by_tg_id(tg_user_id: int, model: str) -> Optional[str]:
+    u = get_user(tg_user_id)
+    if not u:
+        return None
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT result_url FROM last_results WHERE user_id=%s AND model=%s",
+                (u["id"], model),
+            )
+            row = cur.fetchone()
+            return (row or {}).get("result_url")
