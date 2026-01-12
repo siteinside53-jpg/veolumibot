@@ -31,7 +31,7 @@ def start_inline_menu() -> InlineKeyboardMarkup:
 def image_models_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("🧠 GPT Image (WebApp)", web_app=WebAppInfo(url=_webapp_gpt_image_url()))],
+            [InlineKeyboardButton("🧠 GPT Image 1.5", web_app=WebAppInfo(url=_webapp_gpt_image_url()))],
             [InlineKeyboardButton("🍌 Nano Banana PRO", callback_data="menu:set:image:nano_banana_pro")],
             [InlineKeyboardButton("🟣 Midjourney", callback_data="menu:set:image:midjourney")],
             [InlineKeyboardButton("🧪 Flux Kontext", callback_data="menu:set:image:flux_kontext")],
