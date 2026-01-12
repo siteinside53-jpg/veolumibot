@@ -4,20 +4,18 @@ import hmac
 import hashlib
 import json
 import time
-from io import BytesIO
 import base64
 import uuid
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Any
 from urllib.parse import parse_qsl
 
 import httpx
 import stripe
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi import BackgroundTasks
 from openai import OpenAI
 
 from .config import (
@@ -195,11 +193,99 @@ def db_user_from_webapp(init_data: str):
     return dbu
 
 # ======================
+# Telegram helpers (send result in chat)
+# ======================
+async def tg_send_message(chat_id: int, text: str) -> None:
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    async with httpx.AsyncClient(timeout=30) as c:
+        r = await c.post(url, json={"chat_id": chat_id, "text": text})
+        j = r.json()
+        if not j.get("ok"):
+            raise RuntimeError(f"Telegram sendMessage failed: {j}")
+
+async def tg_send_photo(
+    chat_id: int,
+    img_bytes: bytes,
+    caption: str = "",
+    reply_markup: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
+    data = {"chat_id": str(chat_id), "caption": caption}
+    if reply_markup:
+        data["reply_markup"] = json.dumps(reply_markup, ensure_ascii=False)
+    files = {"photo": ("photo.png", img_bytes, "image/png")}
+
+    async with httpx.AsyncClient(timeout=90) as c:
+        r = await c.post(url, data=data, files=files)
+        j = r.json()
+        if not j.get("ok"):
+            raise RuntimeError(f"Telegram sendPhoto failed: {j}")
+        return j["result"]
+
+async def _run_gpt_image_job(
+    tg_chat_id: int,
+    db_user_id: int,
+    prompt: str,
+    size: str,
+    quality: str,
+    cost: int,
+):
+    """
+    Background job:
+    - generate στο OpenAI
+    - sendPhoto στο Telegram chat (όπως στο screenshot)
+    - αν fail: refund + sendMessage
+    """
+    try:
+        res = client.images.generate(
+            model="gpt-image-1.5",
+            prompt=prompt,
+            size=size,
+            quality=quality,
+        )
+
+        b64 = res.data[0].b64_json
+        img = base64.b64decode(b64)
+
+        # (προαιρετικό) αποθήκευση για debug
+        name = f"{uuid.uuid4().hex}.png"
+        (IMAGES_DIR / name).write_bytes(img)
+
+        kb = {
+            "inline_keyboard": [
+                [{"text": "🔽 Πάρε αποτέλεσμα ξανά (δωρεάν)", "callback_data": "gptimg:repeat:last"}],
+                [{"text": "← Πίσω", "callback_data": "menu:images"}],
+            ]
+        }
+
+        await tg_send_photo(
+            chat_id=tg_chat_id,
+            img_bytes=img,
+            caption="✅ Η εικόνα δημιουργήθηκε",
+            reply_markup=kb,
+        )
+
+    except Exception as e:
+        # refund credits
+        try:
+            add_credits_by_user_id(db_user_id, cost, "Refund GPT Image fail", "system", None)
+        except Exception:
+            pass
+
+        # ενημέρωση στο Telegram
+        try:
+            await tg_send_message(
+                tg_chat_id,
+                f"❌ Αποτυχία δημιουργίας εικόνας.\nΛεπτομέρεια: {str(e)[:250]}",
+            )
+        except Exception:
+            pass
+
+# ======================
 # Pages
 # ======================
 @app.get("/profile", response_class=HTMLResponse)
 async def profile_page(request: Request):
-    # Αν δεν βρίσκει template, θα βγάλει 500 — αλλά όχι 404.
     return templates.TemplateResponse(
         "profile.html",
         {"request": request, "credits": "—", "packs": packs_list()},
@@ -519,15 +605,13 @@ async def ref_list(payload: dict):
 
     return {"ok": True, "items": out, "limit": 10}
 
-
-
 # ======================
-# API: OpenAI Image (credits)
+# API: GPT Image (send result in Telegram chat)
 # ======================
 @app.post("/api/gpt_image/generate")
-async def gpt_image_generate(payload: dict):
+async def gpt_image_generate(payload: dict, background_tasks: BackgroundTasks):
     init_data = payload.get("initData", "")
-    mode = (payload.get("mode") or "text2img").strip()
+    mode = (payload.get("mode") or "text2img").strip()  # (δεν το χρησιμοποιούμε ακόμη)
     prompt = (payload.get("prompt") or "").strip()
     ratio = payload.get("ratio", "1:1")
     quality = (payload.get("quality") or "medium").lower().strip()
@@ -538,7 +622,7 @@ async def gpt_image_generate(payload: dict):
     if client is None:
         return {"ok": False, "error": "openai_not_configured"}
 
-    # ΕΓΚΥΡΑ sizes για GPT image models: 1024x1024, 1536x1024, 1024x1536, auto
+    # Valid sizes για gpt-image-1.5
     size_map = {
         "1:1": "1024x1024",
         "2:3": "1024x1536",  # portrait
@@ -554,31 +638,37 @@ async def gpt_image_generate(payload: dict):
     COST = cost_map[quality]
 
     dbu = db_user_from_webapp(init_data)
+    tg_chat_id = int(dbu["tg_user_id"])  # DM chat_id (συνήθως ίδιο με user id)
+    db_user_id = int(dbu["id"])          # internal DB user id
 
+    # Χρέωση credits upfront
     try:
-        spend_credits_by_user_id(dbu["id"], COST, f"GPT Image ({quality})", "openai", "gpt-image-1.5")
+        spend_credits_by_user_id(
+            db_user_id,
+            COST,
+            f"GPT Image ({quality})",
+            "openai",
+            "gpt-image-1.5",
+        )
     except Exception:
         return {"ok": False, "error": "not_enough_credits"}
 
+    # (προαιρετικό) ενημέρωση στο Telegram ότι ξεκίνησε
     try:
-        # Για την ώρα: text2img
-        # (Αν θες πραγματικό img2img/edit, θέλει images edits endpoint — το φτιάχνουμε μετά σωστά.)
-        res = client.images.generate(
-            model="gpt-image-1.5",
-            prompt=prompt,
-            size=size,
-            quality=quality,
-        )
+        await tg_send_message(tg_chat_id, "🧪 Η εικόνα δημιουργείται… Το αποτέλεσμα θα έρθει εδώ.")
+    except Exception:
+        pass
 
-        b64 = res.data[0].b64_json
-        img = base64.b64decode(b64)
+    # Background job: generate + sendPhoto στο Telegram
+    background_tasks.add_task(
+        _run_gpt_image_job,
+        tg_chat_id,
+        db_user_id,
+        prompt,
+        size,
+        quality,
+        COST,
+    )
 
-        name = f"{uuid.uuid4().hex}.png"
-        path = IMAGES_DIR / name
-        path.write_bytes(img)
-
-        return {"ok": True, "url": f"/static/images/{name}", "cost": COST}
-
-    except Exception as e:
-        add_credits_by_user_id(dbu["id"], COST, "Refund GPT Image fail", "system", None)
-        return {"ok": False, "error": "generation_failed", "detail": str(e)}
+    # Άμεση απάντηση στο WebApp για να δείξει popup τύπου Telegram
+    return {"ok": True, "sent_to_telegram": True, "cost": COST}
