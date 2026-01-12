@@ -16,7 +16,7 @@ from .db import run_migrations, ensure_user, get_user
 from . import texts
 from .keyboards import (
     start_inline_menu,
-    open_profile_webapp_kb,
+    # open_profile_webapp_kb,  <-- remove
     video_models_menu,
     image_models_menu,
     audio_models_menu,
