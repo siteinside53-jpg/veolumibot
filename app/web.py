@@ -17,6 +17,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi import BackgroundTasks
 from openai import OpenAI
 
 from .config import (
@@ -518,9 +519,8 @@ async def ref_list(payload: dict):
 
     return {"ok": True, "items": out, "limit": 10}
 
-# ======================
-# API: OpenAI Image (credits)
-# ======================
+
+
 # ======================
 # API: OpenAI Image (credits)
 # ======================
