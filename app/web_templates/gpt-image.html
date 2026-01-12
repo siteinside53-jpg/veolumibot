@@ -111,104 +111,125 @@
 
   <div class="toast" id="toast"></div>
 
-  <script>
-    const $ = id => document.getElementById(id);
-    const tg = window.Telegram?.WebApp;
-    if (tg) { tg.expand(); tg.ready(); }
+ <script>
+  const $ = id => document.getElementById(id);
+  const tg = window.Telegram?.WebApp;
+  if (tg) { tg.expand(); tg.ready(); }
 
-    function toast(msg){
-      const el = $("toast");
-      el.textContent = msg;
-      el.style.display = "block";
-      setTimeout(()=> el.style.display="none", 1800);
-    }
-
-    function fileToDataURL(file){
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result); // data:<mime>;base64,...
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-    }
-
-    function setModeUI(){
-      const mode = $("mode").value;
-      $("imgBox").style.display = (mode === "img2img") ? "block" : "none";
-      $("imgErr").style.display = "none";
-    }
-
-    $("mode").addEventListener("change", setModeUI);
-    setModeUI();
-
-    // Input preview
-    $("imageFile").addEventListener("change", () => {
-      const f = $("imageFile").files?.[0];
-      $("imgErr").style.display = "none";
-      if (!f) { $("inputPreview").style.display="none"; return; }
-      const url = URL.createObjectURL(f);
-      $("inputPreviewImg").src = url;
-      $("inputPreview").style.display = "block";
+  function showSentPopup(){
+    if (!tg?.showPopup) return;
+    tg.showPopup({
+      title: "Telegram",
+      message: "Η αίτηση στάλθηκε. Το αποτέλεσμα θα έρθει μέσα στο Telegram.",
+      buttons: [{ type: "ok", text: "Close" }]
+    }, () => {
+      // ο χρήστης πάτησε Close (δεν κάνουμε κάτι εδώ)
     });
+  }
 
-    async function generate(){
-      const mode = $("mode").value;
-      const prompt = $("prompt").value.trim();
+  function showAlert(msg){
+    if (tg?.showAlert) tg.showAlert(msg);
+  }
 
-      if (prompt.length < 1){ $("promptErr").style.display="block"; return; }
-      $("promptErr").style.display="none";
+  // --------- LIVE COST 2/5 ----------
+  function calcCost(){
+    const q = ($("quality").value || "medium").toLowerCase();
+    return (q === "high") ? 5 : 2;
+  }
+  function updateCostUI(){
+    const cost = calcCost();
+    const priceEl = document.querySelector(".price-line .price");
+    if (priceEl) priceEl.textContent = `${cost} credits`;
+    // αν έχεις και “Τιμή:” πάνω δεξιά, άλλαξέ το κι εκεί αν θέλεις
+  }
+  $("quality").addEventListener("change", updateCostUI);
+  updateCostUI();
 
-      let imageDataUrl = "";
-      let inputFidelity = "high";
+  // --------- MODE UI ----------
+  function fileToDataURL(file){
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
 
-      if (mode === "img2img"){
-        const f = $("imageFile").files?.[0];
-        if (!f){ $("imgErr").style.display="block"; return; }
-        if (f.size > 8 * 1024 * 1024){
-          toast("Η εικόνα είναι πολύ μεγάλη (max 8MB).");
-          return;
-        }
-        imageDataUrl = await fileToDataURL(f);
-        inputFidelity = $("inputFidelity").value || "high";
+  function setModeUI(){
+    const mode = $("mode").value;
+    $("imgBox").style.display = (mode === "img2img") ? "block" : "none";
+    $("imgErr").style.display = "none";
+  }
+  $("mode").addEventListener("change", setModeUI);
+  setModeUI();
+
+  $("imageFile").addEventListener("change", () => {
+    const f = $("imageFile").files?.[0];
+    $("imgErr").style.display = "none";
+    if (!f){ $("inputPreview").style.display="none"; return; }
+    const url = URL.createObjectURL(f);
+    $("inputPreviewImg").src = url;
+    $("inputPreview").style.display = "block";
+  });
+
+  async function generate(){
+    const mode = $("mode").value;
+    const prompt = $("prompt").value.trim();
+
+    if (prompt.length < 1){ $("promptErr").style.display="block"; return; }
+    $("promptErr").style.display="none";
+
+    let imageDataUrl = "";
+    let inputFidelity = "high";
+
+    if (mode === "img2img"){
+      const f = $("imageFile").files?.[0];
+      if (!f){ $("imgErr").style.display="block"; return; }
+      if (f.size > 8 * 1024 * 1024){
+        showAlert("Η εικόνα είναι πολύ μεγάλη (max 8MB).");
+        return;
       }
-
-      const body = {
-        initData: tg?.initData || "",
-        mode,
-        prompt,
-        ratio: $("ratio").value,
-        quality: $("quality").value,
-        input_fidelity: inputFidelity,   // μόνο για edits (θα αγνοηθεί στο text2img)
-        image_data_url: imageDataUrl      // μόνο για img2img
-      };
-
-      $("btnGenerate").disabled = true;
-      $("btnGenerate").textContent = "⏳ Δημιουργία...";
-      try {
-        const res = await fetch("/api/gpt_image/generate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body)
-        });
-
-        const data = await res.json();
-if (!data.ok) {
-  throw new Error((data.error || "") + (data.detail ? (" / " + data.detail) : ""));
-}
-
-        $("previewImg").src = data.url;
-        $("preview").style.display = "block";
-        toast("Η εικόνα δημιουργήθηκε επιτυχώς!");
-        if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-      } catch(e){
-        toast("Αποτυχία: " + (e?.message || "unknown"));
-      } finally {
-        $("btnGenerate").disabled = false;
-        $("btnGenerate").textContent = "Δημιουργία";
-      }
+      imageDataUrl = await fileToDataURL(f);
+      inputFidelity = $("inputFidelity").value || "high";
     }
 
-    $("btnGenerate").addEventListener("click", generate);
-  </script>
+    const body = {
+      initData: tg?.initData || "",
+      mode,
+      prompt,
+      ratio: $("ratio").value,
+      quality: $("quality").value,
+      input_fidelity: inputFidelity,
+      image_data_url: imageDataUrl
+    };
+
+    $("btnGenerate").disabled = true;
+    $("btnGenerate").textContent = "⏳ Αποστολή...";
+
+    // 1) δείξε “στάλθηκε” (σαν το άλλο bot)
+    showSentPopup();
+
+    try {
+      const res = await fetch("/api/gpt_image/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "Αποτυχία");
+
+      // 2) κλείσε WebApp — το αποτέλεσμα θα έρθει ως μήνυμα στο chat
+      if (tg?.close) tg.close();
+
+    } catch(e){
+      showAlert("Αποτυχία δημιουργίας εικόνας. Δοκίμασε ξανά.");
+      $("btnGenerate").disabled = false;
+      $("btnGenerate").textContent = "Δημιουργία";
+    }
+  }
+
+  $("btnGenerate").addEventListener("click", generate);
+</script>
 </body>
 </html>
