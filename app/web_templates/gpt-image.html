@@ -192,14 +192,16 @@
         });
 
         const data = await res.json();
-        if (!data.ok) throw new Error(data.error || "Αποτυχία");
+if (!data.ok) {
+  throw new Error((data.error || "") + (data.detail ? (" / " + data.detail) : ""));
+}
 
         $("previewImg").src = data.url;
         $("preview").style.display = "block";
         toast("Η εικόνα δημιουργήθηκε επιτυχώς!");
         if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
       } catch(e){
-        toast("Αποτυχία δημιουργίας εικόνας");
+        toast("Αποτυχία: " + (e?.message || "unknown"));
       } finally {
         $("btnGenerate").disabled = false;
         $("btnGenerate").textContent = "Δημιουργία";
