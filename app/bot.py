@@ -88,10 +88,6 @@ async def edit_start_card(q, caption: str, reply_markup):
             await msg.reply_text(caption, reply_markup=reply_markup)
 
 
-from .db import ensure_user, get_user, add_credits_by_user_id
-from .db import get_referral_owner_by_code, register_referral_start
-
-REF_BONUS_CREDITS = 1
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
