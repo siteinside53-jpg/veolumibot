@@ -4,6 +4,7 @@ import hmac
 import hashlib
 import json
 import time
+from io import BytesIO
 import base64
 import uuid
 from pathlib import Path
