@@ -318,17 +318,33 @@ async def _run_nanobanana_pro_job(
         except Exception:
             pass
 
+
 @app.post("/api/nanobanana-pro/generate")
-async def nanobanana_pro_generate(payload: dict, background_tasks: BackgroundTasks):
+async def nanobanana_pro_generate(request: Request, background_tasks: BackgroundTasks):
+    # DEBUG: δες αν έρχεται JSON ή κάτι άλλο
+    try:
+        raw = await request.body()
+        print(">>> NBPRO RAW BODY:", raw[:3000], flush=True)
+    except Exception as e:
+        print(">>> NBPRO BODY READ ERROR:", e, flush=True)
+
+    try:
+        payload = await request.json()
+        print(">>> NBPRO PAYLOAD JSON:", payload, flush=True)
+    except Exception as e:
+        print(">>> NBPRO JSON PARSE ERROR:", e, flush=True)
+        return JSONResponse({"ok": False, "error": "bad_json"}, status_code=400)
+
     init_data = payload.get("initData", "")
     prompt = (payload.get("prompt") or "").strip()
     aspect_ratio = (payload.get("aspect_ratio") or "1:1").strip()
-    image_size = (payload.get("image_size") or "1K").strip().upper()   # 1K/2K/4K
+    image_size = (payload.get("image_size") or "1K").strip().upper()
     output_format = (payload.get("output_format") or "png").strip().lower()
     images_data_urls = payload.get("images_data_urls") or []
 
     if not prompt:
         return {"ok": False, "error": "empty_prompt"}
+
     if not isinstance(images_data_urls, list):
         images_data_urls = []
 
@@ -337,29 +353,24 @@ async def nanobanana_pro_generate(payload: dict, background_tasks: BackgroundTas
     if output_format not in ("png", "jpg"):
         output_format = "png"
 
-    # Κόστος Nano Banana Pro (όπως έχεις στο catalog): 4 credits
     COST = 4
 
+    # Θα σκάσει 401 εδώ αν initData είναι λάθος/άδειο
     dbu = db_user_from_webapp(init_data)
     tg_chat_id = int(dbu["tg_user_id"])
     db_user_id = int(dbu["id"])
 
     try:
         spend_credits_by_user_id(
-            db_user_id,
-            COST,
-            "Nano Banana Pro",
-            "gemini",
-            _gemini_model_name(),
+            db_user_id, COST, "Nano Banana Pro", "gemini", _gemini_model_name()
         )
     except Exception:
         return {"ok": False, "error": "not_enough_credits"}
 
-    # προαιρετικό: “ξεκίνησε”
     try:
         await tg_send_message(tg_chat_id, "🍌 Nano Banana Pro: Η εικόνα ετοιμάζεται…")
-    except Exception:
-        pass
+    except Exception as e:
+        print(">>> NBPRO tg_send_message failed:", e, flush=True)
 
     background_tasks.add_task(
         _run_nanobanana_pro_job,
