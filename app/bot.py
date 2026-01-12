@@ -12,7 +12,8 @@ from telegram.ext import (
 )
 
 from .config import BOT_TOKEN
-from .db import run_migrations, ensure_user, get_user
+from .db import ensure_user, get_user, add_credits_by_user_id
+from .db import get_referral_owner_by_code, register_referral_start
 from . import texts
 from .keyboards import (
     start_inline_menu,
@@ -23,6 +24,8 @@ from .keyboards import (
 )
 
 HERO_PATH = Path(__file__).parent / "assets" / "hero.png"
+
+REF_BONUS_CREDITS = 1
 
 
 async def send_start_card(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -85,8 +88,62 @@ async def edit_start_card(q, caption: str, reply_markup):
             await msg.reply_text(caption, reply_markup=reply_markup)
 
 
+from .db import ensure_user, get_user, add_credits_by_user_id
+from .db import get_referral_owner_by_code, register_referral_start
+
+REF_BONUS_CREDITS = 1
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await send_start_card(update, context)
+    user = update.effective_user
+    tg_id = int(user.id)
+    ensure_user(tg_id, user.username, user.first_name)
+
+    # ---- referral parsing ----
+    ref_code = None
+    if context.args:
+        arg0 = context.args[0]
+        if arg0.startswith("ref_"):
+            ref_code = arg0.replace("ref_", "", 1)
+
+    if ref_code:
+        ref = get_referral_owner_by_code(ref_code)
+        if ref:
+            inviter_user_id = int(ref["user_id"])
+
+            # block self-referral
+            me = get_user(tg_id)
+            if me and int(me["id"]) != inviter_user_id:
+                is_new = register_referral_start(inviter_user_id, tg_id)
+                if is_new:
+                    # credit bonus
+                    add_credits_by_user_id(
+                        inviter_user_id,
+                        REF_BONUS_CREDITS,
+                        "Referral bonus (friend joined)",
+                        "referral",
+                        ref_code,
+                    )
+
+                    # notify inviter in Telegram
+                    try:
+                        inviter = None
+                        # βρίσκουμε tg_user_id του inviter
+                        # αν το referrals table σου έχει μόνο user_id, κάνε fetch από users:
+                        with get_conn() as conn:
+                            cur = conn.cursor()
+                            cur.execute("SELECT tg_user_id FROM users WHERE id=%s", (inviter_user_id,))
+                            inviter = cur.fetchone()
+
+                        if inviter:
+                            inviter_tg = int(inviter["tg_user_id"])
+                            await context.bot.send_message(
+                                chat_id=inviter_tg,
+                                text="✅ Σου πιστώθηκε 1 credit από προσκληθέντα φίλο.",
+                            )
+                    except Exception:
+                        pass
+
+    # ... εδώ συνεχίζεις το normal start flow / menus ...
 
 
 async def on_menu_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
