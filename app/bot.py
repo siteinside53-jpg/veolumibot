@@ -12,15 +12,19 @@ from telegram.ext import (
 )
 
 from .config import BOT_TOKEN
-from .db import ensure_user, get_user, add_credits_by_user_id
-from .db import get_referral_owner_by_code, register_referral_start
 from . import texts
 from .keyboards import (
     start_inline_menu,
-    # open_profile_webapp_kb,  <-- remove
     video_models_menu,
     image_models_menu,
     audio_models_menu,
+)
+
+from .db import (
+    run_migrations,
+    ensure_user,
+    get_user,
+    apply_referral_start,  # <--- χρησιμοποιούμε το “σωστό” σύστημα referrals (referrals/referral_joins/referral_events)
 )
 
 HERO_PATH = Path(__file__).parent / "assets" / "hero.png"
@@ -88,7 +92,6 @@ async def edit_start_card(q, caption: str, reply_markup):
             await msg.reply_text(caption, reply_markup=reply_markup)
 
 
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     tg_id = int(user.id)
@@ -97,49 +100,33 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ---- referral parsing ----
     ref_code = None
     if context.args:
-        arg0 = context.args[0]
+        arg0 = (context.args[0] or "").strip()
         if arg0.startswith("ref_"):
-            ref_code = arg0.replace("ref_", "", 1)
+            ref_code = arg0.replace("ref_", "", 1).strip()
 
+    # ---- apply referral (counts + bonus + telegram notify) ----
     if ref_code:
-        ref = get_referral_owner_by_code(ref_code)
-        if ref:
-            inviter_user_id = int(ref["user_id"])
-
-            # block self-referral
+        try:
             me = get_user(tg_id)
-            if me and int(me["id"]) != inviter_user_id:
-                is_new = register_referral_start(inviter_user_id, tg_id)
-                if is_new:
-                    # credit bonus
-                    add_credits_by_user_id(
-                        inviter_user_id,
-                        REF_BONUS_CREDITS,
-                        "Referral bonus (friend joined)",
-                        "referral",
-                        ref_code,
-                    )
-
-                    # notify inviter in Telegram
+            if me:
+                r = apply_referral_start(invited_user_id=int(me["id"]), code=ref_code, bonus_credits=REF_BONUS_CREDITS)
+                if r.get("ok") and r.get("credited"):
+                    # notify inviter
+                    inviter_tg = int(r["owner_tg_user_id"])
+                    bonus = r.get("bonus", REF_BONUS_CREDITS)
                     try:
-                        inviter = None
-                        # βρίσκουμε tg_user_id του inviter
-                        # αν το referrals table σου έχει μόνο user_id, κάνε fetch από users:
-                        with get_conn() as conn:
-                            cur = conn.cursor()
-                            cur.execute("SELECT tg_user_id FROM users WHERE id=%s", (inviter_user_id,))
-                            inviter = cur.fetchone()
-
-                        if inviter:
-                            inviter_tg = int(inviter["tg_user_id"])
-                            await context.bot.send_message(
-                                chat_id=inviter_tg,
-                                text="✅ Σου πιστώθηκε 1 credit από προσκληθέντα φίλο.",
-                            )
+                        await context.bot.send_message(
+                            chat_id=inviter_tg,
+                            text=f"✅ Σου πιστώθηκε {bonus} credit από προσκληθέντα φίλο.",
+                        )
                     except Exception:
                         pass
+        except Exception:
+            # δεν θέλουμε να ρίχνει το /start λόγω referral
+            pass
 
-    # ... εδώ συνεχίζεις το normal start flow / menus ...
+    # ---- normal flow ----
+    await send_start_card(update, context)
 
 
 async def on_menu_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -156,25 +143,6 @@ async def on_menu_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if data == "menu:home":
         await edit_start_card(q, texts.START_CAPTION, start_inline_menu())
-        return
-
-    # NOTE: menu:profile θα δουλέψει μόνο αν υπάρχει κουμπί με callback_data="menu:profile"
-    if data == "menu:profile":
-        dbu = get_user(u.id) or {
-            "tg_user_id": u.id,
-            "tg_username": u.username,
-            "credits": 0,
-        }
-
-        await q.message.reply_text(
-            texts.PROFILE_MD.format(
-                tg_user_id=dbu["tg_user_id"],
-                username=(dbu.get("tg_username") or "—"),
-                credits=f'{float(dbu.get("credits", 0)):.2f}',
-            ),
-            parse_mode=ParseMode.MARKDOWN,
-            reply_markup=open_profile_webapp_kb(),
-        )
         return
 
     if data == "menu:video":
