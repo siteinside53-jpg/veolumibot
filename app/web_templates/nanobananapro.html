@@ -2,406 +2,199 @@
 <html lang="el">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Nano Banana Pro</title>
-
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>VeoLumi – Nano Banana Pro</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
   <style>
-    :root{
-      --bg:#0b0c10;
-      --card:#12141b;
-      --card2:#0f1117;
-      --border:#232736;
-      --text:#e9ecf5;
-      --muted:#9aa3b2;
-      --accent:#7c3aed;
-      --accent2:#5b21b6;
-      --danger:#ef4444;
-      --ok:#22c55e;
-      --shadow: 0 10px 30px rgba(0,0,0,.35);
-      --radius:16px;
+    :root {
+      --bg:#0e0f12;--card:#171a20;--border:#232734;--muted:#9aa3b2;
+      --text:#fff;--purple:#7c3aed;--purple2:#6d28d9;--radius:18px;
+      --shadow:0 10px 30px rgba(0,0,0,.35);
     }
     *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      background: radial-gradient(1200px 700px at 20% 0%, rgba(124,58,237,.25), transparent 55%),
-                  radial-gradient(900px 600px at 95% 30%, rgba(59,130,246,.14), transparent 55%),
-                  var(--bg);
-      color:var(--text);
-    }
-    .wrap{
-      max-width:720px;
-      margin:0 auto;
-      padding:16px;
-    }
-    .topbar{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      margin:4px 0 14px;
-    }
-    .title{
-      display:flex;
-      flex-direction:column;
-      gap:4px;
-    }
-    .title h1{
-      font-size:18px;
-      margin:0;
-      letter-spacing:.2px;
-    }
-    .title .sub{
-      font-size:12px;
-      color:var(--muted);
-    }
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:8px 10px;
-      background:rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.08);
-      border-radius:999px;
-      font-size:12px;
-      color:var(--text);
-      white-space:nowrap;
-    }
-
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background:var(--bg);color:var(--text)}
+    .wrap{max-width:520px;margin:0 auto;padding:16px}
     .card{
-      background: linear-gradient(180deg, rgba(255,255,255,.04), transparent 22%),
-                  var(--card);
+      background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0)),var(--card);
       border:1px solid var(--border);
       border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      padding:14px;
-      overflow:hidden;
+      padding:16px;box-shadow:var(--shadow);
     }
-
-    label{
-      display:block;
-      font-size:12px;
-      color:var(--muted);
-      margin:10px 0 6px;
+    .row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+    select,textarea,input[type="file"]{
+      width:100%;border-radius:14px;border:1px solid var(--border);
+      background:rgba(255,255,255,.03);color:#fff;padding:10px;font-weight:900;
+      font-size:15px;outline:none
     }
-
-    textarea{
-      width:100%;
-      min-height:120px;
-      resize:vertical;
-      border-radius:14px;
-      border:1px solid var(--border);
-      background: var(--card2);
-      color:var(--text);
-      padding:12px 12px;
-      outline:none;
-      line-height:1.35;
-      font-size:14px;
-    }
-    textarea:focus{
-      border-color: rgba(124,58,237,.6);
-      box-shadow: 0 0 0 4px rgba(124,58,237,.12);
-    }
-
-    .row{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:12px;
-      margin-top:10px;
-    }
-    @media (max-width:560px){
-      .row{grid-template-columns:1fr}
-    }
-
-    select, input[type="file"]{
-      width:100%;
-      border-radius:14px;
-      border:1px solid var(--border);
-      background: var(--card2);
-      color:var(--text);
-      padding:10px 12px;
-      font-size:14px;
-      outline:none;
-    }
-    select:focus{
-      border-color: rgba(124,58,237,.6);
-      box-shadow: 0 0 0 4px rgba(124,58,237,.12);
-    }
-
-    .hint{
-      font-size:12px;
-      color:var(--muted);
-      margin-top:6px;
-    }
-
-    .actions{
-      display:flex;
-      gap:10px;
-      margin-top:14px;
-    }
+    textarea{resize:none;height:140px}
+    label{display:block;font-weight:900;margin:10px 0 6px;color:#cfd3df}
     .btn{
-      appearance:none;
-      border:none;
-      cursor:pointer;
-      padding:12px 14px;
-      border-radius:14px;
-      font-weight:600;
-      font-size:14px;
-      transition: transform .06s ease, opacity .15s ease;
+      margin-top:14px;width:100%;padding:12px;border-radius:14px;
+      border:1px solid var(--border);background:linear-gradient(180deg,var(--purple),var(--purple2));
+      color:#fff;font-weight:900;cursor:pointer;text-align:center;
     }
-    .btn:active{ transform: translateY(1px); }
-    .btn-primary{
-      background: linear-gradient(180deg, rgba(255,255,255,.10), transparent 55%),
-                  linear-gradient(90deg, var(--accent), var(--accent2));
-      color:white;
-      flex:1;
-    }
-    .btn-ghost{
-      background: rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.10);
-      color:var(--text);
-    }
-    .btn[disabled]{
-      cursor:not-allowed;
-      opacity:.55;
-    }
-
-    .status{
-      margin-top:12px;
-      padding:10px 12px;
-      border-radius:14px;
-      border:1px solid var(--border);
-      background: rgba(255,255,255,.04);
-      font-size:13px;
-      color: var(--muted);
-      display:none;
-      white-space:pre-wrap;
-    }
-    .status.ok{
-      display:block;
-      border-color: rgba(34,197,94,.35);
-      color: rgba(34,197,94,.95);
-      background: rgba(34,197,94,.06);
-    }
-    .status.err{
-      display:block;
-      border-color: rgba(239,68,68,.35);
-      color: rgba(239,68,68,.95);
-      background: rgba(239,68,68,.06);
-    }
-    .status.info{
-      display:block;
-      border-color: rgba(124,58,237,.30);
-      color: rgba(233,236,245,.92);
-      background: rgba(124,58,237,.08);
-    }
-
-    .counter{
-      display:flex;
-      justify-content:space-between;
-      margin-top:6px;
-      font-size:12px;
-      color:var(--muted);
-    }
+    .btn:active{transform:scale(.99)}
+    .btn[disabled]{opacity:.6;cursor:not-allowed}
+    .price-line{margin-top:10px;display:flex;justify-content:space-between;font-weight:900;color:#cfd3df}
+    .price-line .price{font-size:18px;color:#fff}
+    .hint{margin-top:8px;color:var(--muted);font-weight:800;font-size:13px;line-height:1.35}
+    .err{color:#f66;font-weight:900;display:none;margin-top:6px;white-space:pre-wrap}
+    .ok{color:#22c55e;font-weight:900;display:none;margin-top:6px;white-space:pre-wrap}
   </style>
 </head>
 
 <body>
   <div class="wrap">
-    <div class="topbar">
-      <div class="title">
-        <h1>Nano Banana Pro</h1>
-        <div class="sub">Prompt + optional images + settings</div>
-      </div>
-      <div class="pill" id="costPill">Κόστος: 4 credits</div>
-    </div>
-
     <div class="card">
-      <label for="prompt">PROMPT</label>
-      <textarea id="prompt" maxlength="3000" placeholder="Γράψε τι θέλεις να δημιουργήσει..."></textarea>
-      <div class="counter">
-        <div id="promptHint">Εισάγετε prompt (1–3000 χαρακτήρες).</div>
-        <div><span id="promptCount">0</span>/3000</div>
-      </div>
-
-      <label for="images">ΕΙΚΟΝΕΣ (προαιρετικά)</label>
-      <input id="images" type="file" accept="image/*" multiple />
-      <div class="hint">Έως 8 εικόνες, JPG/PNG, έως 10MB η κάθε μία.</div>
-
       <div class="row">
-        <div>
-          <label for="aspect">ΣΧΕΣΗ ΠΛΕΥΡΩΝ</label>
-          <select id="aspect">
-            <option value="1:1" selected>1:1</option>
-            <option value="2:3">2:3</option>
-            <option value="3:2">3:2</option>
-            <option value="3:4">3:4</option>
-            <option value="4:3">4:3</option>
-            <option value="4:5">4:5</option>
-            <option value="5:4">5:4</option>
-            <option value="9:16">9:16</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="quality">ΠΟΙΟΤΗΤΑ</label>
-          <select id="quality">
-            <option value="1k" selected>1K</option>
-            <option value="2k">2K</option>
-            <option value="4k">4K</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="format">FORMAT</label>
-          <select id="format">
-            <option value="png" selected>PNG</option>
-            <option value="jpg">JPG</option>
-          </select>
-        </div>
-
-        <div>
-          <label for="count">ΑΡΙΘΜΟΣ ΕΙΚΟΝΩΝ</label>
-          <select id="count">
-            <option value="1" selected>1</option>
-            <option value="2">2</option>
-            <option value="4">4</option>
-          </select>
-          <div class="hint">Αν το endpoint σου υποστηρίζει πολλαπλές εξόδους.</div>
-        </div>
+        <h2 style="margin:0">Nano Banana Pro</h2>
+        <div>Κόστος: <b>4 credits</b></div>
       </div>
 
-      <div class="actions">
-        <button class="btn btn-ghost" id="btnBack" type="button">← Πίσω</button>
-        <button class="btn btn-primary" id="btnGenerate" type="button">Δημιουργία</button>
+      <label for="prompt">Prompt</label>
+      <textarea id="prompt" maxlength="3000" placeholder="Πληκτρολόγησε prompt (έως 3000 χαρακτήρες)..."></textarea>
+      <div id="promptErr" class="err">Το prompt είναι υποχρεωτικό (1–3000 χαρακτήρες).</div>
+
+      <label for="images">Εικόνες (προαιρετικά)</label>
+      <input id="images" type="file" accept="image/png,image/jpeg,image/jpg" multiple />
+      <div class="hint">Έως 8 εικόνες. Έως 10MB/εικόνα. JPG/PNG.</div>
+      <div id="imgErr" class="err"></div>
+
+      <label for="ratio">Αναλογία πλευρών</label>
+      <select id="ratio">
+        <option value="1:1" selected>1:1</option>
+        <option value="2:3">2:3</option>
+        <option value="3:2">3:2</option>
+        <option value="3:4">3:4</option>
+        <option value="4:3">4:3</option>
+        <option value="4:5">4:5</option>
+        <option value="5:4">5:4</option>
+        <option value="9:16">9:16</option>
+      </select>
+
+      <label for="quality">Ποιότητα (resolution)</label>
+      <select id="quality">
+        <option value="1k" selected>1K</option>
+        <option value="2k">2K</option>
+        <option value="4k">4K</option>
+      </select>
+
+      <label for="format">Μορφή αρχείου</label>
+      <select id="format">
+        <option value="png" selected>PNG</option>
+        <option value="jpg">JPG</option>
+      </select>
+
+      <div class="price-line">
+        <div>Κόστος</div><div class="price">4 credits</div>
       </div>
 
-      <div class="status info" id="statusBox"></div>
+      <button class="btn" id="btnGenerate">Δημιουργία</button>
+      <div class="hint">Θα εμφανιστεί popup “στάλθηκε” και το αποτέλεσμα θα έρθει μέσα στο Telegram chat.</div>
+
+      <div id="okBox" class="ok"></div>
+      <div id="errBox" class="err"></div>
     </div>
   </div>
 
-  <script>
-    const tg = window.Telegram?.WebApp;
-    if (tg) {
-      tg.ready();
-      try { tg.expand(); } catch (e) {}
+<script>
+  const $ = id => document.getElementById(id);
+  const tg = window.Telegram?.WebApp;
+  if (tg) { tg.expand(); tg.ready(); }
+
+  // ΒΑΛΕ ΕΔΩ ΤΟ ENDPOINT ΠΟΥ ΘΑ ΦΤΙΑΞΕΙΣ ΣΤΟ web.py
+  // (εσύ είπες: app/api/nanobanana_pro/generate)
+  const API_ENDPOINT = "/api/nanobanana-pro/generate";
+
+  function showSentPopup(){
+    if (!tg?.showPopup) return;
+    tg.showPopup({
+      title: "Telegram",
+      message: "Η αίτηση στάλθηκε. Το αποτέλεσμα θα έρθει μέσα στο Telegram.",
+      buttons: [{ type: "ok", text: "Close" }]
+    }, () => {});
+  }
+  function showAlert(msg){
+    if (tg?.showAlert) tg.showAlert(msg);
+  }
+
+  function validateFiles(fileList){
+    if (!fileList || fileList.length === 0) return { ok:true };
+    if (fileList.length > 8) return { ok:false, error:"Μέγιστο 8 εικόνες." };
+    for (const f of fileList){
+      const max = 10 * 1024 * 1024;
+      if (f.size > max) return { ok:false, error:`Η εικόνα "${f.name}" είναι πάνω από 10MB.` };
+      const t = (f.type || "").toLowerCase();
+      if (!(t.includes("png") || t.includes("jpeg") || t.includes("jpg") || t.startsWith("image/")))
+        return { ok:false, error:`Η εικόνα "${f.name}" δεν είναι PNG/JPG.` };
+    }
+    return { ok:true };
+  }
+
+  async function generate(){
+    $("okBox").style.display = "none";
+    $("errBox").style.display = "none";
+    $("promptErr").style.display = "none";
+    $("imgErr").style.display = "none";
+
+    const prompt = $("prompt").value.trim();
+    if (prompt.length < 1 || prompt.length > 3000){
+      $("promptErr").style.display = "block";
+      return;
     }
 
-    // ΡΥΘΜΙΣΗ: βάλε το endpoint που θα φτιάξεις στο web.py
-    // π.χ. /api/nanobanana-pro/generate
-    const API_ENDPOINT = "/api/nanobanana-pro/generate";
-
-    const promptEl = document.getElementById("prompt");
-    const promptCountEl = document.getElementById("promptCount");
-    const imagesEl = document.getElementById("images");
-    const aspectEl = document.getElementById("aspect");
-    const qualityEl = document.getElementById("quality");
-    const formatEl = document.getElementById("format");
-    const countEl = document.getElementById("count");
-    const btnGenerate = document.getElementById("btnGenerate");
-    const btnBack = document.getElementById("btnBack");
-    const statusBox = document.getElementById("statusBox");
-
-    function setStatus(type, msg) {
-      statusBox.className = "status " + (type || "info");
-      statusBox.textContent = msg || "";
-      statusBox.style.display = "block";
+    const files = $("images").files;
+    const vf = validateFiles(files);
+    if (!vf.ok){
+      $("imgErr").textContent = vf.error;
+      $("imgErr").style.display = "block";
+      return;
     }
 
-    function clearStatus() {
-      statusBox.style.display = "none";
-      statusBox.textContent = "";
-      statusBox.className = "status";
+    const fd = new FormData();
+    fd.append("tg_init_data", tg?.initData || "");
+    fd.append("prompt", prompt);
+    fd.append("aspect_ratio", $("ratio").value);
+    fd.append("quality", $("quality").value);
+    fd.append("output_format", $("format").value);
+
+    if (files && files.length){
+      for (const f of files) fd.append("images", f, f.name);
     }
 
-    function validateFiles(files) {
-      if (!files) return { ok:true };
-      if (files.length > 8) return { ok:false, error:"Μέγιστο 8 εικόνες." };
-      for (const f of files) {
-        const max = 10 * 1024 * 1024;
-        if (f.size > max) return { ok:false, error:`Το αρχείο "${f.name}" είναι πάνω από 10MB.` };
-        if (!f.type.startsWith("image/")) return { ok:false, error:`Το αρχείο "${f.name}" δεν είναι εικόνα.` };
+    $("btnGenerate").disabled = true;
+    $("btnGenerate").textContent = "⏳ Αποστολή...";
+
+    showSentPopup();
+
+    try{
+      const res = await fetch(API_ENDPOINT, { method:"POST", body: fd });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data.ok){
+        const msg = data?.error || data?.detail || "Αποτυχία δημιουργίας.";
+        throw new Error(msg);
       }
-      return { ok:true };
+
+      $("okBox").textContent = data.message || "Έτοιμο. Στάλθηκε στο Telegram.";
+      $("okBox").style.display = "block";
+
+      // Συνήθως κλείνουμε το webapp αφού το αποτέλεσμα έρθει στο chat
+      if (tg?.close) tg.close();
+
+    }catch(e){
+      showAlert("Αποτυχία. " + (e?.message || ""));
+      $("errBox").textContent = "Σφάλμα: " + (e?.message || "Άγνωστο σφάλμα");
+      $("errBox").style.display = "block";
+    }finally{
+      $("btnGenerate").disabled = false;
+      $("btnGenerate").textContent = "Δημιουργία";
     }
+  }
 
-    promptEl.addEventListener("input", () => {
-      promptCountEl.textContent = String(promptEl.value.length);
-    });
-
-    btnBack.addEventListener("click", () => {
-      if (tg) {
-        // αν έχεις navigation stack, μπορείς να στείλεις event αντί για close
-        try { tg.close(); } catch(e) {}
-      } else {
-        history.back();
-      }
-    });
-
-    btnGenerate.addEventListener("click", async () => {
-      clearStatus();
-
-      const prompt = (promptEl.value || "").trim();
-      if (!prompt) {
-        setStatus("err", "Γράψε prompt (τουλάχιστον 1 χαρακτήρας).");
-        return;
-      }
-
-      const files = imagesEl.files;
-      const vf = validateFiles(files);
-      if (!vf.ok) {
-        setStatus("err", vf.error);
-        return;
-      }
-
-      btnGenerate.disabled = true;
-      setStatus("info", "Γίνεται αποστολή…");
-
-      try {
-        const fd = new FormData();
-        fd.append("prompt", prompt);
-        fd.append("aspect_ratio", aspectEl.value);
-        fd.append("quality", qualityEl.value);
-        fd.append("output_format", formatEl.value);
-        fd.append("n", countEl.value);
-
-        // Telegram auth payload
-        fd.append("tg_init_data", tg?.initData || "");
-
-        // optional images
-        if (files && files.length) {
-          for (const f of files) fd.append("images", f, f.name);
-        }
-
-        const res = await fetch(API_ENDPOINT, {
-          method: "POST",
-          body: fd,
-        });
-
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          const msg = data?.error || data?.detail || ("HTTP " + res.status);
-          throw new Error(msg);
-        }
-
-        // Αναμενόμενο response παράδειγμα:
-        // { ok:true, job_id:"...", sent_to_telegram:true }
-        // ή { ok:true, telegram_message_id:..., ... }
-        setStatus("ok", data?.message || "Έτοιμο. Το αποτέλεσμα στάλθηκε στο Telegram.");
-        if (tg) {
-          try { tg.HapticFeedback?.notificationOccurred("success"); } catch(e) {}
-        }
-      } catch (e) {
-        setStatus("err", "Σφάλμα: " + (e?.message || String(e)));
-        if (tg) {
-          try { tg.HapticFeedback?.notificationOccurred("error"); } catch(e) {}
-        }
-      } finally {
-        btnGenerate.disabled = false;
-      }
-    });
-  </script>
+  $("btnGenerate").addEventListener("click", generate);
+</script>
 </body>
 </html>
