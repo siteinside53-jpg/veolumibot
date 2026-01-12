@@ -439,3 +439,30 @@ def record_referral_purchase(code: str, amount_eur) -> bool:
             )
             conn.commit()
             return True
+
+def register_referral_start(inviter_user_id: int, invited_tg_id: int) -> bool:
+    """
+    Καταγράφει ότι invited_tg_id μπήκε από referral του inviter_user_id.
+    Επιστρέφει True αν είναι νέα καταγραφή, False αν υπήρχε ήδη.
+    """
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO referral_starts (inviter_id, invited_tg_id)
+            VALUES (%s, %s)
+            ON CONFLICT (inviter_id, invited_tg_id) DO NOTHING
+            RETURNING id
+            """,
+            (inviter_user_id, invited_tg_id),
+        )
+        row = cur.fetchone()
+        conn.commit()
+        return bool(row)
+
+
+def get_referral_owner_by_code(code: str) -> dict | None:
+    with get_conn() as conn:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM referrals WHERE code=%s", (code,))
+        return cur.fetchone()
