@@ -646,6 +646,9 @@ async def tg_send_message(chat_id: int, text: str) -> None:
         if not j.get("ok"):
             raise RuntimeError(f"Telegram sendMessage failed: {j}")
 
+def schedule_coro(coro):
+    asyncio.create_task(coro)
+
 async def tg_send_photo(
     chat_id: int,
     img_bytes: bytes,
