@@ -384,7 +384,7 @@ async def veo31_generate(
         "gemini",
         _veo31_model_name(),
     )
-except Exception:
+    except Exception:
     return {"ok": False, "error": "not_enough_credits"}
 
     # read files (optional)
