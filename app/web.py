@@ -377,7 +377,7 @@ async def veo31_generate(
     db_user_id = int(dbu["id"])
 
     try:
-    spend_credits_by_user_id(
+        spend_credits_by_user_id(
         db_user_id,
         COST,
         f"Veo 3.1 ({mode})",
