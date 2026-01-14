@@ -55,6 +55,8 @@ BASE_DIR = Path(__file__).resolve().parent                 # /app/app
 TEMPLATES_DIR = BASE_DIR / "web_templates"                 # /app/app/web_templates
 STATIC_DIR = BASE_DIR / "static"                           # /app/app/static
 IMAGES_DIR = STATIC_DIR / "images"                         # /app/app/static/images
+VIDEOS_DIR = STATIC_DIR / "videos"
+_ensure_dir(VIDEOS_DIR)
 
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
@@ -324,9 +326,7 @@ async def _run_nanobanana_pro_job(
             pass
 
 def _veo31_model_name() -> str:
-    # Βάλε εδώ το σωστό model name που χρησιμοποιείς τελικά.
-    # Αν το κρατάς σε env:
-    return os.getenv("GEMINI_VEO31_MODEL", "veo-3.1").strip()
+    return os.getenv("GEMINI_VEO31_MODEL", "veo-3.1-generate-preview").strip()
 
 @app.post("/api/veo31/generate")
 async def veo31_generate(
@@ -339,8 +339,8 @@ async def veo31_generate(
     resolution: str = Form("720p"),
     negative_prompt: str = Form(""),
     seed: str = Form(""),
-    image: Optional[UploadFile] = File(None),
-    video: Optional[UploadFile] = File(None),
+    image: Optional[UploadFile] = File(None),                 # for image->video
+    ref_images: List[UploadFile] = File(default_factory=list) # for ref->video (1-3)
 ):
     init_data = (tg_init_data or "").strip()
     prompt = (prompt or "").strip()
@@ -384,7 +384,12 @@ async def veo31_generate(
 
     # read files (optional)
     image_bytes = await image.read() if image else None
-    video_bytes = await video.read() if video else None
+    ref_bytes = []
+    for f in (ref_images or [])[:3]:
+        try:
+            ref_bytes.append(await f.read())
+        except Exception:
+            pass
 
     try:
         await tg_send_message(tg_chat_id, "🎬 Veo 3.1: Το βίντεο ετοιμάζεται…")
@@ -403,47 +408,148 @@ async def veo31_generate(
         (negative_prompt or "").strip(),
         seed_int,
         image_bytes,
-        video_bytes,
+        ref_bytes,
         COST,
     )
-
     return {"ok": True, "sent_to_telegram": True, "cost": COST, "message": "Στάλθηκε στο Telegram."}
 
 async def _run_veo31_job(
     tg_chat_id: int,
     db_user_id: int,
-    mode: str,
+    mode: str,  # "text" | "image" | "ref"
     prompt: str,
     aspect_ratio: str,
     duration_seconds: int,
     resolution: str,
     negative_prompt: str,
     seed: Optional[int],
-    image_bytes: Optional[bytes],
-    video_bytes: Optional[bytes],
+    image_bytes: Optional[bytes],          # for image->video (start frame)
+    ref_images: list[bytes],               # for reference->video (1-3)
     cost: float,
 ):
     try:
         if not GEMINI_API_KEY:
             raise RuntimeError("GEMINI_API_KEY missing")
 
-        # 1) Debug ping (για να ξέρεις ότι το background task τρέχει)
-        await tg_send_message(tg_chat_id, "✅ Veo31 job started (debug).")
+        await tg_send_message(tg_chat_id, "✅ Veo 3.1: Ξεκίνησε η παραγωγή (job).")
 
-        # 2) TODO: Εδώ θα μπει το πραγματικό call στο Gemini Video API.
-        # Για τώρα, κάνουμε fail επίτηδες αν δεν έχεις υλοποίηση,
-        # ώστε να σου έρχεται μήνυμα λάθους στο Telegram (όχι σιωπή).
-        raise RuntimeError("Veo31: Δεν έχει μπει ακόμα το πραγματικό Gemini Video call/parsing.")
+        model = _veo31_model_name()
+        base_url = "https://generativelanguage.googleapis.com/v1beta"
+        op_url = f"{base_url}/models/{model}:predictLongRunning"
 
-        # 3) Παράδειγμα όταν έχεις video_bytes:
-        # name = f"veo31_{uuid.uuid4().hex}.mp4"
-        # (VIDEOS_DIR / name).write_bytes(video_bytes)
-        # public_base = (WEBAPP_URL or "").strip().rstrip("/") or "https://veolumibot-production.up.railway.app"
-        # public_url = f"{public_base}/static/videos/{name}"
-        # set_last_result(db_user_id, "veo31", public_url)
-        #
-        # kb = {"inline_keyboard":[[{"text":"🔽 Κατέβασε","url":public_url}],[{"text":"← Πίσω","callback_data":"menu:video"}]]}
-        # await tg_send_video(tg_chat_id, video_bytes, caption="✅ Veo 3.1: Έτοιμο", reply_markup=kb)
+        # ---- build instances payload (REST) ----
+        instance: Dict[str, Any] = {"prompt": prompt}
+
+        # Official docs mention aspect_ratio and also support 9:16 / 16:9.  [oai_citation:1‡Google AI for Developers](https://ai.google.dev/gemini-api/docs/video?example=dialogue)
+        instance["aspect_ratio"] = aspect_ratio
+
+        # duration/resolution are supported by Veo 3.1 variants (8s, 720p/1080p/4k).  [oai_citation:2‡Google AI for Developers](https://ai.google.dev/gemini-api/docs/video?example=dialogue)
+        instance["duration_seconds"] = duration_seconds
+        instance["resolution"] = resolution
+
+        if negative_prompt:
+            instance["negative_prompt"] = negative_prompt
+        if seed is not None:
+            instance["seed"] = seed
+
+        # image->video (first frame)
+        if mode == "image":
+            if not image_bytes:
+                raise RuntimeError("Λείπει εικόνα για Image → Video.")
+            instance["image"] = {
+                "bytesBase64Encoded": base64.b64encode(image_bytes).decode("utf-8"),
+                "mimeType": "image/png",
+            }
+
+        # reference->video (1-3 images)
+        if mode == "ref":
+            if not ref_images:
+                raise RuntimeError("Χρειάζονται 1–3 εικόνες για Reference → Video.")
+            instance["reference_images"] = [
+                {
+                    "bytesBase64Encoded": base64.b64encode(b).decode("utf-8"),
+                    "mimeType": "image/png",
+                }
+                for b in ref_images[:3]
+            ]
+
+        body = {"instances": [instance]}
+
+        # ---- start long-running operation ----
+        async with httpx.AsyncClient(timeout=60) as c:
+            r = await c.post(
+                op_url,
+                headers={"x-goog-api-key": GEMINI_API_KEY, "Content-Type": "application/json"},
+                json=body,
+            )
+            data = r.json()
+            if r.status_code >= 400:
+                raise RuntimeError(f"Veo31 start error {r.status_code}: {data}")
+
+        op_name = data.get("name")
+        if not op_name:
+            raise RuntimeError(f"No operation name returned: {data}")
+
+        # ---- poll operation ----
+        await tg_send_message(tg_chat_id, "⏳ Veo 3.1: Περιμένω το αποτέλεσμα…")
+
+        status = None
+        async with httpx.AsyncClient(timeout=60) as c:
+            for _ in range(120):  # ~120 * 3s = 6 λεπτά max (ρύθμισε όπως θες)
+                rs = await c.get(
+                    f"{base_url}/{op_name}",
+                    headers={"x-goog-api-key": GEMINI_API_KEY},
+                )
+                status = rs.json()
+                if rs.status_code >= 400:
+                    raise RuntimeError(f"Veo31 poll error {rs.status_code}: {status}")
+
+                if status.get("done") is True:
+                    break
+
+                await asyncio.sleep(3)
+
+        if not status or status.get("done") is not True:
+            raise RuntimeError("Veo31 timeout: operation not done.")
+
+        # ---- extract download URI (official path) ----  [oai_citation:3‡Google AI for Developers](https://ai.google.dev/gemini-api/docs/video?example=dialogue)
+        video_uri = (
+            (((status.get("response") or {}).get("generateVideoResponse") or {}).get("generatedSamples") or [{}])[0]
+            .get("video", {})
+            .get("uri")
+        )
+        if not video_uri:
+            raise RuntimeError(f"No video uri in response: {status}")
+
+        # ---- download bytes ----
+        async with httpx.AsyncClient(timeout=300, follow_redirects=True) as c:
+            vd = await c.get(video_uri, headers={"x-goog-api-key": GEMINI_API_KEY})
+            if vd.status_code >= 400:
+                raise RuntimeError(f"Video download error {vd.status_code}: {vd.text[:300]}")
+            video_bytes = vd.content
+
+        # ---- store & public URL ----
+        name = f"veo31_{uuid.uuid4().hex}.mp4"
+        (VIDEOS_DIR / name).write_bytes(video_bytes)
+
+        public_base = (WEBAPP_URL or "").strip().rstrip("/") or "https://veolumibot-production.up.railway.app"
+        public_url = f"{public_base}/static/videos/{name}"
+
+        set_last_result(db_user_id, "veo31", public_url)
+
+        kb = {
+            "inline_keyboard": [
+                [{"text": "🔽 Κατέβασε", "url": public_url}],
+                [{"text": "← Πίσω", "callback_data": "menu:video"}],
+            ]
+        }
+
+        await tg_send_video(
+            chat_id=tg_chat_id,
+            video_bytes=video_bytes,
+            caption="✅ Veo 3.1: Έτοιμο",
+            reply_markup=kb,
+        )
 
     except Exception as e:
         # refund
@@ -452,7 +558,6 @@ async def _run_veo31_job(
         except Exception:
             pass
 
-        # send error to Telegram (πολύ σημαντικό να μην είναι “σιωπηλό”)
         try:
             await tg_send_message(
                 tg_chat_id,
@@ -562,15 +667,14 @@ async def tg_send_video(
     video_bytes: bytes,
     caption: str = "",
     reply_markup: Optional[Dict[str, Any]] = None,
-    filename: str = "video.mp4",
 ) -> Dict[str, Any]:
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendVideo"
     data = {"chat_id": str(chat_id), "caption": caption}
     if reply_markup:
         data["reply_markup"] = json.dumps(reply_markup, ensure_ascii=False)
+    files = {"video": ("video.mp4", video_bytes, "video/mp4")}
 
-    files = {"video": (filename, video_bytes, "video/mp4")}
-    async with httpx.AsyncClient(timeout=180) as c:
+    async with httpx.AsyncClient(timeout=120) as c:
         r = await c.post(url, data=data, files=files)
         j = r.json()
         if not j.get("ok"):
