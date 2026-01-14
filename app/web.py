@@ -8,7 +8,7 @@ import base64
 import uuid
 import asyncio
 from pathlib import Path
-from typing import Dict, Optional, Tuple, Any
+from typing import Dict, Optional, Tuple, Any, List
 from urllib.parse import parse_qsl
 
 import httpx
@@ -56,7 +56,7 @@ TEMPLATES_DIR = BASE_DIR / "web_templates"                 # /app/app/web_templa
 STATIC_DIR = BASE_DIR / "static"                           # /app/app/static
 IMAGES_DIR = STATIC_DIR / "images"                         # /app/app/static/images
 VIDEOS_DIR = STATIC_DIR / "videos"
-_ensure_dir(VIDEOS_DIR)
+
 
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
@@ -74,6 +74,7 @@ def _ensure_dir(path: Path):
 
 _ensure_dir(STATIC_DIR)
 _ensure_dir(IMAGES_DIR)
+_ensure_dir(VIDEOS_DIR)
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
