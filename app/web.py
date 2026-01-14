@@ -341,7 +341,7 @@ async def veo31_generate(
     negative_prompt: str = Form(""),
     seed: str = Form(""),
     image: Optional[UploadFile] = File(None),                 # for image->video
-    ref_images: List[UploadFile] = File([]),                   # for ref->video (1-3)
+    ref_images: List[UploadFile] = File([])                   # for ref->video (1-3)
 ):
     init_data = (tg_init_data or "").strip()
     prompt = (prompt or "").strip()
