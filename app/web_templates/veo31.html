@@ -151,6 +151,8 @@
     $("errBox").style.display = "none";
     $("promptErr").style.display = "none";
 
+    const duration = parseInt($("duration").value, 10);
+
     const prompt = $("prompt").value.trim();
     if (!prompt){
       $("promptErr").style.display = "block";
