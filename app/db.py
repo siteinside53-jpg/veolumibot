@@ -65,6 +65,19 @@ def run_migrations():
             );
             """)
 
+                        # -------------------------
+            # last_results (store last generated media per user+model)
+            # -------------------------
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS last_results (
+              user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              model TEXT NOT NULL,
+              result_url TEXT NOT NULL,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              PRIMARY KEY (user_id, model)
+            );
+            """)
+
             cur.execute("""
             CREATE INDEX IF NOT EXISTS idx_credit_ledger_user_id_created_at
             ON credit_ledger(user_id, created_at DESC);
@@ -107,8 +120,8 @@ def run_migrations():
             ON referral_events(referral_id, created_at DESC);
             """)
 
-            print(">>> ensured tables users + credit_ledger + referrals/referral_joins/referral_events exist", flush=True)
-
+            print(">>> ensured tables users + credit_ledger + referrals + last_results exist", flush=True)
+            
     # Apply .sql migrations if any
     if not MIGRATIONS_DIR.exists():
         print(">>> migrations folder ΔΕΝ βρέθηκε — συνεχίζουμε χωρίς crash", flush=True)
