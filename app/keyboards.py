@@ -30,6 +30,9 @@ def _webapp_gpt_image_url() -> str:
 def _webapp_nanobanana_pro_url() -> str:
     return f"{_base_url()}/nanobanana-pro"
 
+def _webapp_veo31_url() -> str:
+    return f"{_base_url()}/veo31"
+
 
 def start_inline_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
