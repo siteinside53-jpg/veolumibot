@@ -385,7 +385,7 @@ async def veo31_generate(
         _veo31_model_name(),
     )
     except Exception:
-    return {"ok": False, "error": "not_enough_credits"}
+        return {"ok": False, "error": "not_enough_credits"}
 
     # read files (optional)
     image_bytes = await image.read() if image else None
