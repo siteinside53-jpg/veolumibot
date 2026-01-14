@@ -425,7 +425,6 @@ async def _run_veo31_job(
     prompt: str,
     aspect_ratio: str,
     duration_seconds: int,
-    resolution: str,
     negative_prompt: str,
     seed: Optional[int],
     image_bytes: Optional[bytes],          # for image->video (start frame)
@@ -450,7 +449,6 @@ async def _run_veo31_job(
 
         # duration/resolution are supported by Veo 3.1 variants (8s, 720p/1080p/4k).  [oai_citation:2‡Google AI for Developers](https://ai.google.dev/gemini-api/docs/video?example=dialogue)
         instance["duration_seconds"] = duration_seconds
-        instance["resolution"] = resolution
 
         if negative_prompt:
             instance["negative_prompt"] = negative_prompt
