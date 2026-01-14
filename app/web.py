@@ -409,6 +409,58 @@ async def veo31_generate(
 
     return {"ok": True, "sent_to_telegram": True, "cost": COST, "message": "Στάλθηκε στο Telegram."}
 
+async def _run_veo31_job(
+    tg_chat_id: int,
+    db_user_id: int,
+    mode: str,
+    prompt: str,
+    aspect_ratio: str,
+    duration_seconds: int,
+    resolution: str,
+    negative_prompt: str,
+    seed: Optional[int],
+    image_bytes: Optional[bytes],
+    video_bytes: Optional[bytes],
+    cost: float,
+):
+    try:
+        if not GEMINI_API_KEY:
+            raise RuntimeError("GEMINI_API_KEY missing")
+
+        # 1) Debug ping (για να ξέρεις ότι το background task τρέχει)
+        await tg_send_message(tg_chat_id, "✅ Veo31 job started (debug).")
+
+        # 2) TODO: Εδώ θα μπει το πραγματικό call στο Gemini Video API.
+        # Για τώρα, κάνουμε fail επίτηδες αν δεν έχεις υλοποίηση,
+        # ώστε να σου έρχεται μήνυμα λάθους στο Telegram (όχι σιωπή).
+        raise RuntimeError("Veo31: Δεν έχει μπει ακόμα το πραγματικό Gemini Video call/parsing.")
+
+        # 3) Παράδειγμα όταν έχεις video_bytes:
+        # name = f"veo31_{uuid.uuid4().hex}.mp4"
+        # (VIDEOS_DIR / name).write_bytes(video_bytes)
+        # public_base = (WEBAPP_URL or "").strip().rstrip("/") or "https://veolumibot-production.up.railway.app"
+        # public_url = f"{public_base}/static/videos/{name}"
+        # set_last_result(db_user_id, "veo31", public_url)
+        #
+        # kb = {"inline_keyboard":[[{"text":"🔽 Κατέβασε","url":public_url}],[{"text":"← Πίσω","callback_data":"menu:video"}]]}
+        # await tg_send_video(tg_chat_id, video_bytes, caption="✅ Veo 3.1: Έτοιμο", reply_markup=kb)
+
+    except Exception as e:
+        # refund
+        try:
+            add_credits_by_user_id(db_user_id, cost, "Refund Veo31 fail", "system", None)
+        except Exception:
+            pass
+
+        # send error to Telegram (πολύ σημαντικό να μην είναι “σιωπηλό”)
+        try:
+            await tg_send_message(
+                tg_chat_id,
+                f"❌ Αποτυχία Veo 3.1.\nΛεπτομέρεια: {str(e)[:250]}",
+            )
+        except Exception:
+            pass
+
 @app.post("/api/nanobanana-pro/generate")
 async def nanobanana_pro_generate(request: Request, background_tasks: BackgroundTasks):
     # DEBUG: δες αν έρχεται JSON ή κάτι άλλο
