@@ -151,6 +151,10 @@ async def gpt_image_page(request: Request):
 async def nanobanana_pro_page(request: Request):
     return templates.TemplateResponse("nanobananapro.html", {"request": request})
 
+@api.get("/veo31", response_class=HTMLResponse)
+async def veo31_page(request: Request):
+    return templates.TemplateResponse("veo31.html", {"request": request})
+
 # ======================
 # Tools API
 # ======================
