@@ -50,7 +50,7 @@ def video_models_menu() -> InlineKeyboardMarkup:
             [InlineKeyboardButton("🟢 Kling 2.6 (11–44 credits)", callback_data="menu:set:video:kling_26")],
             [InlineKeyboardButton("🌀 Wan 2.6 (14–56 credits)", callback_data="menu:set:video:wan_26")],
             [InlineKeyboardButton("🛰 Sora 2 PRO (18–80 credits)", callback_data="menu:set:video:sora2pro")],
-            [InlineKeyboardButton("🎥 Veo 3.1 (12 credits)", callback_data="menu:set:video:veo31")],
+            [InlineKeyboardButton("🎬 Veo 3.1", web_app=WebAppInfo(url=_webapp_veo31_url()))],
             [InlineKeyboardButton("← Πίσω", callback_data="menu:home")],
         ]
     )
