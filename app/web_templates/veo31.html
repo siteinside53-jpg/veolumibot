@@ -177,14 +177,6 @@
       return;
     }
 
-    // resolution rules: 1080p/4k -> must be 8s
-    const resolution = $("resolution").value;
-    const duration = $("duration").value;
-    if ((resolution === "1080p" || resolution === "4k") && duration !== "8"){
-      $("errBox").textContent = "Σφάλμα: 1080p/4K υποστηρίζονται μόνο σε διάρκεια 8s.";
-      $("errBox").style.display = "block";
-      return;
-    }
 
     const fd = new FormData();
     fd.append("tg_init_data", tg?.initData || "");
@@ -192,7 +184,7 @@
     fd.append("prompt", prompt);
     fd.append("aspect_ratio", $("aspect").value);
     fd.append("duration_seconds", duration);
-    fd.append("resolution", resolution);
+    // fd.append("resolution", resolution);
     fd.append("negative_prompt", ($("negative").value || "").trim());
     fd.append("seed", ($("seed").value || "").trim());
 
