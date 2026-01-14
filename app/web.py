@@ -377,11 +377,15 @@ async def veo31_generate(
     db_user_id = int(dbu["id"])
 
     try:
-        spend_credits_by_user_id(
-    db_user_id, COST, f"Veo 3.1 ({mode})", "gemini", _veo31_model_name()
-)
-    except Exception:
-        return {"ok": False, "error": "not_enough_credits"}
+    spend_credits_by_user_id(
+        db_user_id,
+        COST,
+        f"Veo 3.1 ({mode})",
+        "gemini",
+        _veo31_model_name(),
+    )
+except Exception:
+    return {"ok": False, "error": "not_enough_credits"}
 
     # read files (optional)
     image_bytes = await image.read() if image else None
