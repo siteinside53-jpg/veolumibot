@@ -6,13 +6,14 @@ import json
 import time
 import base64
 import uuid
+import asyncio
 from pathlib import Path
 from typing import Dict, Optional, Tuple, Any
 from urllib.parse import parse_qsl
 
 import httpx
 import stripe
-from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks, UploadFile, File, Form
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -322,6 +323,84 @@ async def _run_nanobanana_pro_job(
         except Exception:
             pass
 
+@app.post("/api/veo31/generate")
+async def veo31_generate(
+    background_tasks: BackgroundTasks,
+    tg_init_data: str = Form(""),
+    mode: str = Form("text"),
+    prompt: str = Form(""),
+    aspect_ratio: str = Form("16:9"),
+    duration_seconds: int = Form(8),
+    resolution: str = Form("720p"),
+    negative_prompt: str = Form(""),
+    seed: str = Form(""),
+    image: Optional[UploadFile] = File(None),
+    video: Optional[UploadFile] = File(None),
+):
+    init_data = (tg_init_data or "").strip()
+    prompt = (prompt or "").strip()
+    mode = (mode or "text").strip()
+
+    if not prompt:
+        return {"ok": False, "error": "empty_prompt"}
+
+    # basic validation
+    if aspect_ratio not in ("16:9", "9:16"):
+        aspect_ratio = "16:9"
+    if duration_seconds not in (4, 6, 8):
+        duration_seconds = 8
+    if resolution not in ("720p", "1080p", "4k"):
+        resolution = "720p"
+    if resolution in ("1080p", "4k") and duration_seconds != 8:
+        return {"ok": False, "error": "1080p_4k_requires_8s"}
+
+    seed_int: Optional[int] = None
+    if (seed or "").strip().isdigit():
+        seed_int = int(seed.strip())
+
+    # credits mapping (βάλε ό,τι θες)
+    if mode == "text":
+        COST = 10
+    elif mode == "image":
+        COST = 12
+    else:
+        COST = 60
+
+    dbu = db_user_from_webapp(init_data)
+    tg_chat_id = int(dbu["tg_user_id"])
+    db_user_id = int(dbu["id"])
+
+    try:
+        spend_credits_by_user_id(db_user_id, COST, f"Veo 3.1 ({mode})", "gemini", VEO_MODEL)
+    except Exception:
+        return {"ok": False, "error": "not_enough_credits"}
+
+    # read files (optional)
+    image_bytes = await image.read() if image else None
+    video_bytes = await video.read() if video else None
+
+    try:
+        await tg_send_message(tg_chat_id, "🎬 Veo 3.1: Το βίντεο ετοιμάζεται…")
+    except Exception:
+        pass
+
+    background_tasks.add_task(
+        _run_veo31_job,
+        tg_chat_id,
+        db_user_id,
+        mode,
+        prompt,
+        aspect_ratio,
+        duration_seconds,
+        resolution,
+        (negative_prompt or "").strip(),
+        seed_int,
+        image_bytes,
+        video_bytes,
+        COST,
+    )
+
+    return {"ok": True, "sent_to_telegram": True, "cost": COST, "message": "Στάλθηκε στο Telegram."}
 
 @app.post("/api/nanobanana-pro/generate")
 async def nanobanana_pro_generate(request: Request, background_tasks: BackgroundTasks):
