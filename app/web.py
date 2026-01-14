@@ -323,6 +323,11 @@ async def _run_nanobanana_pro_job(
         except Exception:
             pass
 
+def _veo31_model_name() -> str:
+    # Βάλε εδώ το σωστό model name που χρησιμοποιείς τελικά.
+    # Αν το κρατάς σε env:
+    return os.getenv("GEMINI_VEO31_MODEL", "veo-3.1").strip()
+
 @app.post("/api/veo31/generate")
 async def veo31_generate(
     background_tasks: BackgroundTasks,
@@ -371,7 +376,9 @@ async def veo31_generate(
     db_user_id = int(dbu["id"])
 
     try:
-        spend_credits_by_user_id(db_user_id, COST, f"Veo 3.1 ({mode})", "gemini", VEO_MODEL)
+        spend_credits_by_user_id(
+    db_user_id, COST, f"Veo 3.1 ({mode})", "gemini", _veo31_model_name()
+)
     except Exception:
         return {"ok": False, "error": "not_enough_credits"}
 
@@ -496,6 +503,26 @@ async def tg_send_photo(
         j = r.json()
         if not j.get("ok"):
             raise RuntimeError(f"Telegram sendPhoto failed: {j}")
+        return j["result"]
+
+async def tg_send_video(
+    chat_id: int,
+    video_bytes: bytes,
+    caption: str = "",
+    reply_markup: Optional[Dict[str, Any]] = None,
+    filename: str = "video.mp4",
+) -> Dict[str, Any]:
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendVideo"
+    data = {"chat_id": str(chat_id), "caption": caption}
+    if reply_markup:
+        data["reply_markup"] = json.dumps(reply_markup, ensure_ascii=False)
+
+    files = {"video": (filename, video_bytes, "video/mp4")}
+    async with httpx.AsyncClient(timeout=180) as c:
+        r = await c.post(url, data=data, files=files)
+        j = r.json()
+        if not j.get("ok"):
+            raise RuntimeError(f"Telegram sendVideo failed: {j}")
         return j["result"]
 
 async def _run_gpt_image_job(
@@ -880,6 +907,8 @@ async def ref_list(payload: dict):
         )
 
     return {"ok": True, "items": out, "limit": 10}
+
+
 
 # ======================
 # API: GPT Image (send result in Telegram chat)
