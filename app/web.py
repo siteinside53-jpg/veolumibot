@@ -340,7 +340,8 @@ async def veo31_generate(
     resolution: str = Form("720p"),
     negative_prompt: str = Form(""),
     seed: str = Form(""),
-    image: Optional[UploadFile] = File(None),                 # for image->video
+    image: Optional[UploadFile] = File(None),
+    video: Optional[UploadFile] = File(None),# for image->video
     ref_images: List[UploadFile] = File([])                   # for ref->video (1-3)
 ):
     init_data = (tg_init_data or "").strip()
@@ -355,9 +356,6 @@ async def veo31_generate(
         aspect_ratio = "16:9"
     if duration_seconds not in (4, 6, 8):
         duration_seconds = 8
-    if resolution not in ("720p", "1080p", "4k"):
-        resolution = "720p"
-    if resolution in ("1080p", "4k") and duration_seconds != 8:
         return {"ok": False, "error": "1080p_4k_requires_8s"}
 
     seed_int: Optional[int] = None
@@ -624,8 +622,8 @@ async def nanobanana_pro_generate(request: Request, background_tasks: Background
         print(">>> NBPRO tg_send_message failed:", e, flush=True)
 
     background_tasks.add_task(
-        schedule_coro,
-        _run_nanobanana_pro_job,
+    schedule_coro,
+    _run_nanobanana_pro_job(
         tg_chat_id,
         db_user_id,
         prompt,
@@ -634,7 +632,9 @@ async def nanobanana_pro_generate(request: Request, background_tasks: Background
         output_format,
         images_data_urls,
         COST,
-    )
+    ),
+
+)
 
     return {"ok": True, "sent_to_telegram": True, "cost": COST}
 # ======================
