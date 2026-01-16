@@ -5,6 +5,11 @@ import uuid
 
 from fastapi import APIRouter, BackgroundTasks
 from openai import OpenAI
+from .web_shared import (
+    db_user_from_webapp,
+    tg_send_message,
+    tg_send_photo,
+)
 
 from ._shared import (
     db_user_from_webapp,
