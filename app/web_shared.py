@@ -1,4 +1,4 @@
-# web_shared.py  (το αρχείο πρέπει να είναι ΕΔΩ: /app/app/web_shared.py)
+# /app/app/web_shared.py
 from .config import WEBAPP_URL
 
 CREDITS_PACKS = {
