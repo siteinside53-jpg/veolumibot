@@ -333,17 +333,13 @@ def _veo31_model_name() -> str:
 async def veo31_generate(
     background_tasks: BackgroundTasks,
     tg_init_data: str = Form(""),
-    mode: str = Form("text"),
+    mode: str = Form("text"),             # text | image | ref
     prompt: str = Form(""),
     aspect_ratio: str = Form("16:9"),
-    duration_seconds: int = Form(8),
-    resolution: str = Form("720p"),
-    negative_prompt: str = Form(""),
-    seed: str = Form(""),
-    image: Optional[UploadFile] = File(None),
-    video: Optional[UploadFile] = File(None),# for image->video
-    ref_images: List[UploadFile] = File([])                   # for ref->video (1-3)
+    image: Optional[UploadFile] = File(None),        # για image->video
+    ref_images: List[UploadFile] = File([]),         # για ref->video (1-3)
 ):
+    
     init_data = (tg_init_data or "").strip()
     prompt = (prompt or "").strip()
     mode = (mode or "text").strip()
@@ -354,12 +350,7 @@ async def veo31_generate(
     # basic validation
     if aspect_ratio not in ("16:9", "9:16"):
         aspect_ratio = "16:9"
-    if duration_seconds not in (4, 6, 8):
-        duration_seconds = 8
 
-    seed_int: Optional[int] = None
-    if (seed or "").strip().isdigit():
-        seed_int = int(seed.strip())
 
     # credits mapping (βάλε ό,τι θες)
     if mode == "text":
@@ -421,9 +412,6 @@ async def _run_veo31_job(
     mode: str,  # "text" | "image" | "ref"
     prompt: str,
     aspect_ratio: str,
-    duration_seconds: int,
-    negative_prompt: str,
-    seed: Optional[int],
     image_bytes: Optional[bytes],          # for image->video (start frame)
     ref_images: list[bytes],               # for reference->video (1-3)
     cost: float,
@@ -444,13 +432,6 @@ async def _run_veo31_job(
         # Official docs mention aspect_ratio and also support 9:16 / 16:9.  [oai_citation:1‡Google AI for Developers](https://ai.google.dev/gemini-api/docs/video?example=dialogue)
         instance["aspect_ratio"] = aspect_ratio
 
-        # duration/resolution are supported by Veo 3.1 variants (8s, 720p/1080p/4k).  [oai_citation:2‡Google AI for Developers](https://ai.google.dev/gemini-api/docs/video?example=dialogue)
-        instance["duration_seconds"] = duration_seconds
-
-        if negative_prompt:
-            instance["negative_prompt"] = negative_prompt
-        if seed is not None:
-            instance["seed"] = seed
 
         # image->video (first frame)
         if mode == "image":
