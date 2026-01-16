@@ -528,20 +528,25 @@ async def _run_veo31_job(
         
         # Fallback: recursive search for any mp4 URL anywhere in the response JSON
         if not video_uri:
-            def find_mp4_url(obj, path=""):
+            def find_mp4_url(obj, path="", depth=0):
                 """Recursively search for any mp4 URL in nested dict/list structure"""
+                # Prevent infinite recursion with depth limit
+                if depth > 20:
+                    return None
+                    
                 if isinstance(obj, dict):
                     for k, v in obj.items():
-                        result = find_mp4_url(v, f"{path}.{k}")
+                        result = find_mp4_url(v, f"{path}.{k}", depth + 1)
                         if result:
                             return result
                 elif isinstance(obj, list):
                     for idx, item in enumerate(obj):
-                        result = find_mp4_url(item, f"{path}[{idx}]")
+                        result = find_mp4_url(item, f"{path}[{idx}]", depth + 1)
                         if result:
                             return result
                 elif isinstance(obj, str):
-                    if obj.endswith(".mp4") or ".mp4" in obj:
+                    # Match strings that look like video URLs (http/https with .mp4)
+                    if (obj.startswith("http://") or obj.startswith("https://")) and ".mp4" in obj:
                         return obj
                 return None
             
