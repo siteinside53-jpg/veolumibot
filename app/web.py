@@ -173,6 +173,9 @@ def verify_telegram_init_data(init_data: str) -> dict:
     if not init_data:
         raise HTTPException(401, "Missing initData (open inside Telegram)")
 
+    if not BOT_TOKEN:
+        raise HTTPException(500, "BOT_TOKEN not configured")
+
     data = dict(parse_qsl(init_data, keep_blank_values=True))
 
     hash_received = data.pop("hash", None)
@@ -181,7 +184,8 @@ def verify_telegram_init_data(init_data: str) -> dict:
 
     data_check_string = "\n".join(f"{k}={data[k]}" for k in sorted(data.keys()))
 
-    secret_key = hmac.new(b"WebAppData", BOT_TOKEN.encode("utf-8"), hashlib.sha256).digest()
+    # Compute secret_key as SHA256 of BOT_TOKEN
+    secret_key = hashlib.sha256(BOT_TOKEN.encode("utf-8")).digest()
     h = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
 
     if not hmac.compare_digest(h, hash_received):
@@ -396,9 +400,6 @@ async def veo31_generate(
         mode,
         prompt,
         aspect_ratio,
-        duration_seconds,
-        (negative_prompt or "").strip(),
-        seed_int,
         image_bytes,
         ref_bytes,
         COST,
@@ -429,7 +430,7 @@ async def _run_veo31_job(
         # ---- build instances payload (REST) ----
         instance: Dict[str, Any] = {"prompt": prompt}
 
-        # Official docs mention aspect_ratio and also support 9:16 / 16:9.  [oai_citation:1‡Google AI for Developers](https://ai.google.dev/gemini-api/docs/video?example=dialogue)
+        # Official docs mention aspect_ratio and also support 9:16 / 16:9.
         instance["aspect_ratio"] = aspect_ratio
 
 
@@ -463,7 +464,15 @@ async def _run_veo31_job(
                 headers={"x-goog-api-key": GEMINI_API_KEY, "Content-Type": "application/json"},
                 json=body,
             )
-            data = r.json()
+            # Debug log: start response
+            try:
+                data = r.json()
+                body_preview = json.dumps(data, ensure_ascii=False)[:500]
+                print(f"VEO31 start: status_code={r.status_code}, body_preview={body_preview}", flush=True)
+            except Exception:
+                data = r.json()
+                print(f"VEO31 start: status_code={r.status_code}, body could not be previewed", flush=True)
+
             if r.status_code >= 400:
                 raise RuntimeError(f"Veo31 start error {r.status_code}: {data}")
 
@@ -471,17 +480,36 @@ async def _run_veo31_job(
         if not op_name:
             raise RuntimeError(f"No operation name returned: {data}")
 
+        # Debug log: op_name
+        print(f"VEO31 op_name: {op_name}", flush=True)
+
+        # Determine poll_url
+        if op_name.startswith("http"):
+            poll_url = op_name
+        else:
+            poll_url = f"{base_url}/{op_name}"
+
+        print(f"VEO31 poll_url: {poll_url}", flush=True)
+
         # ---- poll operation ----
         await tg_send_message(tg_chat_id, "⏳ Veo 3.1: Περιμένω το αποτέλεσμα…")
 
         status = None
+        max_iterations = 120  # ~120 * 3s = 6 minutes max
         async with httpx.AsyncClient(timeout=60) as c:
-            for _ in range(120):  # ~120 * 3s = 6 λεπτά max (ρύθμισε όπως θες)
+            for iteration in range(max_iterations):
                 rs = await c.get(
-                    f"{base_url}/{op_name}",
+                    poll_url,
                     headers={"x-goog-api-key": GEMINI_API_KEY},
                 )
-                status = rs.json()
+                try:
+                    status = rs.json()
+                    status_preview = json.dumps(status, ensure_ascii=False)[:300]
+                    print(f"VEO31 poll iteration {iteration}: status_code={rs.status_code}, status_preview={status_preview}", flush=True)
+                except Exception:
+                    status = rs.json()
+                    print(f"VEO31 poll iteration {iteration}: status_code={rs.status_code}, status could not be previewed", flush=True)
+
                 if rs.status_code >= 400:
                     raise RuntimeError(f"Veo31 poll error {rs.status_code}: {status}")
 
@@ -493,14 +521,39 @@ async def _run_veo31_job(
         if not status or status.get("done") is not True:
             raise RuntimeError("Veo31 timeout: operation not done.")
 
-        # ---- extract download URI (official path) ----  [oai_citation:3‡Google AI for Developers](https://ai.google.dev/gemini-api/docs/video?example=dialogue)
+        # ---- extract download URI (official path) ----
         video_uri = (
             (((status.get("response") or {}).get("generateVideoResponse") or {}).get("generatedSamples") or [{}])[0]
             .get("video", {})
             .get("uri")
         )
+
+        # If not found via official path, recursively search for .mp4 URL
+        if not video_uri:
+            def _find_mp4_url(obj):
+                """Recursively search for first http URL containing .mp4"""
+                if isinstance(obj, str):
+                    if obj.startswith("http") and ".mp4" in obj:
+                        return obj
+                elif isinstance(obj, dict):
+                    for v in obj.values():
+                        result = _find_mp4_url(v)
+                        if result:
+                            return result
+                elif isinstance(obj, list):
+                    for item in obj:
+                        result = _find_mp4_url(item)
+                        if result:
+                            return result
+                return None
+
+            video_uri = _find_mp4_url(status)
+
         if not video_uri:
             raise RuntimeError(f"No video uri in response: {status}")
+
+        # Debug log: discovered video URI
+        print(f"VEO31 video_uri: {video_uri}", flush=True)
 
         # ---- download bytes ----
         async with httpx.AsyncClient(timeout=300, follow_redirects=True) as c:
@@ -533,12 +586,18 @@ async def _run_veo31_job(
         )
 
     except Exception as e:
+        # Log exception to stdout
+        print(f"VEO31 exception: {str(e)}", flush=True)
+        import traceback
+        traceback.print_exc()
+
         # refund
         try:
             add_credits_by_user_id(db_user_id, cost, "Refund Veo31 fail", "system", None)
         except Exception:
             pass
 
+        # Attempt to notify user via Telegram
         try:
             await tg_send_message(
                 tg_chat_id,
