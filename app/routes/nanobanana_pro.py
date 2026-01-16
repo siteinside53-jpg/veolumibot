@@ -6,6 +6,11 @@ import uuid
 import httpx
 from fastapi import APIRouter, BackgroundTasks, Request
 from fastapi.responses import JSONResponse
+from .web_shared import (
+    db_user_from_webapp,
+    tg_send_message,
+    tg_send_photo,
+)
 
 from ._shared import (
     db_user_from_webapp,
