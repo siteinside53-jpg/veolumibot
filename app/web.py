@@ -173,6 +173,9 @@ def verify_telegram_init_data(init_data: str) -> dict:
     if not init_data:
         raise HTTPException(401, "Missing initData (open inside Telegram)")
 
+    if not BOT_TOKEN:
+        raise HTTPException(500, "BOT_TOKEN not configured")
+
     data = dict(parse_qsl(init_data, keep_blank_values=True))
 
     hash_received = data.pop("hash", None)
@@ -181,7 +184,7 @@ def verify_telegram_init_data(init_data: str) -> dict:
 
     data_check_string = "\n".join(f"{k}={data[k]}" for k in sorted(data.keys()))
 
-    secret_key = hmac.new(b"WebAppData", BOT_TOKEN.encode("utf-8"), hashlib.sha256).digest()
+    secret_key = hashlib.sha256(BOT_TOKEN.encode()).digest()
     h = hmac.new(secret_key, data_check_string.encode("utf-8"), hashlib.sha256).hexdigest()
 
     if not hmac.compare_digest(h, hash_received):
@@ -396,9 +399,6 @@ async def veo31_generate(
         mode,
         prompt,
         aspect_ratio,
-        duration_seconds,
-        (negative_prompt or "").strip(),
-        seed_int,
         image_bytes,
         ref_bytes,
         COST,
@@ -463,7 +463,16 @@ async def _run_veo31_job(
                 headers={"x-goog-api-key": GEMINI_API_KEY, "Content-Type": "application/json"},
                 json=body,
             )
-            data = r.json()
+            
+            # Debug: print start response
+            print(f"VEO31 start: status={r.status_code}, body preview={r.text[:500]}", flush=True)
+            
+            # Robustly parse JSON response
+            try:
+                data = r.json()
+            except Exception:
+                data = {"raw_text": r.text[:1000]}
+            
             if r.status_code >= 400:
                 raise RuntimeError(f"Veo31 start error {r.status_code}: {data}")
 
@@ -471,24 +480,41 @@ async def _run_veo31_job(
         if not op_name:
             raise RuntimeError(f"No operation name returned: {data}")
 
+        # Handle op_name as either full URL or relative name
+        if op_name.startswith("http"):
+            poll_url = op_name
+        else:
+            poll_url = f"{base_url}/{op_name}"
+        
+        print(f"VEO31 op_name: op_name={op_name}, poll_url={poll_url}", flush=True)
+
         # ---- poll operation ----
-        await tg_send_message(tg_chat_id, "⏳ Veo 3.1: Περιμένω το αποτέλεσμα…")
+        await tg_send_message(tg_chat_id, "⏳ Veo 3.1: Waiting for video generation to complete...")
 
         status = None
         async with httpx.AsyncClient(timeout=60) as c:
-            for _ in range(120):  # ~120 * 3s = 6 λεπτά max (ρύθμισε όπως θες)
+            for i in range(120):  # ~120 * 5s = 10 minutes max
                 rs = await c.get(
-                    f"{base_url}/{op_name}",
+                    poll_url,
                     headers={"x-goog-api-key": GEMINI_API_KEY},
                 )
-                status = rs.json()
+                
+                # Debug: print poll response
+                print(f"VEO31 poll #{i}: status={rs.status_code}, body preview={rs.text[:500]}", flush=True)
+                
+                # Robustly parse JSON response
+                try:
+                    status = rs.json()
+                except Exception:
+                    status = {"raw_text": rs.text[:1000]}
+                
                 if rs.status_code >= 400:
                     raise RuntimeError(f"Veo31 poll error {rs.status_code}: {status}")
 
                 if status.get("done") is True:
                     break
 
-                await asyncio.sleep(3)
+                await asyncio.sleep(5)
 
         if not status or status.get("done") is not True:
             raise RuntimeError("Veo31 timeout: operation not done.")
@@ -499,8 +525,32 @@ async def _run_veo31_job(
             .get("video", {})
             .get("uri")
         )
+        
+        # Fallback: recursive search for any mp4 URL anywhere in the response JSON
+        if not video_uri:
+            def find_mp4_url(obj, path=""):
+                """Recursively search for any mp4 URL in nested dict/list structure"""
+                if isinstance(obj, dict):
+                    for k, v in obj.items():
+                        result = find_mp4_url(v, f"{path}.{k}")
+                        if result:
+                            return result
+                elif isinstance(obj, list):
+                    for idx, item in enumerate(obj):
+                        result = find_mp4_url(item, f"{path}[{idx}]")
+                        if result:
+                            return result
+                elif isinstance(obj, str):
+                    if obj.endswith(".mp4") or ".mp4" in obj:
+                        return obj
+                return None
+            
+            video_uri = find_mp4_url(status)
+        
         if not video_uri:
             raise RuntimeError(f"No video uri in response: {status}")
+        
+        print(f"VEO31 video_uri: {video_uri}", flush=True)
 
         # ---- download bytes ----
         async with httpx.AsyncClient(timeout=300, follow_redirects=True) as c:
@@ -533,6 +583,9 @@ async def _run_veo31_job(
         )
 
     except Exception as e:
+        # Print failure for debugging
+        print(f"VEO31 job failed: {str(e)}", flush=True)
+        
         # refund
         try:
             add_credits_by_user_id(db_user_id, cost, "Refund Veo31 fail", "system", None)
