@@ -355,7 +355,7 @@ async def veo31_generate(
     if aspect_ratio not in ("16:9", "9:16"):
         aspect_ratio = "16:9"
     if duration_seconds not in (4, 6, 8):
-    duration_seconds = 8
+        duration_seconds = 8
 
     seed_int: Optional[int] = None
     if (seed or "").strip().isdigit():
