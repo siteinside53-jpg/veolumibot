@@ -470,7 +470,8 @@ async def _run_veo31_job(
             # Robustly parse JSON response
             try:
                 data = r.json()
-            except Exception:
+            except json.JSONDecodeError as e:
+                print(f"VEO31 start: JSON decode error: {e}", flush=True)
                 data = {"raw_text": r.text[:1000]}
             
             if r.status_code >= 400:
@@ -505,7 +506,8 @@ async def _run_veo31_job(
                 # Robustly parse JSON response
                 try:
                     status = rs.json()
-                except Exception:
+                except json.JSONDecodeError as e:
+                    print(f"VEO31 poll #{i}: JSON decode error: {e}", flush=True)
                     status = {"raw_text": rs.text[:1000]}
                 
                 if rs.status_code >= 400:
@@ -545,9 +547,11 @@ async def _run_veo31_job(
                         if result:
                             return result
                 elif isinstance(obj, str):
-                    # Match strings that look like video URLs (http/https with .mp4)
+                    # Match strings that look like video URLs (http/https with .mp4 extension at end or with query params)
                     if (obj.startswith("http://") or obj.startswith("https://")) and ".mp4" in obj:
-                        return obj
+                        # Basic validation: ensure .mp4 is followed by end-of-string or query params
+                        if ".mp4?" in obj or obj.endswith(".mp4"):
+                            return obj
                 return None
             
             video_uri = find_mp4_url(status)
