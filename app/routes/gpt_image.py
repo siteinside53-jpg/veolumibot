@@ -10,13 +10,10 @@ from .web_shared import (
     tg_send_message,
     tg_send_photo,
 )
+from ..core.telegram_auth import db_user_from_webapp
+from ..core.telegram_client import tg_send_message, tg_send_photo
 
-from ._shared import (
-    db_user_from_webapp,
-    tg_send_message,
-    tg_send_photo,
-    IMAGES_DIR,
-)
+from ..core.paths import IMAGES_DIR
 from ..db import spend_credits_by_user_id, add_credits_by_user_id
 
 router = APIRouter()
