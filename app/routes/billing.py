@@ -17,7 +17,7 @@ from ..config import (
     WEBAPP_URL,
 )
 from ..db import get_conn, add_credits_by_user_id
-from ._shared import db_user_from_webapp, CREDITS_PACKS
+from ..web_shared import packs_list, CREDITS_PACKS
 
 router = APIRouter()
 
