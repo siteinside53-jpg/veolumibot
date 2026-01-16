@@ -1,220 +1,126 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="el">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>VeoLumi – Veo 3.1</title>
+  <meta charset="UTF-8">
+  <title>Veo 3.1</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    :root{
-      --bg:#0e0f12;--card:#171a20;--border:#232734;--muted:#9aa3b2;--text:#fff;
-      --purple:#7c3aed;--purple2:#6d28d9;--radius:18px;--shadow:0 10px 30px rgba(0,0,0,.35);
+    body{margin:0;background:#0b0f16;color:#fff;font-family:sans-serif}
+    .box{max-width:420px;margin:auto;padding:16px}
+    .card{background:#0f1623;padding:14px;border-radius:14px;margin-bottom:12px}
+    label{display:block;margin-bottom:6px;color:#9fb0d0}
+    select,textarea,input,button{
+      width:100%;padding:10px;border-radius:8px;border:0;background:#141f33;color:white
     }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
-    .wrap{max-width:560px;margin:0 auto;padding:16px}
-    .card{
-      background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0)),var(--card);
-      border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);
-    }
-    h2{margin:0}
-    .row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-    label{display:block;font-weight:900;margin:10px 0 6px;color:#cfd3df}
-    select,textarea,input[type="file"],input[type="number"],input[type="text"]{
-      width:100%;border-radius:14px;border:1px solid var(--border);
-      background:rgba(255,255,255,.03);color:#fff;padding:10px;font-weight:800;font-size:14px;outline:none
-    }
-    textarea{resize:none;height:140px}
-    .tabs{display:flex;gap:8px;margin-top:12px}
-    .tab{
-      flex:1;text-align:center;padding:10px;border-radius:14px;border:1px solid var(--border);
-      background:rgba(255,255,255,.03);font-weight:900;cursor:pointer;user-select:none
-    }
-    .tab.active{background:linear-gradient(180deg,var(--purple),var(--purple2))}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .btn{
-      margin-top:14px;width:100%;padding:12px;border-radius:14px;
-      border:1px solid var(--border);background:linear-gradient(180deg,var(--purple),var(--purple2));
-      color:#fff;font-weight:900;cursor:pointer;text-align:center;
-    }
-    .btn:active{transform:scale(.99)}
-    .btn[disabled]{opacity:.6;cursor:not-allowed}
-    .hint{margin-top:8px;color:var(--muted);font-weight:800;font-size:13px;line-height:1.35}
-    .err{color:#f66;font-weight:900;display:none;margin-top:8px;white-space:pre-wrap}
-    .ok{color:#22c55e;font-weight:900;display:none;margin-top:8px;white-space:pre-wrap}
-    .cost{font-weight:900}
-    .muted{color:var(--muted);font-weight:800;font-size:13px}
+    textarea{min-height:90px}
+    .hidden{display:none}
+    button{background:#1f3b66;font-weight:bold;margin-top:10px}
+    .price{display:flex;justify-content:space-between;margin-top:10px;color:#9fb0d0}
+    .err{color:#ff5c5c;font-size:13px}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <div class="row">
-        <h2>Veo 3.1</h2>
-        <div class="cost">Κόστος: <b id="costLabel">10 credits</b></div>
-      </div>
+<div class="box">
+  <h2>Veo 3.1</h2>
 
-      <div class="tabs">
-        <div class="tab active" id="tabText">Text → Video</div>
-        <div class="tab" id="tabImage">Image → Video</div>
-        <div class="tab" id="tabExtend">Video → Video (Extend)</div>
-      </div>
-
-      <label for="prompt">Prompt</label>
-      <textarea id="prompt" maxlength="3000" placeholder="Γράψε prompt (μπορεί να περιέχει και διάλογο/ήχους)…"></textarea>
-      <div id="promptErr" class="err">Το prompt είναι υποχρεωτικό.</div>
-
-      <div id="imageBlock" style="display:none">
-        <label for="imageFile">Αρχική εικόνα (1 αρχείο)</label>
-        <input id="imageFile" type="file" accept="image/png,image/jpeg,image/jpg" />
-        <div class="hint">Η εικόνα γίνεται το πρώτο frame του video.</div>
-      </div>
-
-      <div id="extendBlock" style="display:none">
-        <label for="videoFile">Βίντεο εισόδου (MP4)</label>
-        <input id="videoFile" type="file" accept="video/mp4,video/quicktime,video/*" />
-        <div class="hint">Χρησιμοποιείται για επέκταση (extend) του video.</div>
-      </div>
-
-      <div class="grid" style="margin-top:6px">
-        <div>
-          <label for="aspect">Αναλογία</label>
-          <select id="aspect">
-            <option value="16:9" selected>16:9</option>
-            <option value="9:16">9:16</option>
-          </select>
-        </div>
-        <div>
-          <label for="duration">Διάρκεια</label>
-          <select id="duration">
-            <option value="4">4s</option>
-            <option value="6">6s</option>
-            <option value="8" selected>8s</option>
-          </select>
-        </div>
-        <div>
-          <label for="seed">Seed (προαιρετικό)</label>
-          <input id="seed" type="number" min="0" step="1" placeholder="π.χ. 123" />
-        </div>
-      </div>
-
-      <label for="negative">Negative prompt (προαιρετικό)</label>
-      <input id="negative" type="text" maxlength="800" placeholder="π.χ. cartoon, low quality, blurry…" />
-
-      <button class="btn" id="btnGenerate">Δημιουργία</button>
-      <div class="hint">Θα εμφανιστεί popup “στάλθηκε” και το αποτέλεσμα θα έρθει μέσα στο Telegram chat.</div>
-
-      <div id="okBox" class="ok"></div>
-      <div id="errBox" class="err"></div>
-    </div>
+  <div class="card">
+    <label>Λειτουργία</label>
+    <select id="mode">
+      <option value="text">Κείμενο → Βίντεο</option>
+      <option value="image">Εικόνα → Βίντεο</option>
+      <option value="ref">Αναφορά → Βίντεο</option>
+    </select>
   </div>
 
+  <div class="card">
+    <label>Prompt</label>
+    <textarea id="prompt" placeholder="Περιέγραψε σκηνή / κίνηση / στυλ..."></textarea>
+    <div id="errPrompt" class="err hidden">Βάλε prompt (1–5000 χαρακτήρες)</div>
+  </div>
+
+  <div class="card">
+    <label>Αναλογία Πλευρών</label>
+    <select id="ratio">
+      <option value="16:9">16:9</option>
+      <option value="9:16">9:16</option>
+    </select>
+  </div>
+
+  <!-- Image → Video -->
+  <div class="card hidden" id="imageBox">
+    <label>Αρχικό Καρέ (υποχρεωτικό, ≤5MB)</label>
+    <input type="file" id="imageStart" accept="image/*">
+    <label style="margin-top:10px">Τελικό Καρέ (προαιρετικό, ≤5MB)</label>
+    <input type="file" id="imageEnd" accept="image/*">
+  </div>
+
+  <!-- Reference → Video -->
+  <div class="card hidden" id="refBox">
+    <label>1–3 Εικόνες Αναφοράς (≤10MB η καθεμία)</label>
+    <input type="file" id="refImages" multiple accept="image/*">
+    <div id="errRef" class="err hidden">Χρειάζονται 1–3 εικόνες</div>
+  </div>
+
+  <div class="card">
+    <div class="price">
+      <span>Κόστος</span>
+      <b id="price">12 credits</b>
+    </div>
+    <button id="go">Δημιουργία Βίντεο</button>
+  </div>
+</div>
+
 <script>
-  const $ = id => document.getElementById(id);
-  const tg = window.Telegram?.WebApp;
-  if (tg) { tg.expand(); tg.ready(); }
+const tg = window.Telegram.WebApp;
+tg.expand();
 
-  const API_ENDPOINT = "/api/veo31/generate";
+const modeSel = document.getElementById("mode");
+const imageBox = document.getElementById("imageBox");
+const refBox = document.getElementById("refBox");
+const price = document.getElementById("price");
 
-  let mode = "text"; // text | image | extend
+function updateUI(){
+  const m = modeSel.value;
+  imageBox.classList.add("hidden");
+  refBox.classList.add("hidden");
 
-  function setMode(m){
-    mode = m;
-    $("tabText").classList.toggle("active", m==="text");
-    $("tabImage").classList.toggle("active", m==="image");
-    $("tabExtend").classList.toggle("active", m==="extend");
+  if(m==="text"){ price.innerText="12 credits"; }
+  if(m==="image"){ imageBox.classList.remove("hidden"); price.innerText="12 credits"; }
+  if(m==="ref"){ refBox.classList.remove("hidden"); price.innerText="60 credits"; }
+}
+modeSel.onchange = updateUI;
+updateUI();
 
-    $("imageBlock").style.display = (m==="image") ? "block" : "none";
-    $("extendBlock").style.display = (m==="extend") ? "block" : "none";
+document.getElementById("go").onclick = async ()=>{
+  const prompt = document.getElementById("prompt").value.trim();
+  if(!prompt){ document.getElementById("errPrompt").classList.remove("hidden"); return;}
+  document.getElementById("errPrompt").classList.add("hidden");
 
-    // credits labels (βάλε ό,τι θες)
-    const cost = (m==="text") ? 10 : (m==="image") ? 12 : 60;
-    $("costLabel").textContent = cost + " credits";
+  const fd = new FormData();
+  fd.append("tg_init_data", tg.initData || "");
+  fd.append("mode", modeSel.value);
+  fd.append("prompt", prompt);
+  fd.append("aspect_ratio", document.getElementById("ratio").value);
+
+  if(modeSel.value==="image"){
+    const s = document.getElementById("imageStart").files[0];
+    if(!s){ alert("Βάλε αρχικό καρέ"); return;}
+    fd.append("image", s);
+    const e = document.getElementById("imageEnd").files[0];
+    if(e) fd.append("video", e);
   }
 
-  function showSentPopup(){
-    if (!tg?.showPopup) return;
-    tg.showPopup({
-      title: "Telegram",
-      message: "Η αίτηση στάλθηκε. Το αποτέλεσμα θα έρθει μέσα στο Telegram.",
-      buttons: [{ type: "ok", text: "Close" }]
-    }, () => {});
-  }
-  function showAlert(msg){ if (tg?.showAlert) tg.showAlert(msg); }
-
-  $("tabText").addEventListener("click", () => setMode("text"));
-  $("tabImage").addEventListener("click", () => setMode("image"));
-  $("tabExtend").addEventListener("click", () => setMode("extend"));
-
-  async function generate(){
-    $("okBox").style.display = "none";
-    $("errBox").style.display = "none";
-    $("promptErr").style.display = "none";
-
-    const duration = parseInt($("duration").value, 10);
-
-    const prompt = $("prompt").value.trim();
-    if (!prompt){
-      $("promptErr").style.display = "block";
-      return;
-    }
-
-    // basic validation for modes
-    if (mode === "image" && !$("imageFile").files?.[0]){
-      $("errBox").textContent = "Σφάλμα: Βάλε 1 εικόνα στο Image → Video.";
-      $("errBox").style.display = "block";
-      return;
-    }
-    if (mode === "extend" && !$("videoFile").files?.[0]){
-      $("errBox").textContent = "Σφάλμα: Βάλε 1 βίντεο στο Video → Video (Extend).";
-      $("errBox").style.display = "block";
-      return;
-    }
-
-
-    const fd = new FormData();
-    fd.append("tg_init_data", tg?.initData || "");
-    fd.append("mode", mode);
-    fd.append("prompt", prompt);
-    fd.append("aspect_ratio", $("aspect").value);
-    fd.append("duration_seconds", duration);
-    // fd.append("resolution", resolution);
-    fd.append("negative_prompt", ($("negative").value || "").trim());
-    fd.append("seed", ($("seed").value || "").trim());
-
-    if (mode === "image"){
-      fd.append("image", $("imageFile").files[0], $("imageFile").files[0].name);
-    }
-    if (mode === "extend"){
-      fd.append("video", $("videoFile").files[0], $("videoFile").files[0].name);
-    }
-
-    $("btnGenerate").disabled = true;
-    $("btnGenerate").textContent = "⏳ Αποστολή...";
-    showSentPopup();
-
-    try{
-      const res = await fetch(API_ENDPOINT, { method:"POST", body: fd });
-      const data = await res.json().catch(()=> ({}));
-      if (!res.ok || !data.ok){
-        const msg = data?.error || data?.detail || "Αποτυχία δημιουργίας.";
-        throw new Error(msg);
-      }
-      $("okBox").textContent = data.message || "Έτοιμο. Στάλθηκε στο Telegram.";
-      $("okBox").style.display = "block";
-      if (tg?.close) tg.close();
-    }catch(e){
-      showAlert("Αποτυχία. " + (e?.message || ""));
-      $("errBox").textContent = "Σφάλμα: " + (e?.message || "Άγνωστο σφάλμα");
-      $("errBox").style.display = "block";
-    }finally{
-      $("btnGenerate").disabled = false;
-      $("btnGenerate").textContent = "Δημιουργία";
-    }
+  if(modeSel.value==="ref"){
+    const files = document.getElementById("refImages").files;
+    if(files.length<1 || files.length>3){ alert("1–3 εικόνες"); return;}
+    for(const f of files) fd.append("ref_images", f);
   }
 
-  $("btnGenerate").addEventListener("click", generate);
-  setMode("text");
+  const r = await fetch("/api/veo31/generate",{method:"POST",body:fd});
+  const j = await r.json();
+  if(!j.ok) alert("Σφάλμα: "+j.error);
+  else tg.showPopup({message:"Στάλθηκε στο Telegram!"});
+};
 </script>
 </body>
 </html>
