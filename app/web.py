@@ -400,20 +400,19 @@ async def veo31_generate(
         pass
 
     background_tasks.add_task(
-    schedule_coro,
-    _run_veo31_job(
-        tg_chat_id,
-        db_user_id,
-        mode,
-        prompt,
-        aspect_ratio,
-        duration_seconds,
-        (negative_prompt or "").strip(),
-        seed_int,
-        image_bytes,
-        ref_bytes,
-        COST,
-    ),
+    _run_veo31_job,
+    tg_chat_id,
+    db_user_id,
+    mode,
+    prompt,
+    aspect_ratio,
+    duration_seconds,
+    (negative_prompt or "").strip(),
+    seed_int,
+    image_bytes,
+    ref_bytes,
+    COST,
+)
 )
     return {"ok": True, "sent_to_telegram": True, "cost": COST, "message": "Στάλθηκε στο Telegram."}
 
@@ -622,17 +621,16 @@ async def nanobanana_pro_generate(request: Request, background_tasks: Background
         print(">>> NBPRO tg_send_message failed:", e, flush=True)
 
     background_tasks.add_task(
-    schedule_coro,
-    _run_nanobanana_pro_job(
-        tg_chat_id,
-        db_user_id,
-        prompt,
-        aspect_ratio,
-        image_size,
-        output_format,
-        images_data_urls,
-        COST,
-    ),
+    _run_nanobanana_pro_job,
+    tg_chat_id,
+    db_user_id,
+    prompt,
+    aspect_ratio,
+    image_size,
+    output_format,
+    images_data_urls,
+    COST,
+)
 
 )
 
