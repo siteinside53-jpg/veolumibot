@@ -7,287 +7,214 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root{
-      --bg:#0b0f19;
-      --panel:rgba(255,255,255,.06);
-      --panel2:rgba(255,255,255,.04);
-      --stroke:rgba(255,255,255,.10);
-      --text:#e9eefc;
-      --muted:rgba(233,238,252,.65);
-      --btn:#1f2e55;
-      --btn2:#223a72;
-      --radius:16px;
+      --bg:#0e0f12;--card:#171a20;--border:#232734;--muted:#9aa3b2;--text:#fff;
+      --purple:#7c3aed;--purple2:#6d28d9;--radius:18px;--shadow:0 10px 30px rgba(0,0,0,.35);
     }
     *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;
-      background:linear-gradient(180deg,#050814,#0a1228 40%, #071022);
-      color:var(--text);
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
+    .wrap{max-width:560px;margin:0 auto;padding:16px}
+    .card{
+      background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0)),var(--card);
+      border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);
     }
-    .wrap{
-      max-width:420px;
-      margin:0 auto;
-      padding:18px 14px 22px;
+    h2{margin:0}
+    .row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+    label{display:block;font-weight:900;margin:10px 0 6px;color:#cfd3df}
+    select,textarea,input[type="file"],input[type="number"],input[type="text"]{
+      width:100%;border-radius:14px;border:1px solid var(--border);
+      background:rgba(255,255,255,.03);color:#fff;padding:10px;font-weight:800;font-size:14px;outline:none
     }
-    h1{
-      margin:6px 2px 14px;
-      font-size:34px;
-      font-weight:900;
-      letter-spacing:.2px;
+    textarea{resize:none;height:140px}
+    .tabs{display:flex;gap:8px;margin-top:12px}
+    .tab{
+      flex:1;text-align:center;padding:10px;border-radius:14px;border:1px solid var(--border);
+      background:rgba(255,255,255,.03);font-weight:900;cursor:pointer;user-select:none
     }
-    .field{
-      background:var(--panel);
-      border:1px solid var(--stroke);
-      border-radius:var(--radius);
-      padding:12px;
-      margin:12px 0;
-    }
-    label{
-      display:block;
-      font-size:16px;
-      font-weight:800;
-      color:var(--text);
-      margin:0 0 8px;
-    }
-    select, textarea, input[type="file"]{
-      width:100%;
-      border-radius:12px;
-      border:1px solid var(--stroke);
-      background:var(--panel2);
-      color:var(--text);
-      padding:10px 12px;
-      font-size:15px;
-      font-weight:700;
-      outline:none;
-    }
-    textarea{
-      height:120px;
-      resize:none;
-      line-height:1.25;
-    }
-    .hint{
-      margin-top:8px;
-      font-size:13px;
-      color:var(--muted);
-      font-weight:700;
-      line-height:1.25;
-    }
-    .row{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:12px;
-      margin-top:14px;
-      padding:2px 4px;
-    }
-    .row .k{
-      color:var(--muted);
-      font-weight:800;
-      font-size:16px;
-    }
-    .row .v{
-      font-weight:900;
-      font-size:16px;
-    }
+    .tab.active{background:linear-gradient(180deg,var(--purple),var(--purple2))}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .btn{
-      width:100%;
-      margin-top:12px;
-      padding:14px 14px;
-      border:none;
-      border-radius:14px;
-      background:linear-gradient(180deg,var(--btn2),var(--btn));
-      color:var(--text);
-      font-size:16px;
-      font-weight:900;
-      cursor:pointer;
-      border:1px solid rgba(255,255,255,.10);
+      margin-top:14px;width:100%;padding:12px;border-radius:14px;
+      border:1px solid var(--border);background:linear-gradient(180deg,var(--purple),var(--purple2));
+      color:#fff;font-weight:900;cursor:pointer;text-align:center;
     }
-    .btn:disabled{opacity:.6;cursor:not-allowed}
-    .err,.ok{
-      display:none;
-      margin-top:10px;
-      white-space:pre-wrap;
-      font-weight:800;
-      font-size:13px;
-    }
-    .err{color:#ff7b7b}
-    .ok{color:#3be07a}
-
-    /* “file blocks” ώστε να μοιάζει με screenshot */
-    .filebox{
-      border:1px dashed rgba(255,255,255,.22);
-      border-radius:14px;
-      padding:12px;
-      background:rgba(0,0,0,.18);
-    }
+    .btn:active{transform:scale(.99)}
+    .btn[disabled]{opacity:.6;cursor:not-allowed}
+    .hint{margin-top:8px;color:var(--muted);font-weight:800;font-size:13px;line-height:1.35}
+    .err{color:#f66;font-weight:900;display:none;margin-top:8px;white-space:pre-wrap}
+    .ok{color:#22c55e;font-weight:900;display:none;margin-top:8px;white-space:pre-wrap}
+    .cost{font-weight:900}
+    .muted{color:var(--muted);font-weight:800;font-size:13px}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>Veo 3.1</h1>
+    <div class="card">
+      <div class="row">
+        <h2>Veo 3.1</h2>
+        <div class="cost">Κόστος: <b id="costLabel">10 credits</b></div>
+      </div>
 
-    <div class="field">
-      <label for="mode">Λειτουργία</label>
-      <select id="mode">
-        <option value="text" selected>Κείμενο → Βίντεο</option>
-        <option value="image">Εικόνα → Βίντεο</option>
-        <option value="ref">Αναφορά → Βίντεο (1–3 εικόνες)</option>
-      </select>
-    </div>
+      <div class="tabs">
+        <div class="tab active" id="tabText">Text → Video</div>
+        <div class="tab" id="tabImage">Image → Video</div>
+        <div class="tab" id="tabExtend">Video → Video (Extend)</div>
+      </div>
 
-    <div class="field">
       <label for="prompt">Prompt</label>
-      <textarea id="prompt" maxlength="5000" placeholder="Περιέγραψε σκηνή / κίνηση / στυλ..."></textarea>
-      <div class="hint">Στείλε περιγραφή. Το αποτέλεσμα θα έρθει μέσα στο Telegram chat.</div>
-    </div>
+      <textarea id="prompt" maxlength="3000" placeholder="Γράψε prompt (μπορεί να περιέχει και διάλογο/ήχους)…"></textarea>
+      <div id="promptErr" class="err">Το prompt είναι υποχρεωτικό.</div>
 
-    <div class="field" id="imageBlock" style="display:none;">
-      <label for="imageFile">Αρχική εικόνα (υποχρεωτικό)</label>
-      <div class="filebox">
-        <input id="imageFile" type="file" accept="image/png,image/jpeg,image/jpg,image/webp" />
-        <div class="hint">Η εικόνα γίνεται το πρώτο frame του βίντεο.</div>
+      <div id="imageBlock" style="display:none">
+        <label for="imageFile">Αρχική εικόνα (1 αρχείο)</label>
+        <input id="imageFile" type="file" accept="image/png,image/jpeg,image/jpg" />
+        <div class="hint">Η εικόνα γίνεται το πρώτο frame του video.</div>
       </div>
-    </div>
 
-    <div class="field" id="refBlock" style="display:none;">
-      <label for="refFiles">Εικόνες αναφοράς (1–3)</label>
-      <div class="filebox">
-        <input id="refFiles" type="file" multiple accept="image/png,image/jpeg,image/jpg,image/webp" />
-        <div class="hint">Ανέβασε 1 έως 3 εικόνες (θα σταλούν ως reference).</div>
+      <div id="extendBlock" style="display:none">
+        <label for="videoFile">Βίντεο εισόδου (MP4)</label>
+        <input id="videoFile" type="file" accept="video/mp4,video/quicktime,video/*" />
+        <div class="hint">Χρησιμοποιείται για επέκταση (extend) του video.</div>
       </div>
+
+      <div class="grid" style="margin-top:6px">
+        <div>
+          <label for="aspect">Αναλογία</label>
+          <select id="aspect">
+            <option value="16:9" selected>16:9</option>
+            <option value="9:16">9:16</option>
+          </select>
+        </div>
+        <div>
+          <label for="duration">Διάρκεια</label>
+          <select id="duration">
+            <option value="4">4s</option>
+            <option value="6">6s</option>
+            <option value="8" selected>8s</option>
+          </select>
+        </div>
+        <div>
+          <label for="seed">Seed (προαιρετικό)</label>
+          <input id="seed" type="number" min="0" step="1" placeholder="π.χ. 123" />
+        </div>
+      </div>
+
+      <label for="negative">Negative prompt (προαιρετικό)</label>
+      <input id="negative" type="text" maxlength="800" placeholder="π.χ. cartoon, low quality, blurry…" />
+
+      <button class="btn" id="btnGenerate">Δημιουργία</button>
+      <div class="hint">Θα εμφανιστεί popup “στάλθηκε” και το αποτέλεσμα θα έρθει μέσα στο Telegram chat.</div>
+
+      <div id="okBox" class="ok"></div>
+      <div id="errBox" class="err"></div>
     </div>
-
-    <div class="field">
-      <label for="aspect">Αναλογία Πλευρών</label>
-      <select id="aspect">
-        <option value="16:9" selected>16:9</option>
-        <option value="9:16">9:16</option>
-      </select>
-    </div>
-
-    <div class="row">
-      <div class="k">Κόστος</div>
-      <div class="v"><span id="cost">12</span> credits</div>
-    </div>
-
-    <button class="btn" id="btn">Δημιουργία Video</button>
-
-    <div id="ok" class="ok"></div>
-    <div id="err" class="err"></div>
   </div>
 
 <script>
+  const $ = id => document.getElementById(id);
   const tg = window.Telegram?.WebApp;
   if (tg) { tg.expand(); tg.ready(); }
 
   const API_ENDPOINT = "/api/veo31/generate";
 
-  const $ = (id) => document.getElementById(id);
+  let mode = "text"; // text | image | extend
 
-  function setCostByMode(mode){
-    // Βάλ’ τα όπως θες — στο screenshot φαίνεται 12
-    const map = { text: 12, image: 12, ref: 60 };
-    $("cost").textContent = String(map[mode] ?? 12);
+  function setMode(m){
+    mode = m;
+    $("tabText").classList.toggle("active", m==="text");
+    $("tabImage").classList.toggle("active", m==="image");
+    $("tabExtend").classList.toggle("active", m==="extend");
+
+    $("imageBlock").style.display = (m==="image") ? "block" : "none";
+    $("extendBlock").style.display = (m==="extend") ? "block" : "none";
+
+    // credits labels (βάλε ό,τι θες)
+    const cost = (m==="text") ? 10 : (m==="image") ? 12 : 60;
+    $("costLabel").textContent = cost + " credits";
   }
 
-  function setModeUI(){
-    const mode = $("mode").value;
-    $("imageBlock").style.display = (mode === "image") ? "block" : "none";
-    $("refBlock").style.display   = (mode === "ref")   ? "block" : "none";
-    setCostByMode(mode);
-  }
-
-  $("mode").addEventListener("change", setModeUI);
-  setModeUI();
-
-  function showPopupSent(){
+  function showSentPopup(){
     if (!tg?.showPopup) return;
     tg.showPopup({
       title: "Telegram",
       message: "Η αίτηση στάλθηκε. Το αποτέλεσμα θα έρθει μέσα στο Telegram.",
-      buttons: [{ type: "ok", text: "Κλείσιμο" }]
+      buttons: [{ type: "ok", text: "Close" }]
     }, () => {});
   }
+  function showAlert(msg){ if (tg?.showAlert) tg.showAlert(msg); }
 
-  function showErr(msg){
-    $("ok").style.display = "none";
-    $("err").textContent = msg;
-    $("err").style.display = "block";
-    if (tg?.showAlert) tg.showAlert(msg);
-  }
-  function showOk(msg){
-    $("err").style.display = "none";
-    $("ok").textContent = msg;
-    $("ok").style.display = "block";
-  }
+  $("tabText").addEventListener("click", () => setMode("text"));
+  $("tabImage").addEventListener("click", () => setMode("image"));
+  $("tabExtend").addEventListener("click", () => setMode("extend"));
 
-  async function submit(){
-    $("err").style.display = "none";
-    $("ok").style.display = "none";
+  async function generate(){
+    $("okBox").style.display = "none";
+    $("errBox").style.display = "none";
+    $("promptErr").style.display = "none";
 
-    const mode = $("mode").value;
+    const duration = parseInt($("duration").value, 10);
+
     const prompt = $("prompt").value.trim();
-    if (!prompt) return showErr("Σφάλμα: Το prompt είναι υποχρεωτικό.");
-
-    if (mode === "image"){
-      const f = $("imageFile").files?.[0];
-      if (!f) return showErr("Σφάλμα: Βάλε 1 εικόνα στο Εικόνα → Βίντεο.");
+    if (!prompt){
+      $("promptErr").style.display = "block";
+      return;
     }
 
-    if (mode === "ref"){
-      const files = Array.from($("refFiles").files || []);
-      if (files.length < 1 || files.length > 3){
-        return showErr("Σφάλμα: Στο Αναφορά → Βίντεο χρειάζονται 1–3 εικόνες.");
-      }
+    // basic validation for modes
+    if (mode === "image" && !$("imageFile").files?.[0]){
+      $("errBox").textContent = "Σφάλμα: Βάλε 1 εικόνα στο Image → Video.";
+      $("errBox").style.display = "block";
+      return;
     }
+    if (mode === "extend" && !$("videoFile").files?.[0]){
+      $("errBox").textContent = "Σφάλμα: Βάλε 1 βίντεο στο Video → Video (Extend).";
+      $("errBox").style.display = "block";
+      return;
+    }
+
 
     const fd = new FormData();
     fd.append("tg_init_data", tg?.initData || "");
     fd.append("mode", mode);
     fd.append("prompt", prompt);
     fd.append("aspect_ratio", $("aspect").value);
-
-    // ΔΕΝ στέλνουμε duration_seconds / resolution γιατί ο server σου γυρνά 400 ότι δεν υποστηρίζονται
-    // fd.append("duration_seconds", "8");
-    // fd.append("resolution", "720p");
+    fd.append("duration_seconds", duration);
+    // fd.append("resolution", resolution);
+    fd.append("negative_prompt", ($("negative").value || "").trim());
+    fd.append("seed", ($("seed").value || "").trim());
 
     if (mode === "image"){
-      const f = $("imageFile").files[0];
-      fd.append("image", f, f.name);
+      fd.append("image", $("imageFile").files[0], $("imageFile").files[0].name);
+    }
+    if (mode === "extend"){
+      fd.append("video", $("videoFile").files[0], $("videoFile").files[0].name);
     }
 
-    if (mode === "ref"){
-      const files = Array.from($("refFiles").files || []).slice(0,3);
-      for (const f of files){
-        fd.append("ref_images", f, f.name);
-      }
-    }
-
-    $("btn").disabled = true;
-    $("btn").textContent = "Αποστολή...";
-    showPopupSent();
+    $("btnGenerate").disabled = true;
+    $("btnGenerate").textContent = "⏳ Αποστολή...";
+    showSentPopup();
 
     try{
       const res = await fetch(API_ENDPOINT, { method:"POST", body: fd });
       const data = await res.json().catch(()=> ({}));
-
       if (!res.ok || !data.ok){
         const msg = data?.error || data?.detail || "Αποτυχία δημιουργίας.";
         throw new Error(msg);
       }
-
-      showOk(data?.message || "Στάλθηκε στο Telegram.");
+      $("okBox").textContent = data.message || "Έτοιμο. Στάλθηκε στο Telegram.";
+      $("okBox").style.display = "block";
       if (tg?.close) tg.close();
     }catch(e){
-      showErr("Αποτυχία: " + (e?.message || "Άγνωστο σφάλμα"));
+      showAlert("Αποτυχία. " + (e?.message || ""));
+      $("errBox").textContent = "Σφάλμα: " + (e?.message || "Άγνωστο σφάλμα");
+      $("errBox").style.display = "block";
     }finally{
-      $("btn").disabled = false;
-      $("btn").textContent = "Δημιουργία Video";
+      $("btnGenerate").disabled = false;
+      $("btnGenerate").textContent = "Δημιουργία";
     }
   }
 
-  $("btn").addEventListener("click", submit);
+  $("btnGenerate").addEventListener("click", generate);
+  setMode("text");
 </script>
 </body>
 </html>
