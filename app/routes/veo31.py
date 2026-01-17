@@ -10,18 +10,12 @@ from .web_shared import (
     tg_send_photo,
     tg_send_video,
     verify_telegram_init_data,
+    VIDEOS_DIR,
 )
-
+from ..config import PUBLIC_BASE_URL
 import httpx
 from fastapi import APIRouter, BackgroundTasks, UploadFile, File, Form
 
-from ._shared import (
-    db_user_from_webapp,
-    tg_send_message,
-    tg_send_video,
-    VIDEOS_DIR,
-    public_base_url,
-)
 from ..db import (
     spend_credits_by_user_id,
     add_credits_by_user_id,
