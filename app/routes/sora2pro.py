@@ -26,12 +26,11 @@ def _size_from_aspect(aspect: str) -> str:
     return "1280x720"
 
 
-def _seconds_from_ui(seconds: str) -> int:
-    try:
-        s = int(str(seconds).strip())
-    except Exception:
-        s = 10
-    return 15 if s == 15 else 10
+def _seconds_from_ui(seconds: str) -> str:
+    s = (seconds or "").strip()
+    if s in ("4", "8", "12"):
+        return s
+    return "8"
 
 
 def _quality_from_ui(q: str) -> str:
@@ -60,7 +59,7 @@ async def _openai_video_create(
     model: str,
     prompt: str,
     size: str,
-    seconds: int,
+    seconds: str,
     quality: str,
     input_reference_bytes: Optional[bytes],
     input_reference_name: Optional[str],
@@ -112,7 +111,7 @@ async def _openai_video_create(
             "model": model,
             "prompt": prompt,
             "size": size,
-            "seconds": str(seconds),
+            "seconds": seconds,
             "quality": quality,
         }
 
@@ -184,7 +183,7 @@ async def _run_sora2pro_job(
     mode: str,
     prompt: str,
     size: str,
-    seconds: int,
+    seconds: str,
     quality: str,
     image_bytes: Optional[bytes],
     image_name: Optional[str],
