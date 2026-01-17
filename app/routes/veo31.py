@@ -116,32 +116,31 @@ async def _run_veo31_job(
     cost: float,
 ):
     try:
-    if not GEMINI_API_KEY:
-        raise RuntimeError("GEMINI_API_KEY missing")
+        if not GEMINI_API_KEY:
+            raise RuntimeError("GEMINI_API_KEY missing")
 
-    model = _veo31_model_name()
-    base_url = "https://generativelanguage.googleapis.com/v1beta"
-    op_url = f"{base_url}/models/{model}:predictLongRunning"
+        model = _veo31_model_name()
+        base_url = "https://generativelanguage.googleapis.com/v1beta"
+        op_url = f"{base_url}/models/{model}:predictLongRunning"
 
-    ratio_hint = ""
-    if aspect_ratio == "16:9":
-        ratio_hint = "Output in landscape 16:9 (wide cinematic framing)."
-    elif aspect_ratio == "9:16":
-        ratio_hint = "Output in vertical 9:16 (portrait framing for reels)."
+        ratio_hint = ""
+        if aspect_ratio == "16:9":
+            ratio_hint = "Output in landscape 16:9 (wide cinematic framing)."
+        elif aspect_ratio == "9:16":
+            ratio_hint = "Output in vertical 9:16 (portrait framing for reels)."
 
-    final_prompt = f"{ratio_hint}\n{prompt}".strip()
+        final_prompt = f"{ratio_hint}\n{prompt}".strip()
 
-    instance: Dict[str, Any] = {
-        "prompt": final_prompt,
-    }
-
-    if mode == "image":
-        instance["image"] = {
-            "bytesBase64Encoded": base64.b64encode(image_bytes).decode("utf-8"),
-            "mimeType": "image/png",
+        instance: Dict[str, Any] = {
+            "prompt": final_prompt,
         }
 
-        if mode == "ref":
+        if mode == "image":
+            instance["image"] = {
+                "bytesBase64Encoded": base64.b64encode(image_bytes).decode("utf-8"),
+                "mimeType": "image/png",
+            }
+        elif mode == "ref":
             instance["reference_images"] = [
                 {
                     "bytesBase64Encoded": base64.b64encode(b).decode("utf-8"),
