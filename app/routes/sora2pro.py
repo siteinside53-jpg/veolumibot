@@ -20,8 +20,6 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 
 
 def _size_from_aspect(aspect: str) -> str:
-    # Sora API δουλεύει με "size" π.χ. 1280x720, όχι aspect_ratio.
-    # Portrait = 720x1280, Landscape = 1280x720
     a = (aspect or "").lower().strip()
     if a in ("portrait", "9:16", "vertical"):
         return "720x1280"
@@ -68,10 +66,8 @@ async def _openai_video_create(
     input_reference_name: Optional[str],
 ) -> Dict[str, Any]:
     """
-    Σημαντικό:
-    - Χωρίς input_reference -> στέλνουμε JSON (application/json)
-    - Με input_reference -> στέλνουμε multipart/form-data (files + data)
-    Αυτό αποφεύγει το 400 "application/x-www-form-urlencoded".
+    - Χωρίς input_reference: JSON (application/json)
+    - Με input_reference: multipart/form-data (files + data)
     """
     if not OPENAI_API_KEY:
         raise RuntimeError("OPENAI_API_KEY missing")
@@ -79,13 +75,7 @@ async def _openai_video_create(
     url = "https://api.openai.com/v1/videos"
     headers = {"Authorization": f"Bearer {OPENAI_API_KEY}"}
 
-    # Base payload
-    payload = {
-        "model": model,
-        "prompt": prompt,
-        "size": size,
-        "seconds": seconds,
-    }
+    payload = {"model": model, "prompt": prompt, "size": size, "seconds": seconds}
     payload_with_quality = dict(payload)
     payload_with_quality["quality"] = quality
 
@@ -93,11 +83,11 @@ async def _openai_video_create(
 
     async with httpx.AsyncClient(timeout=60) as c:
         if not has_ref:
-            # TEXT MODE -> JSON
+            # JSON request
             r = await c.post(url, headers=headers, json=payload_with_quality)
             j = r.json() if r.content else {}
 
-            # fallback: retry χωρίς quality
+            # retry χωρίς quality
             if r.status_code == 400 and isinstance(j, dict):
                 r2 = await c.post(url, headers=headers, json=payload)
                 j2 = r2.json() if r2.content else {}
@@ -110,7 +100,7 @@ async def _openai_video_create(
 
             return j
 
-        # IMAGE/REF MODE -> multipart/form-data
+        # multipart request
         files = {
             "input_reference": (
                 input_reference_name or "ref.png",
@@ -118,8 +108,6 @@ async def _openai_video_create(
                 _guess_image_mime(input_reference_name or "ref.png"),
             )
         }
-
-        # σε multipart τα πεδία είναι strings
         data = {
             "model": model,
             "prompt": prompt,
@@ -131,7 +119,7 @@ async def _openai_video_create(
         r = await c.post(url, headers=headers, files=files, data=data)
         j = r.json() if r.content else {}
 
-        # fallback: retry χωρίς quality
+        # retry χωρίς quality
         if r.status_code == 400 and isinstance(j, dict):
             data2 = dict(data)
             data2.pop("quality", None)
@@ -173,7 +161,6 @@ async def _openai_video_download(video_id: str) -> bytes:
 
 
 def _build_storyboard_prompt(scenes: List[Dict[str, Any]], base_prompt: str) -> str:
-    # Δεν υπάρχει “storyboard” field στο API snippet, οπότε το υλοποιούμε ως prompt composition.
     lines: List[str] = []
     if base_prompt:
         lines.append(base_prompt.strip())
@@ -216,7 +203,6 @@ async def _run_sora2pro_job(
             input_reference_name = image_name
         elif mode == "storyboard":
             final_prompt = _build_storyboard_prompt(storyboard_scenes, prompt)
-            # Αν υπάρχει storyboard_ref (το περνάς σαν image_bytes/image_name), τότε το χρησιμοποιούμε ως input_reference
             if image_bytes:
                 input_reference_bytes = image_bytes
                 input_reference_name = image_name
@@ -238,7 +224,7 @@ async def _run_sora2pro_job(
         status = created.get("status")
         last_progress = None
 
-        # Poll (~8 λεπτά max με sleep 2s)
+        # Poll (~8 λεπτά max)
         for _ in range(240):
             v = await _openai_video_retrieve(video_id)
             status = v.get("status")
@@ -284,16 +270,12 @@ async def _run_sora2pro_job(
         )
 
     except Exception as e:
-        # refund
         try:
             add_credits_by_user_id(db_user_id, cost, "Refund Sora2Pro fail", "system", None)
         except Exception:
             pass
         try:
-            await tg_send_message(
-                tg_chat_id,
-                f"❌ Αποτυχία Sora 2 Pro.\nΛεπτομέρεια: {str(e)[:300]}",
-            )
+            await tg_send_message(tg_chat_id, f"❌ Αποτυχία Sora 2 Pro.\nΛεπτομέρεια: {str(e)[:300]}")
         except Exception:
             pass
 
@@ -322,7 +304,6 @@ async def sora2pro_generate(
     if not prompt:
         return {"ok": False, "error": "empty_prompt"}
 
-    # parse storyboard scenes
     scenes: List[Dict[str, Any]] = []
     if mode == "storyboard":
         try:
@@ -332,7 +313,6 @@ async def sora2pro_generate(
         except Exception:
             scenes = []
 
-        # validate sum duration == secs
         total = 0.0
         for s in scenes:
             try:
@@ -343,7 +323,6 @@ async def sora2pro_generate(
         if abs(total - float(secs)) > 0.01:
             return {"ok": False, "error": "storyboard_sum_mismatch"}
 
-    # file bytes
     image_bytes: Optional[bytes] = None
     image_name: Optional[str] = None
 
@@ -354,11 +333,9 @@ async def sora2pro_generate(
         image_name = image.filename or "image.png"
 
     if mode == "storyboard" and storyboard_ref:
-        # optional: storyboard reference image (acts like input_reference)
         image_bytes = await storyboard_ref.read()
         image_name = storyboard_ref.filename or "ref.png"
 
-    # credits
     COST = 18 if q == "standard" else 24
 
     dbu = db_user_from_webapp(init_data)
