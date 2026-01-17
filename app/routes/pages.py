@@ -30,3 +30,7 @@ async def nanobanana_pro_page(request: Request):
 @router.get("/veo31", response_class=HTMLResponse)
 async def veo31_page(request: Request):
     return templates.TemplateResponse("veo31.html", {"request": request})
+
+@router.get("/sora2pro", response_class=HTMLResponse)
+async def sora2pro_page(request: Request):
+    return templates.TemplateResponse("sora2pro.html", {"request": request})
