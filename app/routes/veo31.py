@@ -4,14 +4,11 @@ import uuid
 import base64
 import asyncio
 from typing import Dict, Any, Optional, List
-from .web_shared import (
-    db_user_from_webapp,
-    tg_send_message,
-    tg_send_photo,
-    tg_send_video,
-    verify_telegram_init_data,
-    VIDEOS_DIR,
-)
+
+from ..core.telegram_auth import db_user_from_webapp, verify_telegram_init_data,
+from ..core.telegram_client import tg_send_message, tg_send_photo, tg_send_video,
+from ..core.paths import VIDEOS_DIR
+
 from ..config import PUBLIC_BASE_URL
 import httpx
 from fastapi import APIRouter, BackgroundTasks, UploadFile, File, Form
