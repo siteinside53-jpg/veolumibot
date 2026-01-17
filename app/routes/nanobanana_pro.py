@@ -6,19 +6,17 @@ import uuid
 import httpx
 from fastapi import APIRouter, BackgroundTasks, Request
 from fastapi.responses import JSONResponse
-from .web_shared import (
-    packs_list, 
-    CREDITS_PACKS,
-)
-from ..core.telegram_client import tg_send_message, tg_send_photo
+
 from ..core.telegram_auth import db_user_from_webapp
+from ..core.telegram_client import tg_send_message, tg_send_photo
+from ..core.paths import IMAGES_DIR
+from ..web_shared import public_base_url
 
 from ..db import (
     spend_credits_by_user_id,
     add_credits_by_user_id,
     set_last_result,
 )
-from .config import PUBLIC_BASE_URL
 
 router = APIRouter()
 
@@ -26,7 +24,6 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 
 
 def _gemini_model_name() -> str:
-    # Nano Banana Pro
     return os.getenv("GEMINI_NANOBANANA_PRO_MODEL", "gemini-3-pro-image-preview").strip()
 
 
@@ -34,9 +31,9 @@ async def _run_nanobanana_pro_job(
     tg_chat_id: int,
     db_user_id: int,
     prompt: str,
-    aspect_ratio: str,     # "1:1" | "3:2" | "2:3" etc (ό,τι στέλνει το WebApp σου)
-    image_size: str,       # "1K" | "2K" | "4K"
-    output_format: str,    # "png" | "jpg"
+    aspect_ratio: str,
+    image_size: str,
+    output_format: str,
     images_data_urls: list[str],
     cost: float,
 ):
@@ -44,13 +41,15 @@ async def _run_nanobanana_pro_job(
         if not GEMINI_API_KEY:
             raise RuntimeError("GEMINI_API_KEY missing")
 
-        # build "parts": text + optional inline images
         parts = [{"text": prompt}]
 
-        # images_data_urls are like "data:image/png;base64,...."
+        # images_data_urls: ["data:image/png;base64,...", ...]
         for du in images_data_urls[:8]:
+            if not isinstance(du, str):
+                continue
             if not du.startswith("data:") or "base64," not in du:
                 continue
+
             head, b64 = du.split("base64,", 1)
             mime = head.split(";")[0].replace("data:", "").strip() or "image/png"
             parts.append({"inline_data": {"mime_type": mime, "data": b64.strip()}})
@@ -68,22 +67,21 @@ async def _run_nanobanana_pro_job(
 
         model = _gemini_model_name()
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+
         async with httpx.AsyncClient(timeout=120) as c:
             r = await c.post(url, params={"key": GEMINI_API_KEY}, json=body)
             data = r.json()
             if r.status_code >= 400:
                 raise RuntimeError(f"Gemini error {r.status_code}: {data}")
 
-        # parse image from response
         candidates = data.get("candidates") or []
         if not candidates:
             raise RuntimeError(f"No candidates: {data}")
 
-        c0 = candidates[0]
-        parts_out = (((c0.get("content") or {}).get("parts")) or [])
+        parts_out = (((candidates[0].get("content") or {}).get("parts")) or [])
         img_b64 = None
         for p in parts_out:
-            inline = p.get("inline_data") or p.get("inlineData") or None
+            inline = p.get("inline_data") or p.get("inlineData")
             if inline and inline.get("data"):
                 img_b64 = inline["data"]
                 break
@@ -98,8 +96,6 @@ async def _run_nanobanana_pro_job(
         (IMAGES_DIR / name).write_bytes(img_bytes)
 
         public_url = f"{public_base_url()}/static/images/{name}"
-
-        # store last result so "repeat last" is free
         set_last_result(db_user_id, "nano_banana_pro", public_url)
 
         kb = {
@@ -118,17 +114,13 @@ async def _run_nanobanana_pro_job(
         )
 
     except Exception as e:
-        # refund credits
         try:
             add_credits_by_user_id(db_user_id, cost, "Refund NanoBananaPro fail", "system", None)
         except Exception:
             pass
 
         try:
-            await tg_send_message(
-                tg_chat_id,
-                f"❌ Αποτυχία Nano Banana Pro.\nΛεπτομέρεια: {str(e)[:250]}",
-            )
+            await tg_send_message(tg_chat_id, f"❌ Αποτυχία Nano Banana Pro.\nΛεπτομέρεια: {str(e)[:250]}")
         except Exception:
             pass
 
