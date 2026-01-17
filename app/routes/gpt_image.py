@@ -5,11 +5,7 @@ import uuid
 
 from fastapi import APIRouter, BackgroundTasks
 from openai import OpenAI
-from .web_shared import (
-    db_user_from_webapp,
-    tg_send_message,
-    tg_send_photo,
-)
+
 from ..core.telegram_auth import db_user_from_webapp
 from ..core.telegram_client import tg_send_message, tg_send_photo
 
