@@ -5,13 +5,13 @@ import base64
 import asyncio
 from typing import Dict, Any, Optional, List
 
-from ..core.telegram_auth import db_user_from_webapp, verify_telegram_init_data,
-from ..core.telegram_client import tg_send_message, tg_send_photo, tg_send_video,
-from ..core.paths import VIDEOS_DIR
-
-from ..config import PUBLIC_BASE_URL
 import httpx
 from fastapi import APIRouter, BackgroundTasks, UploadFile, File, Form
+
+from ..core.telegram_auth import db_user_from_webapp
+from ..core.telegram_client import tg_send_message, tg_send_video
+from ..core.paths import VIDEOS_DIR
+from ..web_shared import public_base_url
 
 from ..db import (
     spend_credits_by_user_id,
@@ -35,8 +35,8 @@ async def veo31_generate(
     mode: str = Form("text"),             # text | image | ref
     prompt: str = Form(""),
     aspect_ratio: str = Form("16:9"),
-    image: Optional[UploadFile] = File(None),        # για image->video (start frame)
-    ref_images: List[UploadFile] = File([]),         # για ref->video (1-3)
+    image: Optional[UploadFile] = File(None),        # image->video start frame
+    ref_images: List[UploadFile] = File([]),         # ref->video (1-3 images)
 ):
     init_data = (tg_init_data or "").strip()
     prompt = (prompt or "").strip()
@@ -48,7 +48,6 @@ async def veo31_generate(
     if aspect_ratio not in ("16:9", "9:16"):
         aspect_ratio = "16:9"
 
-    # credits mapping
     if mode == "text":
         COST = 10
     elif mode == "image":
@@ -65,8 +64,8 @@ async def veo31_generate(
     except Exception:
         return {"ok": False, "error": "not_enough_credits"}
 
-    # read files
     image_bytes = await image.read() if image else None
+
     ref_bytes: list[bytes] = []
     for f in (ref_images or [])[:3]:
         try:
@@ -74,7 +73,6 @@ async def veo31_generate(
         except Exception:
             pass
 
-    # validations
     if mode == "image" and not image_bytes:
         try:
             add_credits_by_user_id(db_user_id, COST, "Refund Veo31 missing image", "system", None)
@@ -106,24 +104,22 @@ async def veo31_generate(
         COST,
     )
 
-    return {"ok": True, "sent_to_telegram": True, "cost": COST, "message": "Στάλθηκε στο Telegram."}
+    return {"ok": True, "sent_to_telegram": True, "cost": COST}
 
 
 async def _run_veo31_job(
     tg_chat_id: int,
     db_user_id: int,
-    mode: str,  # "text" | "image" | "ref"
+    mode: str,
     prompt: str,
     aspect_ratio: str,
-    image_bytes: Optional[bytes],   # for image->video
-    ref_images: list[bytes],        # for ref->video
+    image_bytes: Optional[bytes],
+    ref_images: list[bytes],
     cost: float,
 ):
     try:
         if not GEMINI_API_KEY:
             raise RuntimeError("GEMINI_API_KEY missing")
-
-        await tg_send_message(tg_chat_id, "✅ Veo 3.1: Ξεκίνησε η παραγωγή (job).")
 
         model = _veo31_model_name()
         base_url = "https://generativelanguage.googleapis.com/v1beta"
@@ -134,14 +130,12 @@ async def _run_veo31_job(
             "aspect_ratio": aspect_ratio,
         }
 
-        # image->video (first frame)
         if mode == "image":
             instance["image"] = {
                 "bytesBase64Encoded": base64.b64encode(image_bytes).decode("utf-8"),
                 "mimeType": "image/png",
             }
 
-        # reference->video (1-3 images)
         if mode == "ref":
             instance["reference_images"] = [
                 {
@@ -153,7 +147,6 @@ async def _run_veo31_job(
 
         body = {"instances": [instance]}
 
-        # start long-running operation
         async with httpx.AsyncClient(timeout=60) as c:
             r = await c.post(
                 op_url,
@@ -168,12 +161,9 @@ async def _run_veo31_job(
         if not op_name:
             raise RuntimeError(f"No operation name returned: {data}")
 
-        await tg_send_message(tg_chat_id, "⏳ Veo 3.1: Περιμένω το αποτέλεσμα…")
-
-        # poll
         status = None
         async with httpx.AsyncClient(timeout=60) as c:
-            for _ in range(120):  # ~6 λεπτά max
+            for _ in range(120):  # ~6 λεπτά
                 rs = await c.get(f"{base_url}/{op_name}", headers={"x-goog-api-key": GEMINI_API_KEY})
                 status = rs.json()
                 if rs.status_code >= 400:
@@ -185,7 +175,6 @@ async def _run_veo31_job(
         if not status or status.get("done") is not True:
             raise RuntimeError("Veo31 timeout: operation not done.")
 
-        # extract video uri
         video_uri = (
             (((status.get("response") or {}).get("generateVideoResponse") or {}).get("generatedSamples") or [{}])[0]
             .get("video", {})
@@ -194,14 +183,12 @@ async def _run_veo31_job(
         if not video_uri:
             raise RuntimeError(f"No video uri in response: {status}")
 
-        # download bytes
         async with httpx.AsyncClient(timeout=300, follow_redirects=True) as c:
             vd = await c.get(video_uri, headers={"x-goog-api-key": GEMINI_API_KEY})
             if vd.status_code >= 400:
                 raise RuntimeError(f"Video download error {vd.status_code}: {vd.text[:300]}")
             video_bytes = vd.content
 
-        # store & public url
         name = f"veo31_{uuid.uuid4().hex}.mp4"
         (VIDEOS_DIR / name).write_bytes(video_bytes)
 
@@ -223,16 +210,12 @@ async def _run_veo31_job(
         )
 
     except Exception as e:
-        # refund
         try:
             add_credits_by_user_id(db_user_id, cost, "Refund Veo31 fail", "system", None)
         except Exception:
             pass
 
         try:
-            await tg_send_message(
-                tg_chat_id,
-                f"❌ Αποτυχία Veo 3.1.\nΛεπτομέρεια: {str(e)[:250]}",
-            )
+            await tg_send_message(tg_chat_id, f"❌ Αποτυχία Veo 3.1.\nΛεπτομέρεια: {str(e)[:250]}")
         except Exception:
             pass
