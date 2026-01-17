@@ -10,20 +10,16 @@ from .web_shared import (
     db_user_from_webapp,
     tg_send_message,
     tg_send_photo,
+    packs_list, 
+    CREDITS_PACKS,
 )
 
-from ._shared import (
-    db_user_from_webapp,
-    tg_send_message,
-    tg_send_photo,
-    IMAGES_DIR,
-    public_base_url,
-)
 from ..db import (
     spend_credits_by_user_id,
     add_credits_by_user_id,
     set_last_result,
 )
+from .config import PUBLIC_BASE_URL
 
 router = APIRouter()
 
