@@ -5,11 +5,8 @@ from typing import Dict, Optional, Tuple
 import httpx
 from fastapi import APIRouter
 
-from ._shared import (
-    db_user_from_webapp,
-    verify_telegram_init_data,
-    packs_list,
-)
+from ..web_shared import packs_list
+from ..core.telegram_auth import db_user_from_webapp, verify_telegram_init_data
 from ..config import BOT_TOKEN
 
 router = APIRouter()
