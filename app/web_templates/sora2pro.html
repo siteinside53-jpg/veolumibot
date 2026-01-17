@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sora 2 Pro</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root{
+      --bg:#0e0f12;--card:#171a20;--border:#232734;--muted:#9aa3b2;--text:#fff;
+      --radius:18px;--shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
+    .wrap{max-width:560px;margin:0 auto;padding:16px}
+    .card{
+      background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0)),var(--card);
+      border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);
+    }
+    .titleRow{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    h1{margin:0;font-size:22px}
+    .badge{
+      display:inline-flex;align-items:center;gap:10px;
+      padding:6px 10px;border-radius:999px;border:1px solid var(--border);
+      background:rgba(255,255,255,.03);font-weight:800
+    }
+    .muted{color:var(--muted);font-weight:700;font-size:13px}
+    label{display:block;font-weight:900;margin:14px 0 6px;color:#cfd3df}
+    select,textarea,input[type="file"],input[type="number"]{
+      width:100%;border-radius:14px;border:1px solid var(--border);
+      background:rgba(255,255,255,.03);color:#fff;padding:10px;font-weight:800;font-size:14px;outline:none
+    }
+    textarea{resize:none;height:150px}
+    .btn{
+      margin-top:14px;width:100%;padding:12px;border-radius:14px;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.08);
+      color:#fff;font-weight:900;cursor:pointer;text-align:center;
+    }
+    .btn:active{transform:scale(.99)}
+    .btn[disabled]{opacity:.6;cursor:not-allowed}
+    .hint{margin-top:8px;color:var(--muted);font-weight:700;font-size:13px;line-height:1.35}
+    .err{color:#ff6b6b;font-weight:900;display:none;margin-top:8px;white-space:pre-wrap}
+    .ok{color:#22c55e;font-weight:900;display:none;margin-top:8px;white-space:pre-wrap}
+    .divider{height:1px;background:rgba(255,255,255,.06);margin:14px 0}
+    .filebox{
+      border:1px dashed rgba(255,255,255,.18);
+      background:rgba(255,255,255,.02);
+      border-radius:16px;padding:12px
+    }
+    .scene{
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:14px;
+      padding:10px;
+      margin-top:10px;
+      background:rgba(255,255,255,.02);
+    }
+    .sceneRow{display:flex;gap:10px;align-items:center}
+    .sceneRow button{
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06);
+      color:#fff;
+      border-radius:12px;
+      padding:10px;
+      cursor:pointer;
+      font-weight:900;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="titleRow">
+        <h1>Sora 2 Pro</h1>
+        <div class="badge">
+          <span class="muted">Κόστος:</span>
+          <span id="costLabel">18 credits</span>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <label for="mode">Λειτουργία</label>
+      <select id="mode">
+        <option value="text" selected>Κείμενο → Βίντεο</option>
+        <option value="image">Εικόνα → Βίντεο</option>
+        <option value="storyboard">Storyboard</option>
+      </select>
+
+      <label for="prompt">Περιγραφή <span class="muted" style="float:right" id="pcount">0/5000</span></label>
+      <textarea id="prompt" maxlength="5000" placeholder="Περιέγραψε τη σκηνή..."></textarea>
+      <div id="promptErr" class="err">Γράψε περιγραφή (1–5000 χαρακτήρες).</div>
+
+      <!-- Image -> Video -->
+      <div id="imageBlock" style="display:none;margin-top:10px">
+        <label>Εικόνα (υποχρεωτικό · έως 10MB)</label>
+        <div class="filebox">
+          <input id="imageFile" type="file" accept="image/png,image/jpeg,image/webp" />
+          <div class="hint">PNG / JPG / WebP · έως 10MB.</div>
+        </div>
+        <div id="imageErr" class="err"></div>
+      </div>
+
+      <!-- Storyboard -->
+      <div id="storyBlock" style="display:none;margin-top:10px">
+        <label>Reference εικόνα (προαιρετικό · έως 10MB)</label>
+        <div class="filebox">
+          <input id="storyRef" type="file" accept="image/png,image/jpeg,image/webp" />
+          <div class="hint">Αν βάλεις reference, καθοδηγεί το πρώτο καρέ.</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="muted" style="font-weight:900">
+          Σκηνές <span class="muted" style="float:right" id="remainLabel">Απομένει: 10.0s</span>
+        </div>
+        <div class="hint">
+          Πρόσθεσε σκηνές από 0.1s και πάνω. Το άθροισμα πρέπει να ισούται με τη διάρκεια.
+        </div>
+
+        <button class="btn" id="btnAddScene" type="button">+ Πρόσθεσε σκηνή</button>
+        <div id="scenesWrap"></div>
+        <div id="storyErr" class="err"></div>
+      </div>
+
+      <label for="aspect">Αναλογία</label>
+      <select id="aspect">
+        <option value="portrait" selected>Κάθετο (Portrait)</option>
+        <option value="landscape">Οριζόντιο (Landscape)</option>
+      </select>
+
+      <label for="seconds">Διάρκεια</label>
+      <select id="seconds">
+        <option value="10" selected>10 δευτερόλεπτα</option>
+        <option value="15">15 δευτερόλεπτα</option>
+      </select>
+
+      <label for="quality">Ποιότητα</label>
+      <select id="quality">
+        <option value="standard" selected>Standard</option>
+        <option value="high">High</option>
+      </select>
+
+      <button class="btn" id="btnGenerate">Δημιούργησε βίντεο</button>
+
+      <div id="okBox" class="ok"></div>
+      <div id="errBox" class="err"></div>
+    </div>
+  </div>
+
+<script>
+const $ = id => document.getElementById(id);
+const tg = window.Telegram?.WebApp;
+if (tg){ tg.expand(); tg.ready(); }
+
+const API_ENDPOINT = "/api/sora2pro/generate";
+
+function costCalc(){
+  const q = $("quality").value;
+  const cost = (q === "high") ? 24 : 18;
+  $("costLabel").textContent = cost + " credits";
+}
+
+function syncUI(){
+  const m = $("mode").value;
+  $("imageBlock").style.display = (m === "image") ? "block" : "none";
+  $("storyBlock").style.display = (m === "storyboard") ? "block" : "none";
+  $("promptErr").style.display = "none";
+  $("imageErr").style.display = "none";
+  $("storyErr").style.display = "none";
+  $("errBox").style.display = "none";
+  $("okBox").style.display = "none";
+  costCalc();
+  refreshRemain();
+}
+
+function totalSeconds(){
+  return parseFloat($("seconds").value || "10");
+}
+
+function scenesData(){
+  return Array.from(document.querySelectorAll("[data-scene]")).map(n => ({
+    seconds: parseFloat(n.querySelector("input").value || "0"),
+    prompt: (n.querySelector("textarea").value || "").trim()
+  }));
+}
+
+function refreshRemain(){
+  if ($("mode").value !== "storyboard") return;
+  const T = totalSeconds();
+  const sum = scenesData().reduce((a,b)=>a+(b.seconds||0),0);
+  $("remainLabel").textContent = "Απομένει: " + (T-sum).toFixed(1) + "s";
+}
+
+function addScene(){
+  const d = document.createElement("div");
+  d.className="scene"; d.dataset.scene="1";
+  d.innerHTML=`
+    <div class="sceneRow">
+      <input type="number" step="0.1" min="0.1" value="1.0"/>
+      <button type="button" class="del">×</button>
+    </div>
+    <label>Περιγραφή σκηνής</label>
+    <textarea></textarea>`;
+  d.querySelector(".del").onclick=()=>{d.remove();refreshRemain();};
+  d.querySelector("input").oninput=refreshRemain;
+  d.querySelector("textarea").oninput=refreshRemain;
+  $("scenesWrap").appendChild(d);
+  refreshRemain();
+}
+
+async function generate(){
+  $("errBox").style.display="none";$("okBox").style.display="none";
+  const mode=$("mode").value, prompt=$("prompt").value.trim();
+  if(!prompt){$("promptErr").style.display="block";return;}
+
+  if(mode==="image" && !$("imageFile").files[0]){
+    $("imageErr").textContent="Βάλε εικόνα."; $("imageErr").style.display="block"; return;
+  }
+
+  if(mode==="storyboard"){
+    const sc=scenesData(),T=totalSeconds(),sum=sc.reduce((a,b)=>a+(b.seconds||0),0);
+    if(!sc.length){$("storyErr").textContent="Πρόσθεσε σκηνή."; $("storyErr").style.display="block";return;}
+    if(Math.abs(sum-T)>0.01){$("storyErr").textContent="Το άθροισμα δεν ταιριάζει."; $("storyErr").style.display="block";return;}
+    if(sc.some(s=>!s.prompt)){ $("storyErr").textContent="Όλες οι σκηνές χρειάζονται περιγραφή."; $("storyErr").style.display="block"; return;}
+  }
+
+  const fd=new FormData();
+  fd.append("tg_init_data",tg?.initData||"");
+  fd.append("mode",mode);
+  fd.append("prompt",prompt);
+  fd.append("aspect",$("aspect").value);
+  fd.append("seconds",$("seconds").value);
+  fd.append("quality",$("quality").value);
+
+  if(mode==="image"){
+    const f=$("imageFile").files[0]; fd.append("image",f,f.name);
+  }
+  if(mode==="storyboard"){
+    fd.append("storyboard_json",JSON.stringify(scenesData()));
+    const rf=$("storyRef").files[0]; if(rf)fd.append("storyboard_ref",rf,rf.name);
+  }
+
+  $("btnGenerate").disabled=true; $("btnGenerate").textContent="Αποστολή…";
+  try{
+    const r=await fetch(API_ENDPOINT,{method:"POST",body:fd});
+    const d=await r.json();
+    if(!r.ok||!d.ok)throw new Error(d.error||"Σφάλμα");
+    $("okBox").textContent=d.message||"Στάλθηκε στο Telegram.";
+    $("okBox").style.display="block";
+    tg?.close();
+  }catch(e){
+    $("errBox").textContent="Σφάλμα: "+e.message; $("errBox").style.display="block";
+  }finally{
+    $("btnGenerate").disabled=false; $("btnGenerate").textContent="Δημιούργησε βίντεο";
+  }
+}
+
+$("mode").onchange=syncUI;
+$("seconds").onchange=refreshRemain;
+$("quality").onchange=costCalc;
+$("btnAddScene").onclick=addScene;
+$("btnGenerate").onclick=generate;
+$("prompt").oninput=()=>{$("pcount").textContent=$("prompt").value.length+"/5000";};
+
+addScene();
+syncUI();
+</script>
+</body>
+</html>
