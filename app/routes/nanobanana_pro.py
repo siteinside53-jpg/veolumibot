@@ -7,12 +7,11 @@ import httpx
 from fastapi import APIRouter, BackgroundTasks, Request
 from fastapi.responses import JSONResponse
 from .web_shared import (
-    db_user_from_webapp,
-    tg_send_message,
-    tg_send_photo,
     packs_list, 
     CREDITS_PACKS,
 )
+from ..core.telegram_client import tg_send_message, tg_send_photo
+from ..core.telegram_auth import db_user_from_webapp
 
 from ..db import (
     spend_credits_by_user_id,
