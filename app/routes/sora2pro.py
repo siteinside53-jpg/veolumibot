@@ -67,6 +67,13 @@ async def _openai_video_create(
     url = "https://api.openai.com/v1/videos"
     headers = {"Authorization": f"Bearer {OPENAI_API_KEY}"}
 
+    payload = {
+        "model": model,
+        "prompt": prompt,
+        "size": size,
+        "seconds": seconds,  # int είναι οκ για json
+    }
+
     # multipart για να υποστηρίξουμε input_reference
     data = {
         "model": model,
