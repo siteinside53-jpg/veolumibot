@@ -34,6 +34,10 @@ def _webapp_veo31_url() -> str:
     return f"{_base_url()}/veo31"
 
 
+def _webapp_sora2pro_url() -> str:
+    return f"{_base_url()}/sora2pro"
+
+
 def start_inline_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
@@ -52,8 +56,8 @@ def video_models_menu() -> InlineKeyboardMarkup:
         [
             [InlineKeyboardButton("🟢 Kling 2.6 (11–44 credits)", callback_data="menu:set:video:kling_26")],
             [InlineKeyboardButton("🌀 Wan 2.6 (14–56 credits)", callback_data="menu:set:video:wan_26")],
-            [InlineKeyboardButton("🛰 Sora 2 PRO (18–80 credits)", callback_data="menu:set:video:sora2pro")],
-            [InlineKeyboardButton("🎬 Veo 3.1", web_app=WebAppInfo(url=_webapp_veo31_url()))],
+            [InlineKeyboardButton("🛰 Sora 2 PRO (18–80 credits)",  web_app=WebAppInfo(url=_webapp_sora2pro_url()))],
+            [InlineKeyboardButton("🎬 Veo 3.1 (10-60 credits)", web_app=WebAppInfo(url=_webapp_veo31_url()))],
             [InlineKeyboardButton("← Πίσω", callback_data="menu:home")],
         ]
     )
