@@ -4,6 +4,9 @@ from pathlib import Path
 from decimal import Decimal
 from typing import Optional, List, Dict, Any
 import secrets
+import json
+import uuid
+from datetime import datetime, timezone
 
 import psycopg
 import psycopg.rows
@@ -19,16 +22,35 @@ MAX_REF_LINKS = 10
 START_FREE_CREDITS = Decimal("5.00")
 
 
+# ----------------------
+# Connections
+# ----------------------
 def _conn_autocommit():
     # Για migrations / απλά queries
     return psycopg.connect(DATABASE_URL, autocommit=True)
 
 
 def get_conn():
-    # Για web.py (dict_row) + transactions (default autocommit=False)
+    # Για app transactions (dict_row) + autocommit=False by default
     return psycopg.connect(DATABASE_URL, row_factory=psycopg.rows.dict_row)
 
 
+# ----------------------
+# Helpers
+# ----------------------
+def _to_decimal(x) -> Decimal:
+    if isinstance(x, Decimal):
+        return x
+    return Decimal(str(x))
+
+
+def _now_utc() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+# ----------------------
+# Migrations bootstrap
+# ----------------------
 def run_migrations():
     """
     Ensures base tables exist even if migrations folder is missing.
@@ -47,6 +69,7 @@ def run_migrations():
               tg_username TEXT,
               tg_first_name TEXT,
               credits NUMERIC(10,2) NOT NULL DEFAULT 0,
+              credits_held NUMERIC(10,2) NOT NULL DEFAULT 0,
               created_at TIMESTAMPTZ NOT NULL DEFAULT now()
             );
             """)
@@ -65,9 +88,12 @@ def run_migrations():
             );
             """)
 
-                        # -------------------------
-            # last_results (store last generated media per user+model)
-            # -------------------------
+            cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_credit_ledger_user_id_created_at
+            ON credit_ledger(user_id, created_at DESC);
+            """)
+
+            # last_results
             cur.execute("""
             CREATE TABLE IF NOT EXISTS last_results (
               user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -78,13 +104,68 @@ def run_migrations():
             );
             """)
 
+            # -------------------------
+            # Holds (HOLD / CAPTURE / RELEASE)
+            # -------------------------
             cur.execute("""
-            CREATE INDEX IF NOT EXISTS idx_credit_ledger_user_id_created_at
-            ON credit_ledger(user_id, created_at DESC);
+            CREATE TABLE IF NOT EXISTS credit_holds (
+              id SERIAL PRIMARY KEY,
+              user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              amount NUMERIC(10,2) NOT NULL,
+              status TEXT NOT NULL DEFAULT 'held', -- held | captured | released
+              reason TEXT,
+              provider TEXT,
+              provider_ref TEXT,
+              idempotency_key TEXT,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+            """)
+
+            # unique idempotency per user (only when key not null)
+            cur.execute("""
+            DO $$
+            BEGIN
+              IF NOT EXISTS (
+                SELECT 1 FROM pg_indexes
+                WHERE schemaname = 'public' AND indexname = 'credit_holds_user_idempotency_uq'
+              ) THEN
+                CREATE UNIQUE INDEX credit_holds_user_idempotency_uq
+                ON credit_holds(user_id, idempotency_key)
+                WHERE idempotency_key IS NOT NULL;
+              END IF;
+            END$$;
             """)
 
             # -------------------------
-            # REFERRALS TABLES (για το νέο σύστημα που δείχνεις στο web)
+            # Jobs
+            # -------------------------
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS generation_jobs (
+              id UUID PRIMARY KEY,
+              user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              model TEXT NOT NULL,
+              mode TEXT,
+              hold_id INTEGER REFERENCES credit_holds(id) ON DELETE SET NULL,
+              provider_job_id TEXT,
+              status TEXT NOT NULL DEFAULT 'queued', -- queued|in_progress|completed|failed|canceled
+              progress INTEGER,
+              prompt TEXT,
+              params JSONB,
+              result_url TEXT,
+              error TEXT,
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+            """)
+
+            cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_generation_jobs_user_created_at
+            ON generation_jobs(user_id, created_at DESC);
+            """)
+
+            # -------------------------
+            # Referrals
             # -------------------------
             cur.execute("""
             CREATE TABLE IF NOT EXISTS referrals (
@@ -120,8 +201,8 @@ def run_migrations():
             ON referral_events(referral_id, created_at DESC);
             """)
 
-            print(">>> ensured tables users + credit_ledger + referrals + last_results exist", flush=True)
-            
+            print(">>> ensured base tables exist (users/ledger/holds/jobs/referrals/last_results)", flush=True)
+
     # Apply .sql migrations if any
     if not MIGRATIONS_DIR.exists():
         print(">>> migrations folder ΔΕΝ βρέθηκε — συνεχίζουμε χωρίς crash", flush=True)
@@ -151,11 +232,10 @@ def ensure_user(tg_user_id: int, tg_username: Optional[str], tg_first_name: Opti
     """
     with get_conn() as conn:
         with conn.cursor() as cur:
-            # 1) Try insert NEW user with starting credits
             cur.execute(
                 """
-                INSERT INTO users (tg_user_id, tg_username, tg_first_name, credits)
-                VALUES (%s, %s, %s, %s)
+                INSERT INTO users (tg_user_id, tg_username, tg_first_name, credits, credits_held)
+                VALUES (%s, %s, %s, %s, 0)
                 ON CONFLICT (tg_user_id) DO NOTHING
                 RETURNING *;
                 """,
@@ -164,7 +244,6 @@ def ensure_user(tg_user_id: int, tg_username: Optional[str], tg_first_name: Opti
             inserted = cur.fetchone()
 
             if inserted:
-                # New user: write ledger (+5)
                 cur.execute(
                     """
                     INSERT INTO credit_ledger (user_id, delta, balance_after, reason, provider, provider_ref)
@@ -182,7 +261,6 @@ def ensure_user(tg_user_id: int, tg_username: Optional[str], tg_first_name: Opti
                 conn.commit()
                 return inserted
 
-            # 2) Existing user: update basic fields + return row
             cur.execute(
                 """
                 UPDATE users
@@ -205,15 +283,16 @@ def get_user(tg_user_id: int) -> Optional[Dict[str, Any]]:
             return cur.fetchone()
 
 
+def get_user_by_id(user_id: int) -> Optional[Dict[str, Any]]:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM users WHERE id=%s", (user_id,))
+            return cur.fetchone()
+
+
 # ======================
 # Credits + Ledger (atomic)
 # ======================
-def _to_decimal(x) -> Decimal:
-    if isinstance(x, Decimal):
-        return x
-    return Decimal(str(x))
-
-
 def add_credits_by_user_id(
     user_id: int,
     amount,
@@ -231,7 +310,6 @@ def add_credits_by_user_id(
 
     with get_conn() as conn:
         with conn.cursor() as cur:
-            # lock user row
             cur.execute("SELECT id, credits FROM users WHERE id=%s FOR UPDATE", (user_id,))
             u = cur.fetchone()
             if not u:
@@ -335,6 +413,268 @@ def get_ledger_by_tg_id(tg_user_id: int, limit: int = 50) -> List[Dict[str, Any]
                 LIMIT %s
                 """,
                 (u["id"], limit),
+            )
+            return cur.fetchall()
+
+
+# ======================
+# HOLD / CAPTURE / RELEASE (Billing-safe for async jobs)
+# ======================
+def create_credit_hold(
+    user_id: int,
+    amount,
+    reason: str,
+    provider: Optional[str] = None,
+    provider_ref: Optional[str] = None,
+    idempotency_key: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    HOLD: Δεσμεύει credits (credits_held) και δημιουργεί εγγραφή credit_holds.
+    Idempotent per user_id + idempotency_key (αν δοθεί).
+    """
+    amount = _to_decimal(amount)
+    if amount <= 0:
+        raise ValueError("amount must be > 0")
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            if idempotency_key:
+                cur.execute(
+                    "SELECT * FROM credit_holds WHERE user_id=%s AND idempotency_key=%s",
+                    (user_id, idempotency_key),
+                )
+                existing = cur.fetchone()
+                if existing:
+                    conn.commit()
+                    return existing
+
+            cur.execute("SELECT id, credits, credits_held FROM users WHERE id=%s FOR UPDATE", (user_id,))
+            u = cur.fetchone()
+            if not u:
+                raise RuntimeError("User not found")
+
+            credits = _to_decimal(u["credits"])
+            held = _to_decimal(u["credits_held"])
+            available = credits - held
+
+            if available < amount:
+                raise RuntimeError(f"Insufficient credits: have {available}, need {amount}")
+
+            new_held = held + amount
+            cur.execute("UPDATE users SET credits_held=%s WHERE id=%s", (new_held, user_id))
+
+            cur.execute(
+                """
+                INSERT INTO credit_holds (user_id, amount, status, reason, provider, provider_ref, idempotency_key)
+                VALUES (%s, %s, 'held', %s, %s, %s, %s)
+                RETURNING *;
+                """,
+                (user_id, amount, reason, provider, provider_ref, idempotency_key),
+            )
+            hold = cur.fetchone()
+            conn.commit()
+            return hold
+
+
+def capture_credit_hold(
+    hold_id: int,
+    reason: str,
+    provider: Optional[str] = None,
+    provider_ref: Optional[str] = None,
+) -> bool:
+    """
+    CAPTURE: Μετατρέπει HOLD σε πραγματική χρέωση.
+    - Μειώνει credits_held
+    - Μειώνει credits
+    - Γράφει credit_ledger delta = -amount
+    """
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM credit_holds WHERE id=%s FOR UPDATE", (hold_id,))
+            h = cur.fetchone()
+            if not h:
+                raise RuntimeError("Hold not found")
+
+            if h["status"] == "captured":
+                conn.commit()
+                return True
+            if h["status"] != "held":
+                # released/canceled -> δεν κάνουμε capture
+                conn.commit()
+                return False
+
+            user_id = int(h["user_id"])
+            amount = _to_decimal(h["amount"])
+
+            cur.execute("SELECT id, credits, credits_held FROM users WHERE id=%s FOR UPDATE", (user_id,))
+            u = cur.fetchone()
+            if not u:
+                raise RuntimeError("User not found")
+
+            credits = _to_decimal(u["credits"])
+            held = _to_decimal(u["credits_held"])
+
+            if held < amount:
+                raise RuntimeError("credits_held invariant broken")
+
+            new_held = held - amount
+            new_credits = credits - amount
+            if new_credits < 0:
+                raise RuntimeError("credits invariant broken")
+
+            cur.execute(
+                "UPDATE users SET credits=%s, credits_held=%s WHERE id=%s",
+                (new_credits, new_held, user_id),
+            )
+
+            cur.execute(
+                """
+                INSERT INTO credit_ledger (user_id, delta, balance_after, reason, provider, provider_ref)
+                VALUES (%s, %s, %s, %s, %s, %s);
+                """,
+                (user_id, -amount, new_credits, reason, provider, provider_ref),
+            )
+
+            cur.execute(
+                "UPDATE credit_holds SET status='captured', provider=%s, provider_ref=%s, updated_at=now() WHERE id=%s",
+                (provider, provider_ref, hold_id),
+            )
+            conn.commit()
+            return True
+
+
+def release_credit_hold(
+    hold_id: int,
+    provider: Optional[str] = None,
+    provider_ref: Optional[str] = None,
+    reason: Optional[str] = None,
+) -> bool:
+    """
+    RELEASE: Αποδεσμεύει HOLD (δεν υπάρχει χρέωση).
+    - Μειώνει credits_held
+    - Δεν αλλάζει credits
+    """
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM credit_holds WHERE id=%s FOR UPDATE", (hold_id,))
+            h = cur.fetchone()
+            if not h:
+                raise RuntimeError("Hold not found")
+
+            if h["status"] == "released":
+                conn.commit()
+                return True
+            if h["status"] != "held":
+                conn.commit()
+                return True
+
+            user_id = int(h["user_id"])
+            amount = _to_decimal(h["amount"])
+
+            cur.execute("SELECT id, credits_held FROM users WHERE id=%s FOR UPDATE", (user_id,))
+            u = cur.fetchone()
+            if not u:
+                raise RuntimeError("User not found")
+
+            held = _to_decimal(u["credits_held"])
+            new_held = held - amount
+            if new_held < 0:
+                new_held = Decimal("0")
+
+            cur.execute("UPDATE users SET credits_held=%s WHERE id=%s", (new_held, user_id))
+            cur.execute(
+                """
+                UPDATE credit_holds
+                SET status='released',
+                    provider=%s,
+                    provider_ref=%s,
+                    reason=COALESCE(%s, reason),
+                    updated_at=now()
+                WHERE id=%s
+                """,
+                (provider, provider_ref, reason, hold_id),
+            )
+            conn.commit()
+            return True
+
+
+def get_credit_summary_by_user_id(user_id: int) -> Dict[str, Any]:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT credits, credits_held FROM users WHERE id=%s", (user_id,))
+            u = cur.fetchone()
+            if not u:
+                return {"credits": Decimal("0"), "credits_held": Decimal("0"), "credits_available": Decimal("0")}
+            credits = _to_decimal(u["credits"])
+            held = _to_decimal(u["credits_held"])
+            return {"credits": credits, "credits_held": held, "credits_available": credits - held}
+
+
+# ======================
+# Jobs (async tracking)
+# ======================
+def create_generation_job(
+    user_id: int,
+    model: str,
+    mode: str,
+    hold_id: Optional[int],
+    prompt: str,
+    params: Dict[str, Any],
+    provider_job_id: Optional[str] = None,
+    status: str = "queued",
+) -> str:
+    job_id = str(uuid.uuid4())
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO generation_jobs (id, user_id, model, mode, hold_id, provider_job_id, status, progress, prompt, params)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (job_id, user_id, model, mode, hold_id, provider_job_id, status, 0, prompt, json.dumps(params)),
+            )
+            conn.commit()
+    return job_id
+
+
+def update_generation_job(job_id: str, **fields) -> None:
+    allowed = {"status", "progress", "provider_job_id", "result_url", "error"}
+    sets = []
+    vals = []
+    for k, v in fields.items():
+        if k in allowed:
+            sets.append(f"{k}=%s")
+            vals.append(v)
+    if not sets:
+        return
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"UPDATE generation_jobs SET {', '.join(sets)}, updated_at=now() WHERE id=%s",
+                (*vals, job_id),
+            )
+            conn.commit()
+
+
+def get_job(job_id: str) -> Optional[Dict[str, Any]]:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM generation_jobs WHERE id=%s", (job_id,))
+            return cur.fetchone()
+
+
+def list_jobs_by_user_id(user_id: int, limit: int = 50) -> List[Dict[str, Any]]:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, model, mode, status, progress, result_url, error, created_at, updated_at
+                FROM generation_jobs
+                WHERE user_id=%s
+                ORDER BY created_at DESC
+                LIMIT %s
+                """,
+                (user_id, limit),
             )
             return cur.fetchall()
 
