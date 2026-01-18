@@ -54,6 +54,7 @@ def _now_utc() -> datetime:
 def run_migrations():
     """
     Ensures base tables exist even if migrations folder is missing.
+    Also performs lightweight, idempotent schema upgrades (ADD COLUMN IF NOT EXISTS).
     Then applies .sql migrations if present.
     """
     print(">>> RUNNING MIGRATIONS <<<", flush=True)
@@ -61,7 +62,9 @@ def run_migrations():
 
     with _conn_autocommit() as conn:
         with conn.cursor() as cur:
-            # users
+            # -------------------------
+            # users (base)
+            # -------------------------
             cur.execute("""
             CREATE TABLE IF NOT EXISTS users (
               id SERIAL PRIMARY KEY,
@@ -69,12 +72,17 @@ def run_migrations():
               tg_username TEXT,
               tg_first_name TEXT,
               credits NUMERIC(10,2) NOT NULL DEFAULT 0,
-              credits_held NUMERIC(10,2) NOT NULL DEFAULT 0,
               created_at TIMESTAMPTZ NOT NULL DEFAULT now()
             );
             """)
 
+            # --- upgrades for users ---
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS credits_held NUMERIC(10,2) NOT NULL DEFAULT 0;")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();")
+
+            # -------------------------
             # credit_ledger
+            # -------------------------
             cur.execute("""
             CREATE TABLE IF NOT EXISTS credit_ledger (
               id SERIAL PRIMARY KEY,
@@ -93,7 +101,9 @@ def run_migrations():
             ON credit_ledger(user_id, created_at DESC);
             """)
 
+            # -------------------------
             # last_results
+            # -------------------------
             cur.execute("""
             CREATE TABLE IF NOT EXISTS last_results (
               user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -105,7 +115,7 @@ def run_migrations():
             """)
 
             # -------------------------
-            # Holds (HOLD / CAPTURE / RELEASE)
+            # credit_holds
             # -------------------------
             cur.execute("""
             CREATE TABLE IF NOT EXISTS credit_holds (
@@ -138,7 +148,7 @@ def run_migrations():
             """)
 
             # -------------------------
-            # Jobs
+            # generation_jobs
             # -------------------------
             cur.execute("""
             CREATE TABLE IF NOT EXISTS generation_jobs (
@@ -165,7 +175,7 @@ def run_migrations():
             """)
 
             # -------------------------
-            # Referrals
+            # referrals
             # -------------------------
             cur.execute("""
             CREATE TABLE IF NOT EXISTS referrals (
@@ -213,6 +223,11 @@ def run_migrations():
         print(">>> Δεν υπάρχουν .sql migrations", flush=True)
         return
 
+    with _conn_autocommit() as conn:
+        with conn.cursor() as cur:
+            for f in sql_files:
+                print(f">>> applying {f.name}", flush=True)
+                cur.execute(f.read_text(encoding="utf-8"))
     with _conn_autocommit() as conn:
         with conn.cursor() as cur:
             for f in sql_files:
