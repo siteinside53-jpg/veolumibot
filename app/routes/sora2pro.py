@@ -3,7 +3,6 @@ import os
 import uuid
 import json
 import asyncio
-import random
 from typing import Optional, List, Dict, Any
 
 import httpx
@@ -19,12 +18,7 @@ router = APIRouter()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 
-_TRANSIENT_STATUSES = {429, 500, 502, 503, 504}
 
-
-# ----------------------------
-# UI -> API mapping helpers
-# ----------------------------
 def _size_from_aspect(aspect: str) -> str:
     a = (aspect or "").lower().strip()
     if a in ("portrait", "9:16", "vertical"):
@@ -33,14 +27,9 @@ def _size_from_aspect(aspect: str) -> str:
 
 
 def _seconds_from_ui(seconds: str) -> str:
-    """
-    Sora API (σύμφωνα με το error σου) δέχεται ΜΟΝΟ: '4' | '8' | '12'
-    Επιστρέφουμε STRING, όχι int.
-    """
-    s = str(seconds or "").strip()
+    s = (seconds or "").strip()
     if s in ("4", "8", "12"):
         return s
-    # default
     return "8"
 
 
@@ -65,91 +54,52 @@ def _guess_image_mime(filename: str) -> str:
     return "image/png"
 
 
-# ----------------------------
-# HTTP retry helper
-# ----------------------------
-def _is_transient_http(code: int) -> bool:
-    return code in _TRANSIENT_STATUSES
-
-
-async def _request_with_retries(
-    client: httpx.AsyncClient,
-    method: str,
-    url: str,
-    *,
-    headers: Dict[str, str],
-    params: Dict[str, Any] | None = None,
-    data: Dict[str, Any] | None = None,
-    files: Any = None,
-    json_body: Dict[str, Any] | None = None,
-    max_attempts: int = 10,
-    base_sleep: float = 1.5,
-) -> httpx.Response:
-    last_exc: Optional[Exception] = None
-
-    for attempt in range(1, max_attempts + 1):
-        try:
-            r = await client.request(
-                method,
-                url,
-                headers=headers,
-                params=params,
-                data=data,
-                files=files,
-                json=json_body,
-            )
-
-            if _is_transient_http(r.status_code):
-                sleep_s = min(20.0, base_sleep * (2 ** (attempt - 1)))
-                sleep_s *= 0.7 + random.random() * 0.6  # jitter
-                await asyncio.sleep(sleep_s)
-                continue
-
-            return r
-
-        except (httpx.TimeoutException, httpx.NetworkError) as e:
-            last_exc = e
-            sleep_s = min(20.0, base_sleep * (2 ** (attempt - 1)))
-            sleep_s *= 0.7 + random.random() * 0.6
-            await asyncio.sleep(sleep_s)
-
-    if last_exc:
-        raise RuntimeError(f"Network/transient failure after retries: {last_exc}")
-    raise RuntimeError("Transient failure after retries")
-
-
-# ----------------------------
-# OpenAI Sora API calls
-# ----------------------------
 async def _openai_video_create(
     *,
     model: str,
     prompt: str,
     size: str,
-    seconds: str,  # MUST be '4'/'8'/'12'
+    seconds: str,
     quality: str,
     input_reference_bytes: Optional[bytes],
     input_reference_name: Optional[str],
 ) -> Dict[str, Any]:
+    """
+    - Χωρίς input_reference: JSON (application/json)
+    - Με input_reference: multipart/form-data (files + data)
+    """
     if not OPENAI_API_KEY:
         raise RuntimeError("OPENAI_API_KEY missing")
 
     url = "https://api.openai.com/v1/videos"
     headers = {"Authorization": f"Bearer {OPENAI_API_KEY}"}
 
-    # multipart/form-data (ώστε να υποστηρίζει input_reference)
-    data = {
-        "model": model,
-        "prompt": prompt,
-        "size": size,
-        "seconds": str(seconds),
-    }
+    payload = {"model": model, "prompt": prompt, "size": size, "seconds": seconds}
+    payload_with_quality = dict(payload)
+    payload_with_quality["quality"] = quality
 
-    data_with_quality = dict(data)
-    data_with_quality["quality"] = quality
+    has_ref = bool(input_reference_bytes)
 
-    files = None
-    if input_reference_bytes:
+    async with httpx.AsyncClient(timeout=60) as c:
+        if not has_ref:
+            # JSON request
+            r = await c.post(url, headers=headers, json=payload_with_quality)
+            j = r.json() if r.content else {}
+
+            # retry χωρίς quality
+            if r.status_code == 400 and isinstance(j, dict):
+                r2 = await c.post(url, headers=headers, json=payload)
+                j2 = r2.json() if r2.content else {}
+                if r2.status_code >= 400:
+                    raise RuntimeError(f"Sora create error {r2.status_code}: {j2}")
+                return j2
+
+            if r.status_code >= 400:
+                raise RuntimeError(f"Sora create error {r.status_code}: {j}")
+
+            return j
+
+        # multipart request
         files = {
             "input_reference": (
                 input_reference_name or "ref.png",
@@ -157,32 +107,22 @@ async def _openai_video_create(
                 _guess_image_mime(input_reference_name or "ref.png"),
             )
         }
+        data = {
+            "model": model,
+            "prompt": prompt,
+            "size": size,
+            "seconds": seconds,
+            "quality": quality,
+        }
 
-    async with httpx.AsyncClient(timeout=60) as c:
-        r = await _request_with_retries(
-            c,
-            "POST",
-            url,
-            headers=headers,
-            data=data_with_quality,
-            files=files,
-            max_attempts=8,
-            base_sleep=1.2,
-        )
+        r = await c.post(url, headers=headers, files=files, data=data)
         j = r.json() if r.content else {}
 
-        # fallback: αν δεν δέχεται quality, ξαναδοκίμασε χωρίς
-        if r.status_code == 400 and isinstance(j, dict) and "quality" in data_with_quality:
-            r2 = await _request_with_retries(
-                c,
-                "POST",
-                url,
-                headers=headers,
-                data=data,
-                files=files,
-                max_attempts=8,
-                base_sleep=1.2,
-            )
+        # retry χωρίς quality
+        if r.status_code == 400 and isinstance(j, dict):
+            data2 = dict(data)
+            data2.pop("quality", None)
+            r2 = await c.post(url, headers=headers, files=files, data=data2)
             j2 = r2.json() if r2.content else {}
             if r2.status_code >= 400:
                 raise RuntimeError(f"Sora create error {r2.status_code}: {j2}")
@@ -197,12 +137,10 @@ async def _openai_video_create(
 async def _openai_video_retrieve(video_id: str) -> Dict[str, Any]:
     if not OPENAI_API_KEY:
         raise RuntimeError("OPENAI_API_KEY missing")
-
     url = f"https://api.openai.com/v1/videos/{video_id}"
     headers = {"Authorization": f"Bearer {OPENAI_API_KEY}"}
-
     async with httpx.AsyncClient(timeout=30) as c:
-        r = await _request_with_retries(c, "GET", url, headers=headers, max_attempts=10, base_sleep=1.2)
+        r = await c.get(url, headers=headers)
         j = r.json() if r.content else {}
         if r.status_code >= 400:
             raise RuntimeError(f"Sora retrieve error {r.status_code}: {j}")
@@ -212,27 +150,15 @@ async def _openai_video_retrieve(video_id: str) -> Dict[str, Any]:
 async def _openai_video_download(video_id: str) -> bytes:
     if not OPENAI_API_KEY:
         raise RuntimeError("OPENAI_API_KEY missing")
-
     url = f"https://api.openai.com/v1/videos/{video_id}/content"
     headers = {"Authorization": f"Bearer {OPENAI_API_KEY}"}
-
     async with httpx.AsyncClient(timeout=300, follow_redirects=True) as c:
-        r = await _request_with_retries(c, "GET", url, headers=headers, max_attempts=10, base_sleep=2.0)
-
-        if r.status_code == 404:
-            # Συνήθως σημαίνει expired / no longer available
-            txt = r.text[:300]
-            raise RuntimeError(f"Sora content not available (404): {txt}")
-
+        r = await c.get(url, headers=headers)
         if r.status_code >= 400:
-            raise RuntimeError(f"Sora download error {r.status_code}: {r.text[:300]}")
-
+            raise RuntimeError(f"Sora download error {r.status_code}: {r.text[:400]}")
         return r.content
 
 
-# ----------------------------
-# Storyboard -> prompt composition
-# ----------------------------
 def _build_storyboard_prompt(scenes: List[Dict[str, Any]], base_prompt: str) -> str:
     lines: List[str] = []
     if base_prompt:
@@ -251,9 +177,6 @@ def _build_storyboard_prompt(scenes: List[Dict[str, Any]], base_prompt: str) -> 
     return "\n".join(lines).strip()
 
 
-# ----------------------------
-# Background job
-# ----------------------------
 async def _run_sora2pro_job(
     tg_chat_id: int,
     db_user_id: int,
@@ -267,22 +190,21 @@ async def _run_sora2pro_job(
     storyboard_scenes: List[Dict[str, Any]],
     cost: int,
 ):
-    warned_transient = False
-    video_id: Optional[str] = None
-
     try:
         await tg_send_message(tg_chat_id, "🎬 Sora 2 Pro: Ξεκίνησε η παραγωγή…")
 
         final_prompt = prompt
-        input_reference_bytes = None
-        input_reference_name = None
+        input_reference_bytes: Optional[bytes] = None
+        input_reference_name: Optional[str] = None
 
         if mode == "image":
             input_reference_bytes = image_bytes
             input_reference_name = image_name
         elif mode == "storyboard":
             final_prompt = _build_storyboard_prompt(storyboard_scenes, prompt)
-            # προαιρετικά: storyboard_ref ως input_reference έχει ήδη περαστεί (image_bytes/image_name)
+            if image_bytes:
+                input_reference_bytes = image_bytes
+                input_reference_name = image_name
 
         created = await _openai_video_create(
             model="sora-2-pro",
@@ -301,20 +223,9 @@ async def _run_sora2pro_job(
         status = created.get("status")
         last_progress = None
 
-        # Poll μέχρι completion
-        for _ in range(240):  # ~8 λεπτά αν sleep 2s (με retries μέσα)
-            try:
-                v = await _openai_video_retrieve(video_id)
-            except Exception as e:
-                if not warned_transient:
-                    warned_transient = True
-                    try:
-                        await tg_send_message(tg_chat_id, "⚠️ Παροδικό σφάλμα από OpenAI. Συνεχίζω…")
-                    except Exception:
-                        pass
-                await asyncio.sleep(2)
-                continue
-
+        # Poll (~8 λεπτά max)
+        for _ in range(240):
+            v = await _openai_video_retrieve(video_id)
             status = v.get("status")
             prog = v.get("progress")
 
@@ -335,10 +246,8 @@ async def _run_sora2pro_job(
         if status != "completed":
             raise RuntimeError(f"Sora timeout/not completed. status={status}")
 
-        # Download MP4 (με retries)
         video_bytes = await _openai_video_download(video_id)
 
-        # Save locally
         name = f"sora2pro_{uuid.uuid4().hex}.mp4"
         (VIDEOS_DIR / name).write_bytes(video_bytes)
 
@@ -360,36 +269,28 @@ async def _run_sora2pro_job(
         )
 
     except Exception as e:
-        # refund credits (μόνο όταν δεν παραδώσαμε mp4)
         try:
-            add_credits_by_user_id(db_user_id, cost, "Refund Sora2Pro fail", "system", video_id)
+            add_credits_by_user_id(db_user_id, cost, "Refund Sora2Pro fail", "system", None)
         except Exception:
             pass
-
         try:
-            await tg_send_message(
-                tg_chat_id,
-                f"❌ Αποτυχία Sora 2 Pro.\nΛεπτομέρεια: {str(e)[:300]}",
-            )
+            await tg_send_message(tg_chat_id, f"❌ Αποτυχία Sora 2 Pro.\nΛεπτομέρεια: {str(e)[:300]}")
         except Exception:
             pass
 
 
-# ----------------------------
-# API endpoint
-# ----------------------------
 @router.post("/api/sora2pro/generate")
 async def sora2pro_generate(
     background_tasks: BackgroundTasks,
     tg_init_data: str = Form(""),
-    mode: str = Form("text"),                  # text | image | storyboard
+    mode: str = Form("text"),                 # text | image | storyboard
     prompt: str = Form(""),
-    aspect: str = Form("portrait"),            # portrait | landscape
-    seconds: str = Form("8"),                  # 4 | 8 | 12
-    quality: str = Form("standard"),           # standard | high
-    image: Optional[UploadFile] = File(None),  # image->video
-    storyboard_json: str = Form("[]"),         # storyboard scenes list
-    storyboard_ref: Optional[UploadFile] = File(None),  # optional reference
+    aspect: str = Form("portrait"),           # portrait | landscape
+    seconds: str = Form("10"),                # 10 | 15
+    quality: str = Form("standard"),          # standard | high
+    image: Optional[UploadFile] = File(None), # image->video
+    storyboard_json: str = Form("[]"),        # storyboard scenes list
+    storyboard_ref: Optional[UploadFile] = File(None),  # optional reference for storyboard
 ):
     init_data = (tg_init_data or "").strip()
     prompt = (prompt or "").strip()
@@ -402,7 +303,6 @@ async def sora2pro_generate(
     if not prompt:
         return {"ok": False, "error": "empty_prompt"}
 
-    # parse storyboard scenes
     scenes: List[Dict[str, Any]] = []
     if mode == "storyboard":
         try:
@@ -412,7 +312,16 @@ async def sora2pro_generate(
         except Exception:
             scenes = []
 
-    # file bytes
+        total = 0.0
+        for s in scenes:
+            try:
+                total += float(s.get("seconds") or 0)
+            except Exception:
+                pass
+
+        if abs(total - float(secs)) > 0.01:
+            return {"ok": False, "error": "storyboard_sum_mismatch"}
+
     image_bytes: Optional[bytes] = None
     image_name: Optional[str] = None
 
@@ -426,24 +335,20 @@ async def sora2pro_generate(
         image_bytes = await storyboard_ref.read()
         image_name = storyboard_ref.filename or "ref.png"
 
-    # credits (ρύθμισέ το όπως θες)
-    # π.χ. baseline 18 για 8s standard, scale με seconds/quality
-    base = 18
-    if secs == "4":
-        base = 12
-    elif secs == "12":
-        base = 26
-    if q == "high":
-        base = int(round(base * 1.35))
-
-    COST = base
+    COST = 18 if q == "standard" else 24
 
     dbu = db_user_from_webapp(init_data)
     tg_chat_id = int(dbu["tg_user_id"])
     db_user_id = int(dbu["id"])
 
     try:
-        spend_credits_by_user_id(db_user_id, COST, f"Sora 2 Pro ({mode},{secs}s,{q})", "openai", "sora-2-pro")
+        spend_credits_by_user_id(
+            db_user_id,
+            COST,
+            f"Sora 2 Pro ({mode},{secs}s,{q})",
+            "openai",
+            "sora-2-pro",
+        )
     except Exception:
         return {"ok": False, "error": "not_enough_credits"}
 
