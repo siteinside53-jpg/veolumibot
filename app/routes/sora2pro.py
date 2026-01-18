@@ -159,16 +159,27 @@ async def _openai_video_create(
         }
 
     async with httpx.AsyncClient(timeout=60) as c:
-        r = await _request_with_retries(
-            c,
-            "POST",
-            url,
-            headers=headers,
-            data=data_with_quality,
-            files=files,
-            max_attempts=8,
-            base_sleep=1.2,
-        )
+        if files:
+            r = await _request_with_retries(
+                c,
+                "POST",
+                url,
+                headers=headers,
+                data=data_with_quality,
+                files=files,
+                max_attempts=8,
+                base_sleep=1.2,
+            )
+        else:
+            r = await _request_with_retries(
+                c,
+                "POST",
+                url,
+                headers=headers,
+                json_body=data_with_quality,
+                max_attempts=8,
+                base_sleep=1.2,
+            )
         j = r.json() if r.content else {}
 
         # fallback: αν δεν δέχεται quality, ξαναδοκίμασε χωρίς
@@ -184,9 +195,28 @@ async def _openai_video_create(
                 base_sleep=1.2,
             )
             j2 = r2.json() if r2.content else {}
-            if r2.status_code >= 400:
-                raise RuntimeError(f"Sora create error {r2.status_code}: {j2}")
-            return j2
+            if r.status_code == 400 and isinstance(j, dict) and "quality" in data_with_quality:
+    if files:
+        r2 = await _request_with_retries(
+            c,
+            "POST",
+            url,
+            headers=headers,
+            data=data,
+            files=files,
+            max_attempts=8,
+            base_sleep=1.2,
+        )
+    else:
+        r2 = await _request_with_retries(
+            c,
+            "POST",
+            url,
+            headers=headers,
+            json_body=data,
+            max_attempts=8,
+            base_sleep=1.2,
+        )
 
         if r.status_code >= 400:
             raise RuntimeError(f"Sora create error {r.status_code}: {j}")
