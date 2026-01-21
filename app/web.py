@@ -16,6 +16,10 @@ from .routes.gpt_image import router as gpt_image_router
 from .routes.nanobanana_pro import router as nanobanana_pro_router
 from .routes.veo31 import router as veo31_router
 from .routes.sora2pro import router as sora2pro_router
+from app.routes.nanobanana import router as nanobanana_router
+
+# ...
+app.include_router(nanobanana_router)
 
 stripe.api_key = STRIPE_SECRET_KEY
 
@@ -41,4 +45,5 @@ app.include_router(gpt_image_router)
 app.include_router(nanobanana_pro_router)
 app.include_router(veo31_router)
 app.include_router(sora2pro_router)
+app.include_router(nanobanana_router)
 
