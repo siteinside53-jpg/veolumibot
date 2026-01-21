@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Nano Banana</title>
+  <style>
+    :root{
+      --bg:#0b0c12;
+      --card:#121422;
+      --card2:#0f1020;
+      --text:#e9e9f5;
+      --muted:#a4a7c0;
+      --stroke:#242646;
+      --accent:#7c3aed;      /* purple */
+      --accent2:#6d28d9;
+      --good:#19c37d;
+      --bad:#ef4444;
+      --shadow: 0 14px 40px rgba(0,0,0,.55);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background:
+        radial-gradient(800px 500px at 20% 10%, rgba(124,58,237,.18), transparent 55%),
+        radial-gradient(700px 500px at 80% 40%, rgba(124,58,237,.12), transparent 60%),
+        var(--bg);
+      color:var(--text);
+      display:flex;
+      justify-content:center;
+      padding:18px 14px 28px;
+    }
+    .wrap{width:min(520px, 100%)}
+    .topbar{
+      display:flex; align-items:center; gap:12px;
+      padding:8px 6px 14px;
+      color:var(--muted);
+    }
+    .brand{
+      display:flex; align-items:center; gap:10px;
+      font-weight:700; color:var(--text);
+    }
+    .logo{
+      width:34px; height:34px; border-radius:12px;
+      background: linear-gradient(135deg, rgba(124,58,237,.9), rgba(124,58,237,.35));
+      display:grid; place-items:center;
+      box-shadow: 0 10px 20px rgba(124,58,237,.25);
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .logo svg{opacity:.95}
+    .subtitle{font-size:12px; color:var(--muted); margin-top:2px}
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+      border:1px solid rgba(255,255,255,.06);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card-inner{padding:16px}
+    .section-title{
+      font-size:15px;
+      font-weight:700;
+      margin:2px 0 10px;
+    }
+    .section-sub{font-size:13px; color:var(--muted); margin:0 0 10px}
+
+    .tabs{
+      background: rgba(0,0,0,.25);
+      border:1px solid rgba(255,255,255,.06);
+      border-radius: 14px;
+      padding:8px;
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    .tab{
+      flex:1;
+      padding:10px 10px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.06);
+      color:var(--muted);
+      background: rgba(255,255,255,.02);
+      font-weight:700;
+      font-size:13px;
+      display:flex;
+      justify-content:center;
+      gap:8px;
+      cursor:pointer;
+      user-select:none;
+    }
+    .tab.active{
+      background: linear-gradient(180deg, rgba(124,58,237,.35), rgba(124,58,237,.18));
+      border-color: rgba(124,58,237,.55);
+      color: var(--text);
+    }
+
+    .block{
+      margin-top:12px;
+      background: rgba(0,0,0,.22);
+      border:1px solid rgba(255,255,255,.06);
+      border-radius: 14px;
+      padding:12px;
+    }
+    .label-row{
+      display:flex; justify-content:space-between; align-items:center;
+      margin-bottom:8px;
+      color:var(--muted);
+      font-size:12px;
+    }
+    textarea{
+      width:100%;
+      min-height:120px;
+      resize:vertical;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
+      color: var(--text);
+      padding:12px;
+      outline:none;
+      font-size:14px;
+      line-height:1.35;
+    }
+    textarea:focus{border-color: rgba(124,58,237,.55); box-shadow: 0 0 0 4px rgba(124,58,237,.15)}
+
+    .uploader{
+      border:1px dashed rgba(255,255,255,.16);
+      background: rgba(255,255,255,.02);
+      border-radius: 14px;
+      padding:14px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+    .upload-icon{
+      width:36px; height:36px; border-radius:12px;
+      background: rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.08);
+      display:grid; place-items:center;
+      flex:0 0 auto;
+    }
+    .upload-meta{flex:1}
+    .upload-meta .h{font-weight:700; font-size:13px}
+    .upload-meta .p{font-size:12px; color:var(--muted); margin-top:2px}
+    .btn{
+      border:0;
+      background: linear-gradient(180deg, var(--accent), var(--accent2));
+      color:white;
+      font-weight:800;
+      border-radius: 14px;
+      padding:11px 14px;
+      cursor:pointer;
+      box-shadow: 0 12px 22px rgba(124,58,237,.25);
+    }
+    .btn:active{transform: translateY(1px)}
+    .btn.secondary{
+      background: rgba(255,255,255,.06);
+      box-shadow:none;
+      border:1px solid rgba(255,255,255,.12);
+    }
+
+    .qty-row{
+      display:flex;
+      gap:10px;
+      margin-top:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .qty-pill{
+      width:42px; height:38px;
+      display:grid; place-items:center;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      color: var(--text);
+      font-weight:800;
+      cursor:pointer;
+      user-select:none;
+    }
+    .qty-pill.active{
+      background: linear-gradient(180deg, rgba(124,58,237,.45), rgba(124,58,237,.18));
+      border-color: rgba(124,58,237,.55);
+    }
+
+    .cost{
+      margin-top:12px;
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      padding:10px 12px;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,.06);
+      background: rgba(0,0,0,.18);
+    }
+    .cost .left{color:var(--muted); font-size:12px}
+    .cost .right{
+      font-size:18px; font-weight:900;
+    }
+
+    .footer{
+      margin-top:12px;
+    }
+    .big-generate{
+      width:100%;
+      padding:14px 16px;
+      border-radius: 16px;
+      font-size:15px;
+      letter-spacing:.2px;
+    }
+
+    .status{
+      margin-top:10px;
+      font-size:13px;
+      color:var(--muted);
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .chip{
+      font-size:12px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      color:var(--muted);
+    }
+    .chip.ok{border-color: rgba(25,195,125,.35); color: rgba(25,195,125,.95); background: rgba(25,195,125,.08)}
+    .chip.bad{border-color: rgba(239,68,68,.35); color: rgba(239,68,68,.95); background: rgba(239,68,68,.08)}
+
+    .preview{
+      margin-top:12px;
+      display:none;
+      gap:10px;
+      flex-direction:column;
+    }
+    .preview img{
+      width:100%;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
+    }
+    .small{font-size:12px; color:var(--muted)}
+    .row{display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap}
+    .link{
+      color:#c4b5fd;
+      text-decoration:none;
+      font-weight:700;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M7 14c4-1 6-4 7-8 3 3 4 8 2 12-1 2-4 4-7 4-4 0-6-3-6-6 0-3 2-5 4-6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div>Nano Banana</div>
+          <div class="subtitle">Γεννήτρια εικόνων (Text→Image / Image→Image)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-inner">
+        <div class="section-title">Παράμετροι</div>
+        <div class="section-sub">Λειτουργία παραγωγής</div>
+
+        <div class="tabs" role="tablist" aria-label="Generation mode">
+          <div id="tab-t2i" class="tab active" role="tab" aria-selected="true">
+            <span>📝</span><span>Κείμενο → Εικόνα</span>
+          </div>
+          <div id="tab-i2i" class="tab" role="tab" aria-selected="false">
+            <span>🖼️</span><span>Εικόνα → Εικόνα</span>
+          </div>
+        </div>
+
+        <div id="block-upload" class="block" style="display:none">
+          <div class="label-row">
+            <div>Εικόνα εισόδου</div>
+            <div class="small"><span id="file-count">0</span>/1</div>
+          </div>
+          <div class="uploader">
+            <div class="upload-icon" aria-hidden="true">+</div>
+            <div class="upload-meta">
+              <div class="h">Σύρε εδώ αρχείο</div>
+              <div class="p">ή πάτησε “Επιλογή εικόνας” (PNG/JPG)</div>
+            </div>
+            <button id="btn-pick" class="btn" type="button">Επιλογή εικόνας</button>
+          </div>
+          <input id="file" type="file" accept="image/*" style="display:none" />
+          <div class="small" style="margin-top:8px">
+            Συμβουλή: Για καλύτερο αποτέλεσμα, δώσε και prompt (π.χ. “make it cinematic, clean background”).
+          </div>
+        </div>
+
+        <div class="block">
+          <div class="label-row">
+            <div>Κείμενο prompt</div>
+            <div class="small"><span id="charCount">0</span>/2500</div>
+          </div>
+          <textarea id="prompt" maxlength="2500" placeholder="Περιέγραψε τι θέλεις να δημιουργηθεί…"></textarea>
+        </div>
+
+        <div class="block">
+          <div class="label-row">
+            <div>Πόσες εικόνες θέλεις (1–4)</div>
+            <div class="small">σε 1 κλήση</div>
+          </div>
+          <div class="qty-row" aria-label="number of images">
+            <div class="qty-pill active" data-n="1">1</div>
+            <div class="qty-pill" data-n="2">2</div>
+            <div class="qty-pill" data-n="3">3</div>
+            <div class="qty-pill" data-n="4">4</div>
+          </div>
+
+          <div class="cost" aria-label="cost">
+            <div class="left">
+              Κόστος<br />
+              <span class="small" id="costHint">0.5 credit ανά εικόνα</span>
+            </div>
+            <div class="right"><span id="costValue">0.5</span> credits</div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <button id="btn-generate" class="btn big-generate" type="button">
+            Δημιουργία <span id="btnN">1</span> · <span id="btnCost">0.5</span> credits
+          </button>
+
+          <div class="status">
+            <div id="statusText">Έτοιμο.</div>
+            <div id="statusChip" class="chip">idle</div>
+          </div>
+
+          <div id="preview" class="preview">
+            <div class="row">
+              <div class="section-title" style="margin:0">Αποτέλεσμα</div>
+              <a id="openLink" class="link" href="#" target="_blank" rel="noopener" style="display:none">Άνοιγμα</a>
+            </div>
+            <img id="imgOut" alt="Generated image preview" />
+            <div id="rawOut" class="small" style="display:none"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="small" style="margin-top:12px; opacity:.9">
+      Endpoint: <code>/api/nanobanana/generate</code> — υποστηρίζει JSON ή multipart.
+    </div>
+  </div>
+
+<script>
+  // -----------------------------
+  // Config
+  // -----------------------------
+  const API_URL = "/api/nanobanana/generate";
+
+  // pricing (βάλε ό,τι θέλεις)
+  const PRICE_PER_IMAGE = 0.5;
+
+  // -----------------------------
+  // State
+  // -----------------------------
+  let mode = "t2i"; // t2i | i2i
+  let n = 1;
+  let file = null;
+
+  // -----------------------------
+  // Elements
+  // -----------------------------
+  const tabT2I = document.getElementById("tab-t2i");
+  const tabI2I = document.getElementById("tab-i2i");
+  const blockUpload = document.getElementById("block-upload");
+
+  const promptEl = document.getElementById("prompt");
+  const charCount = document.getElementById("charCount");
+
+  const btnPick = document.getElementById("btn-pick");
+  const fileEl = document.getElementById("file");
+  const fileCount = document.getElementById("file-count");
+
+  const qtyPills = [...document.querySelectorAll(".qty-pill")];
+
+  const costValue = document.getElementById("costValue");
+  const btnGenerate = document.getElementById("btn-generate");
+  const btnN = document.getElementById("btnN");
+  const btnCost = document.getElementById("btnCost");
+
+  const statusText = document.getElementById("statusText");
+  const statusChip = document.getElementById("statusChip");
+
+  const preview = document.getElementById("preview");
+  const imgOut = document.getElementById("imgOut");
+  const rawOut = document.getElementById("rawOut");
+  const openLink = document.getElementById("openLink");
+
+  // -----------------------------
+  // UI helpers
+  // -----------------------------
+  function setChip(type, text){
+    statusChip.className = "chip" + (type ? (" " + type) : "");
+    statusChip.textContent = text;
+  }
+
+  function recalc(){
+    const cost = (n * PRICE_PER_IMAGE).toFixed(1).replace(/\.0$/, "");
+    costValue.textContent = cost;
+    btnN.textContent = String(n);
+    btnCost.textContent = cost;
+  }
+
+  function setMode(next){
+    mode = next;
+    const isT2I = mode === "t2i";
+
+    tabT2I.classList.toggle("active", isT2I);
+    tabI2I.classList.toggle("active", !isT2I);
+
+    tabT2I.setAttribute("aria-selected", isT2I ? "true" : "false");
+    tabI2I.setAttribute("aria-selected", !isT2I ? "true" : "false");
+
+    blockUpload.style.display = isT2I ? "none" : "block";
+
+    // reset preview on mode change
+    preview.style.display = "none";
+    openLink.style.display = "none";
+    rawOut.style.display = "none";
+    imgOut.src = "";
+
+    setChip("", "idle");
+    statusText.textContent = "Έτοιμο.";
+  }
+
+  // -----------------------------
+  // Events
+  // -----------------------------
+  tabT2I.addEventListener("click", () => setMode("t2i"));
+  tabI2I.addEventListener("click", () => setMode("i2i"));
+
+  promptEl.addEventListener("input", () => {
+    charCount.textContent = String(promptEl.value.length);
+  });
+
+  qtyPills.forEach(p => {
+    p.addEventListener("click", () => {
+      qtyPills.forEach(x => x.classList.remove("active"));
+      p.classList.add("active");
+      n = Number(p.dataset.n || "1");
+      recalc();
+    });
+  });
+
+  btnPick.addEventListener("click", () => fileEl.click());
+
+  fileEl.addEventListener("change", () => {
+    file = fileEl.files && fileEl.files[0] ? fileEl.files[0] : null;
+    fileCount.textContent = file ? "1" : "0";
+    if(file){
+      setChip("ok", "file");
+      statusText.textContent = `Επιλέχθηκε: ${file.name}`;
+    } else {
+      setChip("", "idle");
+      statusText.textContent = "Έτοιμο.";
+    }
+  });
+
+  // drag & drop (nice-to-have)
+  blockUpload.addEventListener("dragover", (e) => { e.preventDefault(); });
+  blockUpload.addEventListener("drop", (e) => {
+    e.preventDefault();
+    const f = e.dataTransfer.files && e.dataTransfer.files[0] ? e.dataTransfer.files[0] : null;
+    if(!f) return;
+    file = f;
+    fileCount.textContent = "1";
+    setChip("ok", "file");
+    statusText.textContent = `Επιλέχθηκε: ${file.name}`;
+  });
+
+  async function safeJson(res){
+    const txt = await res.text();
+    try { return JSON.parse(txt); } catch { return { raw: txt }; }
+  }
+
+  function resolveImageUrl(payload){
+    // Προσπάθεια να “μαντέψουμε” format απάντησης:
+    // 1) { url: "https://..." }
+    // 2) { result_url: "..." }
+    // 3) { data: [{ url: "..." }]}
+    // 4) { images: ["..."] }
+    if(!payload) return null;
+
+    if(payload.url) return payload.url;
+    if(payload.result_url) return payload.result_url;
+
+    if(payload.data && Array.isArray(payload.data) && payload.data[0]){
+      if(payload.data[0].url) return payload.data[0].url;
+      if(payload.data[0].b64_json) return "data:image/png;base64," + payload.data[0].b64_json;
+    }
+
+    if(payload.images && Array.isArray(payload.images) && payload.images[0]){
+      const v = payload.images[0];
+      if(typeof v === "string"){
+        if(v.startsWith("http")) return v;
+        // maybe base64
+        return "data:image/png;base64," + v;
+      }
+      if(v.url) return v.url;
+      if(v.b64_json) return "data:image/png;base64," + v.b64_json;
+    }
+
+    return null;
+  }
+
+  btnGenerate.addEventListener("click", async () => {
+    preview.style.display = "none";
+    openLink.style.display = "none";
+    rawOut.style.display = "none";
+    imgOut.src = "";
+
+    const prompt = (promptEl.value || "").trim();
+
+    if(mode === "i2i" && !file){
+      setChip("bad", "missing");
+      statusText.textContent = "Βάλε 1 εικόνα για Image→Image.";
+      return;
+    }
+    if(!prompt && mode === "t2i"){
+      setChip("bad", "missing");
+      statusText.textContent = "Γράψε prompt (Κείμενο → Εικόνα).";
+      return;
+    }
+
+    setChip("", "working");
+    statusText.textContent = "Παραγωγή…";
+    btnGenerate.disabled = true;
+    btnGenerate.style.opacity = "0.75";
+
+    try{
+      let res;
+
+      if(mode === "t2i"){
+        // JSON request
+        res = await fetch(API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            prompt,
+            n,
+            mode: "text_to_image"
+          })
+        });
+      } else {
+        // multipart request
+        const fd = new FormData();
+        fd.append("image", file);
+        fd.append("prompt", prompt);
+        fd.append("n", String(n));
+        fd.append("mode", "image_to_image");
+
+        res = await fetch(API_URL, {
+          method: "POST",
+          body: fd
+          // ΜΗΝ βάλεις Content-Type εδώ. Το browser βάζει μόνο του σωστό multipart boundary.
+        });
+      }
+
+      const payload = await safeJson(res);
+
+      if(!res.ok){
+        setChip("bad", "error");
+        statusText.textContent = "Αποτυχία.";
+        preview.style.display = "block";
+        rawOut.style.display = "block";
+        rawOut.textContent = JSON.stringify(payload, null, 2);
+        return;
+      }
+
+      const url = resolveImageUrl(payload);
+
+      setChip("ok", "done");
+      statusText.textContent = "Ολοκληρώθηκε.";
+
+      preview.style.display = "flex";
+
+      if(url){
+        imgOut.src = url;
+        openLink.href = url;
+        openLink.style.display = url.startsWith("http") ? "inline" : "none";
+      } else {
+        // fallback
+        rawOut.style.display = "block";
+        rawOut.textContent = JSON.stringify(payload, null, 2);
+      }
+
+    } catch(err){
+      setChip("bad", "error");
+      statusText.textContent = "Σφάλμα δικτύου.";
+      preview.style.display = "block";
+      rawOut.style.display = "block";
+      rawOut.textContent = String(err);
+    } finally{
+      btnGenerate.disabled = false;
+      btnGenerate.style.opacity = "1";
+    }
+  });
+
+  // init
+  recalc();
+  setMode("t2i");
+</script>
+</body>
+</html>
