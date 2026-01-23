@@ -1,28 +1,28 @@
-# app/routes/grok.py
 import os
 import base64
 import uuid
-
+import logging  # Added logging for better error handling
 from pathlib import Path
 import httpx
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse
-
+from fastapi import APIRouter, HTTPException, Request, BackgroundTasks  # Added missing imports
+from fastapi.responses import FileResponse, JSONResponse  # Added JSONResponse import
 from ..core.telegram_auth import db_user_from_webapp
 from ..core.telegram_client import tg_send_message, tg_send_photo
 from ..core.paths import STATIC_DIR
 from ..web_shared import public_base_url
-
 from ..db import (
     spend_credits_by_user_id,
     add_credits_by_user_id,
     set_last_result,
 )
 
+logging.basicConfig(level=logging.WARNING)  # Configure basic logging for the file
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 XAI_API_KEY = os.getenv("XAI_API_KEY", "").strip()
-
+IMAGES_DIR = Path(STATIC_DIR) / "images"  # Added IMAGES_DIR definition
 
 @router.get("/grok", include_in_schema=False)
 async def grok_page():
@@ -67,14 +67,23 @@ async def _run_grok_job(
             )
 
         data = r.json()
+
+        # Validate API response structure
         if r.status_code >= 400:
-            raise RuntimeError(f"xAI error {r.status_code}: {data}")
+            raise RuntimeError(f"xAI error {r.status_code}: {data.get('error', 'Unknown Error')}")
+
+        if not data.get("data") or not data["data"][0].get("b64_json"):
+            raise RuntimeError("Invalid response structure from xAI API")
 
         img_b64 = data["data"][0]["b64_json"]
         img_bytes = base64.b64decode(img_b64)
 
         name = f"grok_{uuid.uuid4().hex}.png"
-        (IMAGES_DIR / name).write_bytes(img_bytes)
+        img_path = IMAGES_DIR / name
+
+        # Ensure the directory exists before saving
+        IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+        img_path.write_bytes(img_bytes)
 
         public_url = f"{public_base_url()}/static/images/{name}"
         set_last_result(db_user_id, "grok", public_url)
@@ -94,25 +103,27 @@ async def _run_grok_job(
         )
 
     except Exception as e:
+        logger.error(f"Error during Grok job: {e}")
         try:
             add_credits_by_user_id(db_user_id, cost, "Refund Grok fail", "system", None)
-        except Exception:
-            pass
+        except Exception as ex:
+            logger.error(f"Error refunding credits: {ex}")
 
         try:
             await tg_send_message(
                 tg_chat_id,
                 f"❌ Αποτυχία Grok.\nΛεπτομέρεια: {str(e)[:250]}",
             )
-        except Exception:
-            pass
+        except Exception as ex:
+            logger.error(f"Error sending failure message: {ex}")
 
 
 @router.post("/api/grok/generate")
 async def grok_generate(request: Request, background_tasks: BackgroundTasks):
     try:
         payload = await request.json()
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error parsing JSON request: {e}")
         return JSONResponse({"ok": False, "error": "bad_json"}, status_code=400)
 
     init_data = payload.get("initData", "")
@@ -130,13 +141,14 @@ async def grok_generate(request: Request, background_tasks: BackgroundTasks):
 
     try:
         spend_credits_by_user_id(db_user_id, COST, "Grok Image", "xai", _grok_model_name())
-    except Exception:
+    except Exception as e:
+        logger.error(f"Not enough credits: {e}")
         return {"ok": False, "error": "not_enough_credits"}
 
     try:
         await tg_send_message(tg_chat_id, "🧠 Grok: Η εικόνα ετοιμάζεται…")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"Failed to send preparation message: {e}")
 
     background_tasks.add_task(
         _run_grok_job,
