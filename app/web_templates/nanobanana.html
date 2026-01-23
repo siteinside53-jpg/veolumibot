@@ -556,6 +556,7 @@
           method: "POST",
           headers: {
             "Content-Type": "application/json"
+            "X-Telegram-Init-Data": TG_INIT_DATA
           },
           body: JSON.stringify({
             prompt,
@@ -573,6 +574,9 @@
 
         res = await fetch(API_URL, {
           method: "POST",
+          headers: {
+            "X-Telegram-Init-Data": TG_INIT_DATA
+          },
           body: fd
           // ΜΗΝ βάλεις Content-Type εδώ. Το browser βάζει μόνο του σωστό multipart boundary.
         });
