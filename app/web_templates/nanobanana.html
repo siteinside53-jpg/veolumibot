@@ -366,6 +366,7 @@
   let mode = "t2i"; // t2i | i2i
   let n = 1;
   let file = null;
+  let images_data_urls = [];
 
   // -----------------------------
   // Elements
@@ -522,6 +523,7 @@
     if (mode === "i2i" && !file) {
       setChip("bad", "missing");
       setStatus("Βάλε 1 εικόνα για Image→Image.");
+      images_data_urls = [await fileToDataURL(file)];
       return;
     }
     if (mode === "t2i" && !prompt) {
