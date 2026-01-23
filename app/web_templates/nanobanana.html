@@ -2,10 +2,10 @@
 <html lang="el">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <title>Nano Banana</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Grok Imagine</title>
   <style>
+
     :root{
       --bg:#0b0c12;
       --card:#121422;
@@ -251,285 +251,297 @@
       text-decoration:none;
       font-weight:700;
     }
-  </style>
+    </style>
 </head>
-
 <body>
-  <div class="wrap">
+  <div class="app">
     <div class="topbar">
       <div class="brand">
-        <div class="logo" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M7 14c4-1 6-4 7-8 3 3 4 8 2 12-1 2-4 4-7 4-4 0-6-3-6-6 0-3 2-5 4-6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-        <div>
-          <div>Nano Banana</div>
-          <div class="subtitle">Γεννήτρια εικόνων (Text→Image / Image→Image)</div>
+        <div class="dot"></div>
+        <div class="brand-text">
+          <div class="title">Grok Imagine</div>
+          <div class="subtitle">Δημιουργία εικόνας / video (WebApp)</div>
         </div>
       </div>
+      <div class="pill" id="costPill">Κόστος: —</div>
     </div>
 
     <div class="card">
-      <div class="card-inner">
-        <div class="section-title">Παράμετροι</div>
-        <div class="section-sub">Λειτουργία παραγωγής</div>
-
-        <div class="tabs" role="tablist" aria-label="Generation mode">
-          <div id="tab-t2i" class="tab active" role="tab" aria-selected="true">
-            <span>📝</span><span>Κείμενο → Εικόνα</span>
-          </div>
-          <div id="tab-i2i" class="tab" role="tab" aria-selected="false">
-            <span>🖼️</span><span>Εικόνα → Εικόνα</span>
-          </div>
+      <div class="grid">
+        <div>
+          <div class="label">Λειτουργία</div>
+          <select id="mode" class="input">
+            <option value="text_to_image">Text to Image</option>
+            <option value="text_to_video">Text to Video</option>
+            <option value="image_to_video">Image to Video</option>
+          </select>
         </div>
 
-        <div id="block-upload" class="block" style="display:none">
-          <div class="label-row">
-            <div>Εικόνα εισόδου</div>
-            <div class="small"><span id="file-count">0</span>/1</div>
-          </div>
-          <div class="uploader">
-            <div class="upload-icon" aria-hidden="true">+</div>
-            <div class="upload-meta">
-              <div class="h">Σύρε εδώ αρχείο</div>
-              <div class="p">ή πάτησε “Επιλογή εικόνας” (PNG/JPG)</div>
+        <div>
+          <div class="label">Αναλογία πλευρών</div>
+          <select id="aspect" class="input">
+            <option value="1:1">1:1</option>
+            <option value="2:3">2:3</option>
+            <option value="3:2">3:2</option>
+          </select>
+        </div>
+
+        <div>
+          <div class="label">Τόνος / στυλ</div>
+          <select id="modifier" class="input">
+            <option value="fun">Fun</option>
+            <option value="normal" selected>Normal</option>
+            <option value="spicy">Spicy</option>
+          </select>
+        </div>
+
+        <div class="full">
+          <div class="label">Prompt <span class="hint" id="promptHint">0/5000</span></div>
+          <textarea id="prompt" class="textarea" maxlength="5000" placeholder="Περιέγραψε τι θέλεις να δημιουργηθεί..."></textarea>
+          <div class="hint" style="margin-top:6px;" id="promptErr"></div>
+        </div>
+
+        <div class="full" id="imageBlock" style="display:none;">
+          <div class="label">Εικόνα (απαραίτητη για Image to Video)</div>
+          <div class="dropzone" id="dropzone">
+            <input id="image" type="file" accept="image/*" />
+            <div class="drop-inner">
+              <div class="plus">+</div>
+              <div class="muted">Ανέβασε JPG/PNG (έως 10MB)</div>
             </div>
-            <button id="btn-pick" class="btn" type="button">Επιλογή εικόνας</button>
           </div>
-          <input id="file" type="file" accept="image/*" style="display:none" />
-          <div class="small" style="margin-top:8px">
-            Συμβουλή: Για καλύτερο αποτέλεσμα, δώσε και prompt (π.χ. “make it cinematic, clean background”).
-          </div>
-        </div>
-
-        <div class="block">
-          <div class="label-row">
-            <div>Κείμενο prompt</div>
-            <div class="small"><span id="charCount">0</span>/2500</div>
-          </div>
-          <textarea id="prompt" maxlength="2500" placeholder="Περιέγραψε τι θέλεις να δημιουργηθεί…"></textarea>
-        </div>
-
-        <div class="block">
-          <div class="label-row">
-            <div>Πόσες εικόνες θέλεις (1–4)</div>
-            <div class="small">σε 1 κλήση</div>
-          </div>
-          <div class="qty-row" aria-label="number of images">
-            <div class="qty-pill active" data-n="1">1</div>
-            <div class="qty-pill" data-n="2">2</div>
-            <div class="qty-pill" data-n="3">3</div>
-            <div class="qty-pill" data-n="4">4</div>
-          </div>
-
-          <div class="cost" aria-label="cost">
-            <div class="left">
-              Κόστος<br />
-              <span class="small" id="costHint">0.5 credit ανά εικόνα</span>
-            </div>
-            <div class="right"><span id="costValue">0.5</span> credits</div>
+          <div class="preview" id="preview" style="display:none;">
+            <img id="previewImg" alt="preview" />
+            <button class="ghost" id="clearImage" type="button">Αφαίρεση</button>
           </div>
         </div>
 
-        <div class="footer">
-          <button id="btn-generate" class="btn big-generate" type="button">
-            Δημιουργία <span id="btnN">1</span> · <span id="btnCost">0.5</span> credits
-          </button>  
+        <div class="full row">
+          <button class="btn" id="generateBtn" type="button">
+            <span class="btnText">Generate</span>
+            <span class="spinner" style="display:none;"></span>
+          </button>
+          <button class="ghost" id="resetBtn" type="button">Reset</button>
+        </div>
+
+        <div class="full result" id="result" style="display:none;">
+          <div class="result-title">Κατάσταση</div>
+          <div class="result-body" id="resultBody"></div>
         </div>
       </div>
     </div>
-    
+
+    <div class="footer">
+      <div class="muted">
+        Τα αποτελέσματα παραδίδονται στο Telegram chat. Η σελίδα αυτή ξεκινά το task και εμφανίζει μόνο status.
+      </div>
+    </div>
   </div>
 
-<script>
-  // -----------------------------
-  // Config
-  // -----------------------------
-  const API_URL = "/api/nanobanana/generate";
-  const PRICE_PER_IMAGE = 0.5;
+  <div class="toast" id="toast" style="display:none;"></div>
 
-  // Telegram WebApp
-  const tg = window.Telegram?.WebApp;
-  if (tg) { tg.expand(); tg.ready(); }
-  const TG_INIT_DATA = tg?.initData || "";
-
-  // -----------------------------
-  // State
-  // -----------------------------
-  let mode = "t2i"; // "t2i" | "i2i"
-  let n = 1;
-  let file = null;
-
-  // -----------------------------
-  // Elements
-  // -----------------------------
-  const tabT2I = document.getElementById("tab-t2i");
-  const tabI2I = document.getElementById("tab-i2i");
-  const blockUpload = document.getElementById("block-upload");
-
-  const promptEl = document.getElementById("prompt");
-  const charCount = document.getElementById("charCount");
-
-  const btnPick = document.getElementById("btn-pick");
-  const fileEl = document.getElementById("file");
-  const fileCount = document.getElementById("file-count");
-
-  const qtyPills = [...document.querySelectorAll(".qty-pill")];
-
-  const costValue = document.getElementById("costValue");
-  const btnGenerate = document.getElementById("btn-generate");
-  const btnN = document.getElementById("btnN");
-  const btnCost = document.getElementById("btnCost");
-
-  // -----------------------------
-  // Helpers
-  // -----------------------------
-  function recalc(){
-    const cost = (n * PRICE_PER_IMAGE).toFixed(1).replace(/\.0$/, "");
-    costValue.textContent = cost;
-    btnN.textContent = String(n);
-    btnCost.textContent = cost;
-  }
-
-  function setMode(next){
-    mode = next;
-    const isT2I = (mode === "t2i");
-
-    tabT2I.classList.toggle("active", isT2I);
-    tabI2I.classList.toggle("active", !isT2I);
-
-    tabT2I.setAttribute("aria-selected", isT2I ? "true" : "false");
-    tabI2I.setAttribute("aria-selected", !isT2I ? "true" : "false");
-
-    blockUpload.style.display = isT2I ? "none" : "block";
-  }
-
-  function showSentPopup(){
-    if (!tg?.showPopup) return;
-    tg.showPopup({
-      title: "Telegram",
-      message: "Η αίτηση στάλθηκε. Το αποτέλεσμα θα έρθει μέσα στο Telegram.",
-      buttons: [{ type: "ok", text: "Close" }]
-    }, () => {});
-  }
-
-  function showAlert(msg){
-    if (tg?.showAlert) tg.showAlert(msg);
-    else alert(msg);
-  }
-
-  function fileToDataURL(f){
-    return new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(String(r.result || ""));
-      r.onerror = () => reject(new Error("File read failed"));
-      r.readAsDataURL(f);
-    });
-  }
-
-  async function safeJson(res){
-    const txt = await res.text();
-    try { return JSON.parse(txt); } catch { return { raw: txt }; }
-  }
-
-  // -----------------------------
-  // Events
-  // -----------------------------
-  tabT2I.addEventListener("click", () => setMode("t2i"));
-  tabI2I.addEventListener("click", () => setMode("i2i"));
-
-  promptEl.addEventListener("input", () => {
-    charCount.textContent = String(promptEl.value.length);
-  });
-
-  qtyPills.forEach(p => {
-    p.addEventListener("click", () => {
-      qtyPills.forEach(x => x.classList.remove("active"));
-      p.classList.add("active");
-      n = Number(p.dataset.n || "1");
-      recalc();
-    });
-  });
-
-  btnPick?.addEventListener("click", () => fileEl.click());
-
-  fileEl?.addEventListener("change", () => {
-    file = fileEl.files && fileEl.files[0] ? fileEl.files[0] : null;
-    fileCount.textContent = file ? "1" : "0";
-  });
-
-  blockUpload?.addEventListener("dragover", (e) => e.preventDefault());
-  blockUpload?.addEventListener("drop", (e) => {
-    e.preventDefault();
-    const f = e.dataTransfer.files && e.dataTransfer.files[0] ? e.dataTransfer.files[0] : null;
-    if (!f) return;
-    file = f;
-    fileCount.textContent = "1";
-  });
-
-  // -----------------------------
-  // Generate → sent to Telegram
-  // -----------------------------
-  btnGenerate.addEventListener("click", async () => {
-    const prompt = (promptEl.value || "").trim();
-
-    if (!prompt) {
-      showAlert("Γράψε prompt.");
-      return;
+  <script>
+    const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+    if (tg) {
+      try {
+        tg.ready();
+        tg.expand();
+        tg.setHeaderColor('#0b0c10');
+        tg.setBackgroundColor('#0b0c10');
+      } catch (e) {}
     }
 
-    if (mode === "i2i" && !file) {
-      showAlert("Βάλε 1 εικόνα για Image→Image.");
-      return;
+    const $ = (id) => document.getElementById(id);
+
+    function showToast(message, type='info') {
+      const el = $('toast');
+      el.className = 'toast ' + (type === 'error' ? 'toast-error' : type === 'success' ? 'toast-success' : '');
+      el.textContent = message;
+      el.style.display = 'block';
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => { el.style.display = 'none'; }, 2400);
     }
 
-    btnGenerate.disabled = true;
-    btnGenerate.style.opacity = "0.75";
+    function setLoading(isLoading) {
+      $('generateBtn').disabled = isLoading;
+      $('resetBtn').disabled = isLoading;
+      const sp = $('generateBtn').querySelector('.spinner');
+      const tx = $('generateBtn').querySelector('.btnText');
+      sp.style.display = isLoading ? 'inline-block' : 'none';
+      tx.textContent = isLoading ? 'Working…' : 'Generate';
+    }
 
-    showSentPopup();
+    function updatePromptCounter() {
+      const v = $('prompt').value || '';
+      $('promptHint').textContent = `${v.length}/5000`;
+    }
 
-    try {
-      let images_data_urls = [];
-      if (mode === "i2i") {
-        images_data_urls = [await fileToDataURL(file)];
+    function modeConfig(mode) {
+      // Ρύθμισε ελεύθερα τα credits σύμφωνα με το bot σου.
+      if (mode === 'text_to_image') return { cost: '0.8 credits', needsImage: false, enabled: true };
+      if (mode === 'text_to_video') return { cost: '4 credits', needsImage: false, enabled: false };
+      if (mode === 'image_to_video') return { cost: '4 credits', needsImage: true, enabled: false };
+      return { cost: '—', needsImage: false, enabled: false };
+    }
+
+    function updateModeUI() {
+      const mode = $('mode').value;
+      const cfg = modeConfig(mode);
+
+      $('costPill').textContent = `Κόστος: ${cfg.cost}`;
+      $('imageBlock').style.display = cfg.needsImage ? 'block' : 'none';
+
+      if (!cfg.enabled) $('generateBtn').classList.add('btn-disabled');
+      else $('generateBtn').classList.remove('btn-disabled');
+
+      if (!cfg.needsImage) clearImage();
+    }
+
+    function clearImage() {
+      $('image').value = '';
+      $('preview').style.display = 'none';
+      $('dropzone').style.display = 'block';
+      $('previewImg').src = '';
+    }
+
+    function setResult(html) {
+      $('result').style.display = 'block';
+      $('resultBody').innerHTML = html;
+    }
+
+    function resetAll() {
+      $('prompt').value = '';
+      $('aspect').value = '1:1';
+      $('modifier').value = 'normal';
+      $('mode').value = 'text_to_image';
+      $('promptErr').textContent = '';
+      updatePromptCounter();
+      clearImage();
+      $('result').style.display = 'none';
+      updateModeUI();
+    }
+
+    async function fileToBase64(file) {
+      const maxMB = 10;
+      if (file.size > maxMB * 1024 * 1024) throw new Error(`Η εικόνα είναι > ${maxMB}MB`);
+      const dataUrl = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result);
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+      return dataUrl.split(',')[1];
+    }
+
+    async function submit() {
+      const mode = $('mode').value;
+      const cfg = modeConfig(mode);
+
+      $('promptErr').textContent = '';
+
+      if (!cfg.enabled) {
+        showToast('Αυτό το mode δεν είναι ενεργό ακόμα.', 'error');
+        return;
       }
 
+      const prompt = ($('prompt').value || '').trim();
+      if (!prompt) {
+        $('promptErr').textContent = 'Γράψε prompt (1–5000 χαρακτήρες).';
+        $('promptErr').style.color = 'var(--bad)';
+        return;
+      }
+
+      // backend αυτή τη στιγμή χρησιμοποιεί μόνο: initData, prompt, aspect_ratio
+      const initData = (tg && tg.initData) ? tg.initData : '';
       const payload = {
-        initData: TG_INIT_DATA,
+        initData,
         prompt,
-        n, // backend: payload.get("n_images") or payload.get("n")
-        mode: (mode === "t2i") ? "text_to_image" : "image_to_image",
-        images_data_urls
+        aspect_ratio: $('aspect').value,
+        // κρατάμε τα παρακάτω για μελλοντική επέκταση (δεν θα σε χαλάσουν αν ο backend τα αγνοήσει)
+        mode,
+        modifier: $('modifier').value,
+        image_b64: null,
       };
 
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await safeJson(res);
-
-      if (!res.ok || data?.ok === false) {
-        const msg = data?.error || data?.detail || data?.message || "Αποτυχία";
-        throw new Error(msg);
+      if (cfg.needsImage) {
+        const f = $('image').files && $('image').files[0];
+        if (!f) {
+          showToast('Χρειάζεται εικόνα για αυτό το mode.', 'error');
+          return;
+        }
+        payload.image_b64 = await fileToBase64(f);
       }
 
-      // κλείσιμο (όπως στο Pro)
-      if (tg?.close) tg.close();
+      setLoading(true);
+      try {
+        const res = await fetch('/api/grok/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
 
-    } catch (e) {
-      showAlert("Αποτυχία. " + (e?.message || ""));
-    } finally {
-      btnGenerate.disabled = false;
-      btnGenerate.style.opacity = "1";
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok || !data.ok) {
+          const msg = data.detail || data.error || 'Κάτι πήγε στραβά.';
+          showToast(msg, 'error');
+          setResult(`<div class="muted">Σφάλμα: ${msg}</div>`);
+          return;
+        }
+
+        showToast('Ξεκίνησε! Θα λάβεις αποτέλεσμα στο Telegram.', 'success');
+
+        const costLine = (typeof data.cost !== 'undefined')
+          ? `<div><b>Κόστος:</b> <code>${data.cost}</code></div>`
+          : '';
+
+        const sentLine = (typeof data.sent_to_telegram !== 'undefined')
+          ? `<div><b>Αποστολή στο Telegram:</b> <code>${data.sent_to_telegram}</code></div>`
+          : '';
+
+        setResult(`${costLine}${sentLine}<div class="muted" style="margin-top:8px;">Μείνε στο chat με το bot — το αποτέλεσμα θα σταλεί εκεί.</div>`);
+      } catch (e) {
+        showToast(e.message || 'Network error', 'error');
+        setResult(`<div class="muted">Network error: ${e.message || e}</div>`);
+      } finally {
+        setLoading(false);
+      }
     }
-  });
 
-  // init
-  recalc();
-  setMode("t2i");
-</script>
+    // Events
+    $('prompt').addEventListener('input', updatePromptCounter);
+    $('mode').addEventListener('change', updateModeUI);
+    $('resetBtn').addEventListener('click', resetAll);
+    $('generateBtn').addEventListener('click', () => submit());
+    $('clearImage').addEventListener('click', (e) => { e.preventDefault(); clearImage(); });
+
+    $('image').addEventListener('change', async () => {
+      const f = $('image').files && $('image').files[0];
+      if (!f) return;
+      const url = URL.createObjectURL(f);
+      $('previewImg').src = url;
+      $('preview').style.display = 'flex';
+      $('dropzone').style.display = 'none';
+    });
+
+    const dz = $('dropzone');
+    dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dropzone-hover'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('dropzone-hover'));
+    dz.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dz.classList.remove('dropzone-hover');
+      const f = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!f) return;
+      $('image').files = e.dataTransfer.files;
+      const url = URL.createObjectURL(f);
+      $('previewImg').src = url;
+      $('preview').style.display = 'flex';
+      $('dropzone').style.display = 'none';
+    });
+
+    // init
+    updatePromptCounter();
+    updateModeUI();
+  </script>
 </body>
 </html>
