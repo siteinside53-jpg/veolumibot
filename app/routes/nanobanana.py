@@ -198,7 +198,7 @@ async def nanobanana_generate(request: Request, background_tasks: BackgroundTask
         output_format = "png"
 
     # Αν είναι text2image, αγνοούμε inputs
-    if mode != "image2image":
+    if mode not in ("image_to_image", "image2image"):
         images_data_urls = []
 
     COST_PER_IMAGE = 0.5
