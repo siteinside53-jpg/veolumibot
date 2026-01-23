@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 
 from ..core.telegram_auth import db_user_from_webapp
 from ..core.telegram_client import tg_send_message, tg_send_photo
-from ..core.paths import IMAGES_DIR, WEB_TEMPLATES_DIR
+from ..core.paths import IMAGES_DIR, TEMPLATES_DIR
 from ..web_shared import public_base_url
 
 from ..db import (
