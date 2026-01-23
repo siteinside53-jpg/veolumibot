@@ -24,8 +24,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 
 
 def _gemini_model_name() -> str:
-    # “φθηνότερο” μοντέλο από το Pro
-    return os.getenv("GEMINI_NANOBANANA_MODEL", "gemini-3-image-preview").strip()
+    return os.getenv("GEMINI_NANOBANANA_MODEL", "gemini-2.5-flash-image-preview").strip()
 
 
 def _read_nanobanana_html() -> str:
