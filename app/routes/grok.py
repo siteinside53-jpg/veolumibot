@@ -3,13 +3,14 @@ import os
 import base64
 import uuid
 
+from pathlib import Path
 import httpx
-from fastapi import APIRouter, BackgroundTasks, Request
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse
 
 from ..core.telegram_auth import db_user_from_webapp
 from ..core.telegram_client import tg_send_message, tg_send_photo
-from ..core.paths import IMAGES_DIR
+from ..core.paths import STATIC_DIR
 from ..web_shared import public_base_url
 
 from ..db import (
@@ -22,6 +23,13 @@ router = APIRouter()
 
 XAI_API_KEY = os.getenv("XAI_API_KEY", "").strip()
 
+
+@router.get("/grok", include_in_schema=False)
+async def grok_page():
+    p = Path(STATIC_DIR) / "grok.html"
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="grok.html not found in static dir")
+    return FileResponse(p)
 
 def _grok_model_name() -> str:
     # άλλαξέ το αν θες άλλο grok image model
