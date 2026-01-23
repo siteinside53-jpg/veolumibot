@@ -18,8 +18,6 @@ from .routes.veo31 import router as veo31_router
 from .routes.sora2pro import router as sora2pro_router
 from app.routes.nanobanana import router as nanobanana_router
 
-# ...
-app.include_router(nanobanana_router)
 
 stripe.api_key = STRIPE_SECRET_KEY
 
