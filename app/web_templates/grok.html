@@ -1,1 +1,397 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Grok Imagine</title>
 
+  <!-- Telegram WebApp -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <style>
+    :root{
+      --bg:#0b0f1a;
+      --card:#0f1526;
+      --card2:#0c1221;
+      --border:rgba(255,255,255,.08);
+      --text:rgba(255,255,255,.92);
+      --muted:rgba(255,255,255,.65);
+      --muted2:rgba(255,255,255,.45);
+      --accent:#7c3aed;
+      --accent2:#a78bfa;
+      --danger:#ef4444;
+      --ok:#22c55e;
+      --shadow: 0 20px 60px rgba(0,0,0,.45);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(1200px 900px at 80% 0%, rgba(124,58,237,.20), transparent 60%),
+                  radial-gradient(900px 700px at 10% 30%, rgba(167,139,250,.15), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+    }
+    .wrap{max-width:980px;margin:0 auto;padding:18px 14px 38px}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0 14px}
+    .brand{display:flex;flex-direction:column;gap:6px}
+    .brand h1{font-size:22px;line-height:1.1;margin:0;font-weight:800;letter-spacing:.2px}
+    .pill{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:8px 12px;border:1px solid var(--border);
+      background:rgba(255,255,255,.04);
+      border-radius:999px;color:var(--muted);font-size:13px;
+    }
+    .grid{display:grid;grid-template-columns: 1.2fr .8fr;gap:14px}
+    @media (max-width: 860px){ .grid{grid-template-columns:1fr} }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .card .head{
+      padding:16px 16px 12px;
+      border-bottom:1px solid var(--border);
+      display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+    }
+    .card .head .title{font-weight:800}
+    .card .head .sub{color:var(--muted2);font-size:13px;margin-top:4px}
+    .card .body{padding:16px}
+
+    label{display:block;font-size:12px;color:var(--muted);margin:14px 0 8px}
+    .row{display:grid;grid-template-columns: 1fr 1fr;gap:12px}
+    @media (max-width: 520px){ .row{grid-template-columns:1fr} }
+
+    select, textarea, input[type="text"]{
+      width:100%;
+      background: rgba(255,255,255,.03);
+      border:1px solid var(--border);
+      color:var(--text);
+      border-radius:14px;
+      padding:12px 12px;
+      outline:none;
+    }
+    textarea{min-height:130px;resize:vertical}
+    select:focus, textarea:focus, input:focus{border-color: rgba(124,58,237,.55); box-shadow: 0 0 0 4px rgba(124,58,237,.18)}
+
+    .hint{font-size:12px;color:var(--muted2);margin-top:8px;line-height:1.35}
+    .danger{color:var(--danger)}
+    .ok{color:var(--ok)}
+
+    .upload{
+      border: 1px dashed rgba(255,255,255,.18);
+      background: rgba(255,255,255,.02);
+      border-radius: 18px;
+      padding: 18px;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:10px;
+      min-height: 210px;
+    }
+    .upload .plus{
+      width:54px;height:54px;border-radius:18px;
+      border:1px solid rgba(255,255,255,.16);
+      display:flex;align-items:center;justify-content:center;
+      font-size:28px;color:rgba(255,255,255,.70);
+      background: rgba(255,255,255,.03);
+    }
+    .upload .txt{color:var(--muted);font-size:13px;text-align:center}
+    .upload input{display:none}
+
+    .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    .btn{
+      appearance:none;border:0;cursor:pointer;
+      border-radius:14px;
+      padding:12px 14px;
+      font-weight:800;
+      color:#fff;
+      background: linear-gradient(135deg, rgba(124,58,237,.95), rgba(167,139,250,.95));
+      box-shadow: 0 14px 40px rgba(124,58,237,.25);
+    }
+    .btn.secondary{
+      background: rgba(255,255,255,.06);
+      border:1px solid var(--border);
+      color:var(--text);
+      box-shadow:none;
+    }
+    .btn:disabled{opacity:.55;cursor:not-allowed}
+
+    .status{margin-top:12px;font-size:13px;color:var(--muted)}
+    .preview{
+      display:grid;gap:10px;
+    }
+    .media{
+      width:100%;
+      border-radius:16px;
+      border:1px solid var(--border);
+      overflow:hidden;
+      background: rgba(0,0,0,.25);
+    }
+    .media img, .media video{width:100%;display:block}
+    .small{font-size:12px;color:var(--muted2)}
+    .divider{height:1px;background:var(--border);margin:14px 0}
+    .badge{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:8px 12px;border:1px solid var(--border);
+      background:rgba(255,255,255,.03);
+      border-radius:999px;color:var(--muted);font-size:13px;
+      white-space:nowrap;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <h1>Grok Imagine</h1>
+        <div class="pill">Prompt (1–5000 χαρακτήρες)</div>
+      </div>
+      <div class="badge" id="costBadge">Κόστος: —</div>
+    </div>
+
+    <div class="grid">
+      <!-- Left: Form -->
+      <div class="card">
+        <div class="head">
+          <div>
+            <div class="title">Δημιουργία</div>
+            <div class="sub">Text→Image / Text→Video / Image→Video</div>
+          </div>
+          <div class="pill" id="tgPill">Telegram: —</div>
+        </div>
+
+        <div class="body">
+          <label for="mode">ΡΕΖΙΜ (Mode)</label>
+          <select id="mode">
+            <option value="text_to_video">Text to Video</option>
+            <option value="text_to_image">Text to Image</option>
+            <option value="image_to_video">Image to Video</option>
+          </select>
+
+          <label for="prompt">PROMPT</label>
+          <textarea id="prompt" maxlength="5000" placeholder="Περιέγραψε τι θες να φτιαχτεί..."></textarea>
+          <div class="hint" id="promptCount">0 / 5000</div>
+
+          <div class="row">
+            <div>
+              <label for="aspect">ΑΝΑΛΟΓΙΑ (Aspect Ratio)</label>
+              <select id="aspect">
+                <option value="1:1">1:1</option>
+                <option value="2:3">2:3</option>
+                <option value="3:2">3:2</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="style">ΜΟΔΙΦΙΚΑΣΙΑ (Modification)</label>
+              <select id="style">
+                <option value="normal">Normal</option>
+                <option value="fun">Fun</option>
+                <option value="spicy">Spicy</option>
+              </select>
+              <div class="hint">Αν ο provider δεν το υποστηρίζει, ο server μπορεί να το αγνοήσει.</div>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <label>ΕΙΚΟΝΑ (προαιρετικό – απαιτείται στο Image→Video)</label>
+          <div class="upload" id="uploadBox">
+            <div class="plus">+</div>
+            <div class="txt">Upload JPG/PNG (≤ 10MB)</div>
+            <div class="small" id="uploadHint">Σε Image→Video είναι υποχρεωτικό.</div>
+            <input id="imageInput" type="file" accept="image/png,image/jpeg" />
+            <button class="btn secondary" id="pickBtn" type="button">Διάλεξε εικόνα</button>
+          </div>
+
+          <div class="btns">
+            <button class="btn" id="runBtn" type="button">Generate</button>
+            <button class="btn secondary" id="clearBtn" type="button">Clear</button>
+          </div>
+
+          <div class="status" id="status"></div>
+        </div>
+      </div>
+
+      <!-- Right: Preview -->
+      <div class="card">
+        <div class="head">
+          <div>
+            <div class="title">Αποτέλεσμα</div>
+            <div class="sub">Θα εμφανιστεί εδώ εικόνα ή βίντεο.</div>
+          </div>
+          <div class="pill" id="metaPill">—</div>
+        </div>
+        <div class="body">
+          <div class="preview" id="preview"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Telegram
+  const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+  const tgPill = document.getElementById('tgPill');
+  const initData = tg ? (tg.initData || "") : "";
+  if (tg) {
+    tg.ready();
+    tgPill.textContent = "Telegram: OK";
+  } else {
+    tgPill.textContent = "Telegram: OFF";
+  }
+
+  const modeEl = document.getElementById('mode');
+  const promptEl = document.getElementById('prompt');
+  const promptCountEl = document.getElementById('promptCount');
+  const aspectEl = document.getElementById('aspect');
+  const styleEl = document.getElementById('style');
+
+  const imageInput = document.getElementById('imageInput');
+  const pickBtn = document.getElementById('pickBtn');
+  const uploadHint = document.getElementById('uploadHint');
+
+  const runBtn = document.getElementById('runBtn');
+  const clearBtn = document.getElementById('clearBtn');
+
+  const statusEl = document.getElementById('status');
+  const previewEl = document.getElementById('preview');
+  const metaPill = document.getElementById('metaPill');
+  const costBadge = document.getElementById('costBadge');
+
+  let imageDataUrl = null;
+
+  function setStatus(msg, kind="") {
+    statusEl.textContent = msg || "";
+    statusEl.className = "status " + (kind || "");
+  }
+
+  function updatePromptCount() {
+    promptCountEl.textContent = `${promptEl.value.length} / 5000`;
+  }
+  promptEl.addEventListener('input', updatePromptCount);
+  updatePromptCount();
+
+  function updateModeUI() {
+    const m = modeEl.value;
+    const needsImage = (m === "image_to_video");
+    uploadHint.textContent = needsImage ? "Σε Image→Video είναι υποχρεωτικό." : "Προαιρετικό (αν το endpoint το δέχεται).";
+    // “Κόστος” mock στο UI (αν θες, μπορεί να το γυρίζει ο server)
+    if (m === "text_to_image") costBadge.textContent = "Κόστος: 0.8 credits";
+    if (m === "text_to_video") costBadge.textContent = "Κόστος: 4 credits";
+    if (m === "image_to_video") costBadge.textContent = "Κόστος: 4 credits";
+  }
+  modeEl.addEventListener('change', updateModeUI);
+  updateModeUI();
+
+  pickBtn.addEventListener('click', () => imageInput.click());
+
+  imageInput.addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setStatus("Η εικόνα είναι πάνω από 10MB.", "danger");
+      imageInput.value = "";
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      imageDataUrl = reader.result; // data:image/...;base64,...
+      setStatus("Η εικόνα φορτώθηκε.", "ok");
+      // preview small image
+      previewEl.innerHTML = `
+        <div class="media"><img src="${imageDataUrl}" alt="uploaded"/></div>
+        <div class="small">Uploaded image (θα χρησιμοποιηθεί αν χρειάζεται)</div>
+      `;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  clearBtn.addEventListener('click', () => {
+    promptEl.value = "";
+    updatePromptCount();
+    imageInput.value = "";
+    imageDataUrl = null;
+    previewEl.innerHTML = "";
+    metaPill.textContent = "—";
+    setStatus("");
+  });
+
+  async function postJson(url, payload) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const msg = (data && (data.detail || data.error)) ? (data.detail || data.error) : `HTTP ${res.status}`;
+      throw new Error(msg);
+    }
+    return data;
+  }
+
+  runBtn.addEventListener('click', async () => {
+    try {
+      const mode = modeEl.value;
+      const prompt = (promptEl.value || "").trim();
+      const aspect_ratio = aspectEl.value;
+      const modification = styleEl.value;
+
+      if (!prompt) {
+        setStatus("Βάλε prompt.", "danger");
+        return;
+      }
+      if (mode === "image_to_video" && !imageDataUrl) {
+        setStatus("Σε Image→Video πρέπει να ανεβάσεις εικόνα.", "danger");
+        return;
+      }
+
+      runBtn.disabled = true;
+      setStatus("Γίνεται generate...");
+
+      const payload = {
+        init_data: initData,          // Telegram validation (αν το κάνεις στον server)
+        mode,                         // text_to_image | text_to_video | image_to_video
+        prompt,
+        aspect_ratio,                 // 1:1 | 2:3 | 3:2
+        modification,                 // normal | fun | spicy
+        image_data_url: imageDataUrl  // optional
+      };
+
+      const out = await postJson("/api/grok/generate", payload);
+
+      // Αναμενόμενη απάντηση (πρότεινε server να επιστρέφει):
+      // { type: "image"|"video", url: "https://...", meta: {...} }
+      previewEl.innerHTML = "";
+      const type = out.type || "image";
+      const url = out.url || out.result_url;
+
+      metaPill.textContent = out.meta && out.meta.model ? out.meta.model : "OK";
+
+      if (!url) {
+        setStatus("Δεν επέστρεψε url αποτέλεσμα από το server.", "danger");
+        runBtn.disabled = false;
+        return;
+      }
+
+      if (type === "video") {
+        previewEl.innerHTML = `<div class="media"><video src="${url}" controls playsinline></video></div>`;
+      } else {
+        previewEl.innerHTML = `<div class="media"><img src="${url}" alt="result"/></div>`;
+      }
+
+      setStatus("Ολοκληρώθηκε.", "ok");
+    } catch (e) {
+      setStatus(`Σφάλμα: ${e.message}`, "danger");
+    } finally {
+      runBtn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
