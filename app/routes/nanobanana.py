@@ -125,9 +125,6 @@ async def _run_nanobanana_job(
         for idx in range(1, n_images + 1):
             img_bytes = await _gemini_generate_one_image(
                 prompt=prompt,
-                aspect_ratio=aspect_ratio,
-                image_size=image_size,
-                output_format=output_format,
                 images_data_urls=images_data_urls,
             )
 
