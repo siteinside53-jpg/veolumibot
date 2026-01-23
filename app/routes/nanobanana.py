@@ -29,8 +29,8 @@ def _gemini_model_name() -> str:
 
 
 def _read_nanobanana_html() -> str:
-    # Σύμφωνα με τη δομή σου: app/web-templates/nanobanana.html
-    p = BASE_DIR / "web-templates" / "nanobanana.html"
+    # Σύμφωνα με τη δομή σου: app/web_templates/nanobanana.html
+    p = BASE_DIR / "web_templates" / "nanobanana.html"
     return p.read_text(encoding="utf-8")
 
 
