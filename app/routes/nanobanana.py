@@ -23,7 +23,7 @@ router = APIRouter()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 
 def _gemini_model_name() -> str:
-    # Nano Banana (cheap/fast) default
+    # Nano Banana (Flash Image)
     return os.getenv("GEMINI_NANOBANANA_MODEL", "gemini-2.5-flash-image").strip()
 
 SUPPORTED_MODELS = {
@@ -49,17 +49,14 @@ async def nanobanana_page():
 
 async def _gemini_generate_one_image(
     prompt: str,
-    aspect_ratio: str,
-    image_size: str,
-    output_format: str,
     images_data_urls: list[str],
 ) -> bytes:
     if not GEMINI_API_KEY:
         raise RuntimeError("GEMINI_API_KEY missing")
 
+    # parts: text + (optional) inline images
     parts = [{"text": prompt}]
 
-    # image->image (προαιρετικά)
     for du in (images_data_urls or [])[:8]:
         if not isinstance(du, str):
             continue
@@ -68,27 +65,28 @@ async def _gemini_generate_one_image(
 
         head, b64 = du.split("base64,", 1)
         mime = head.split(";")[0].replace("data:", "").strip() or "image/png"
-        parts.append({"inline_data": {"mime_type": mime, "data": b64.strip()}})
+        parts.append({"inlineData": {"mimeType": mime, "data": b64.strip()}})
 
     body = {
-        "contents": [{"parts": parts}],
-        "generationConfig": {
-            "responseModalities": ["IMAGE"],
-            "imageConfig": {
-                "aspectRatio": aspect_ratio,
-                "imageSize": image_size,
-            },
-        },
+        "contents": [{"parts": parts}]
     }
 
     model = _gemini_model_name()
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
 
     async with httpx.AsyncClient(timeout=120) as c:
-        r = await c.post(url, params={"key": GEMINI_API_KEY}, json=body)
-        data = r.json()
-        if r.status_code >= 400:
-            raise RuntimeError(f"Gemini error {r.status_code}: {data}")
+        r = await c.post(
+            url,
+            headers={
+                "x-goog-api-key": GEMINI_API_KEY,
+                "Content-Type": "application/json",
+            },
+            json=body,
+        )
+
+    data = r.json()
+    if r.status_code >= 400:
+        raise RuntimeError(f"Gemini error {r.status_code}: {data}")
 
     candidates = data.get("candidates") or []
     if not candidates:
@@ -96,8 +94,9 @@ async def _gemini_generate_one_image(
 
     parts_out = (((candidates[0].get("content") or {}).get("parts")) or [])
     img_b64 = None
+
     for p in parts_out:
-        inline = p.get("inline_data") or p.get("inlineData")
+        inline = p.get("inlineData") or p.get("inline_data")
         if inline and inline.get("data"):
             img_b64 = inline["data"]
             break
