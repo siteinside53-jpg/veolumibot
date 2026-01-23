@@ -347,26 +347,19 @@
   // Config
   // -----------------------------
   const API_URL = "/api/nanobanana/generate";
+  const PRICE_PER_IMAGE = 0.5;
 
   // Telegram WebApp
   const tg = window.Telegram?.WebApp;
-  if (tg) {
-    tg.expand();
-    tg.ready();
-  }
-
+  if (tg) { tg.expand(); tg.ready(); }
   const TG_INIT_DATA = tg?.initData || "";
-
-  // pricing
-  const PRICE_PER_IMAGE = 0.5;
 
   // -----------------------------
   // State
   // -----------------------------
-  let mode = "t2i"; // t2i | i2i
+  let mode = "t2i"; // "t2i" | "i2i"
   let n = 1;
   let file = null;
-  let images_data_urls = [];
 
   // -----------------------------
   // Elements
@@ -389,215 +382,145 @@
   const btnN = document.getElementById("btnN");
   const btnCost = document.getElementById("btnCost");
 
-  // NOTE: Στο HTML που έστειλες ΔΕΝ υπάρχουν status/preview στοιχεία.
-  // Για να μη σκάει το script, τα κρατάμε ως optional.
-  const statusText = document.getElementById("statusText");
-  const statusChip = document.getElementById("statusChip");
-  const preview = document.getElementById("preview");
-  const imgOut = document.getElementById("imgOut");
-  const rawOut = document.getElementById("rawOut");
-  const openLink = document.getElementById("openLink");
-
   // -----------------------------
-  // Helpers (UI safe)
+  // Helpers
   // -----------------------------
-  function setStatus(text) {
-    if (statusText) statusText.textContent = text;
-  }
-
-  function setChip(type, text) {
-    if (!statusChip) return;
-    statusChip.className = "chip" + (type ? (" " + type) : "");
-    statusChip.textContent = text;
-  }
-
-  function hidePreview() {
-    if (preview) preview.style.display = "none";
-    if (openLink) openLink.style.display = "none";
-    if (rawOut) rawOut.style.display = "none";
-    if (imgOut) imgOut.src = "";
-  }
-
-  function recalc() {
+  function recalc(){
     const cost = (n * PRICE_PER_IMAGE).toFixed(1).replace(/\.0$/, "");
-    if (costValue) costValue.textContent = cost;
-    if (btnN) btnN.textContent = String(n);
-    if (btnCost) btnCost.textContent = cost;
+    costValue.textContent = cost;
+    btnN.textContent = String(n);
+    btnCost.textContent = cost;
   }
 
-  function setMode(next) {
+  function setMode(next){
     mode = next;
-    const isT2I = mode === "t2i";
+    const isT2I = (mode === "t2i");
 
-    tabT2I?.classList.toggle("active", isT2I);
-    tabI2I?.classList.toggle("active", !isT2I);
+    tabT2I.classList.toggle("active", isT2I);
+    tabI2I.classList.toggle("active", !isT2I);
 
-    tabT2I?.setAttribute("aria-selected", isT2I ? "true" : "false");
-    tabI2I?.setAttribute("aria-selected", !isT2I ? "true" : "false");
+    tabT2I.setAttribute("aria-selected", isT2I ? "true" : "false");
+    tabI2I.setAttribute("aria-selected", !isT2I ? "true" : "false");
 
-    if (blockUpload) blockUpload.style.display = isT2I ? "none" : "block";
-
-    hidePreview();
-    setChip("", "idle");
-    setStatus("Έτοιμο.");
+    blockUpload.style.display = isT2I ? "none" : "block";
   }
 
-  function showSentPopup() {
+  function showSentPopup(){
     if (!tg?.showPopup) return;
-    tg.showPopup(
-      {
-        title: "Telegram",
-        message: "Η αίτηση στάλθηκε. Το αποτέλεσμα θα έρθει μέσα στο Telegram.",
-        buttons: [{ type: "ok", text: "Close" }],
-      },
-      () => {}
-    );
+    tg.showPopup({
+      title: "Telegram",
+      message: "Η αίτηση στάλθηκε. Το αποτέλεσμα θα έρθει μέσα στο Telegram.",
+      buttons: [{ type: "ok", text: "Close" }]
+    }, () => {});
   }
 
-  async function safeJson(res) {
+  function showAlert(msg){
+    if (tg?.showAlert) tg.showAlert(msg);
+    else alert(msg);
+  }
+
+  function fileToDataURL(f){
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result || ""));
+      r.onerror = () => reject(new Error("File read failed"));
+      r.readAsDataURL(f);
+    });
+  }
+
+  async function safeJson(res){
     const txt = await res.text();
-    try {
-      return JSON.parse(txt);
-    } catch {
-      return { raw: txt };
-    }
+    try { return JSON.parse(txt); } catch { return { raw: txt }; }
   }
 
   // -----------------------------
   // Events
   // -----------------------------
-  tabT2I?.addEventListener("click", () => setMode("t2i"));
-  tabI2I?.addEventListener("click", () => setMode("i2i"));
+  tabT2I.addEventListener("click", () => setMode("t2i"));
+  tabI2I.addEventListener("click", () => setMode("i2i"));
 
-  promptEl?.addEventListener("input", () => {
-    if (charCount) charCount.textContent = String(promptEl.value.length);
+  promptEl.addEventListener("input", () => {
+    charCount.textContent = String(promptEl.value.length);
   });
 
-  qtyPills.forEach((p) => {
+  qtyPills.forEach(p => {
     p.addEventListener("click", () => {
-      qtyPills.forEach((x) => x.classList.remove("active"));
+      qtyPills.forEach(x => x.classList.remove("active"));
       p.classList.add("active");
       n = Number(p.dataset.n || "1");
       recalc();
     });
   });
 
-  btnPick?.addEventListener("click", () => fileEl?.click());
+  btnPick?.addEventListener("click", () => fileEl.click());
 
   fileEl?.addEventListener("change", () => {
     file = fileEl.files && fileEl.files[0] ? fileEl.files[0] : null;
-    if (fileCount) fileCount.textContent = file ? "1" : "0";
-
-    if (file) {
-      setChip("ok", "file");
-      setStatus(`Επιλέχθηκε: ${file.name}`);
-    } else {
-      setChip("", "idle");
-      setStatus("Έτοιμο.");
-    }
+    fileCount.textContent = file ? "1" : "0";
   });
 
-  blockUpload?.addEventListener("dragover", (e) => {
-    e.preventDefault();
-  });
-
+  blockUpload?.addEventListener("dragover", (e) => e.preventDefault());
   blockUpload?.addEventListener("drop", (e) => {
     e.preventDefault();
     const f = e.dataTransfer.files && e.dataTransfer.files[0] ? e.dataTransfer.files[0] : null;
     if (!f) return;
     file = f;
-    if (fileCount) fileCount.textContent = "1";
-    setChip("ok", "file");
-    setStatus(`Επιλέχθηκε: ${file.name}`);
+    fileCount.textContent = "1";
   });
 
   // -----------------------------
-  // Generate
+  // Generate → sent to Telegram
   // -----------------------------
-  btnGenerate?.addEventListener("click", async () => {
-    hidePreview();
+  btnGenerate.addEventListener("click", async () => {
+    const prompt = (promptEl.value || "").trim();
 
-    const prompt = (promptEl?.value || "").trim();
+    if (!prompt) {
+      showAlert("Γράψε prompt.");
+      return;
+    }
 
-    // Validations
     if (mode === "i2i" && !file) {
-      setChip("bad", "missing");
-      setStatus("Βάλε 1 εικόνα για Image→Image.");
-      images_data_urls = [await fileToDataURL(file)];
-      return;
-    }
-    if (mode === "t2i" && !prompt) {
-      setChip("bad", "missing");
-      setStatus("Γράψε prompt (Κείμενο → Εικόνα).");
+      showAlert("Βάλε 1 εικόνα για Image→Image.");
       return;
     }
 
-    // UI
-    setChip("", "sending");
-    setStatus("Αποστολή…");
     btnGenerate.disabled = true;
     btnGenerate.style.opacity = "0.75";
 
-    // Pop-up σαν το Pro
     showSentPopup();
 
     try {
-      let res;
-
-      if (mode === "t2i") {
-        // JSON payload (όπως στο Pro: initData μέσα στο body)
-        const payload = {
-          initData: TG_INIT_DATA,
-          prompt,
-          n,
-          mode: "text_to_image",
-        };
-
-        res = await fetch(API_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
-      } else {
-        // multipart payload (initData σαν πεδίο + αρχείο)
-        const fd = new FormData();
-        fd.append("initData", TG_INIT_DATA);
-        fd.append("prompt", prompt);
-        fd.append("n", String(n));
-        fd.append("mode", "image_to_image");
-        fd.append("image", file);
-
-        res = await fetch(API_URL, {
-          method: "POST",
-          body: fd,
-        });
+      let images_data_urls = [];
+      if (mode === "i2i") {
+        images_data_urls = [await fileToDataURL(file)];
       }
+
+      const payload = {
+        initData: TG_INIT_DATA,
+        prompt,
+        n, // backend: payload.get("n_images") or payload.get("n")
+        mode: (mode === "t2i") ? "text_to_image" : "image_to_image",
+        images_data_urls
+      };
+
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
       const data = await safeJson(res);
 
-      if (!res.ok) {
-        const msg = data?.error || data?.detail || data?.message || "Αποτυχία δημιουργίας.";
+      if (!res.ok || data?.ok === false) {
+        const msg = data?.error || data?.detail || data?.message || "Αποτυχία";
         throw new Error(msg);
       }
 
-      // Αν το backend γυρνά {ok:true} (σαν το Pro), το σεβόμαστε.
-      if (typeof data?.ok === "boolean" && data.ok === false) {
-        throw new Error(data?.error || data?.detail || "Αποτυχία δημιουργίας.");
-      }
-
-      setChip("ok", "sent");
-      setStatus("Στάλθηκε. Θα έρθει μέσα στο Telegram.");
-
-      // Κλείσε webapp (ίδια λογική με Pro)
+      // κλείσιμο (όπως στο Pro)
       if (tg?.close) tg.close();
+
     } catch (e) {
-      const msg = e?.message || "Άγνωστο σφάλμα";
-      setChip("bad", "error");
-      setStatus("Αποτυχία.");
-      if (tg?.showAlert) tg.showAlert("Αποτυχία. " + msg);
-      else alert("Αποτυχία. " + msg);
+      showAlert("Αποτυχία. " + (e?.message || ""));
     } finally {
       btnGenerate.disabled = false;
       btnGenerate.style.opacity = "1";
