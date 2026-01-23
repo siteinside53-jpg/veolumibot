@@ -175,7 +175,7 @@ async def nanobanana_generate(request: Request, background_tasks: BackgroundTask
     image_size = (payload.get("image_size") or "1K").strip().upper()
     output_format = (payload.get("output_format") or "png").strip().lower()
 
-    n_images = payload.get("n_images", 1)
+    n_images = payload.get("n_images") or payload.get("n") or 1
     images_data_urls = payload.get("images_data_urls") or []
 
     if not prompt:
