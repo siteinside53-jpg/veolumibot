@@ -21,12 +21,21 @@ from ..db import (
 router = APIRouter()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
-
+SUPPORTED_MODELS = {
+    "gemini-1.5-flash",
+    "gemini-1.5-pro",
+}
 
 def _gemini_model_name() -> str:
-    return os.getenv("GEMINI_NANOBANANA_MODEL", "gemini-2.5-flash-image-preview").strip()
+    model = os.getenv(
+        "GEMINI_NANOBANANA_MODEL",
+        "gemini-1.5-flash"
+    ).strip()
 
+    if model not in SUPPORTED_MODELS:
+        raise RuntimeError(f"Unsupported Gemini model: {model}")
 
+    return model
 def _read_nanobanana_html() -> str:
     # Σύμφωνα με τη δομή σου: app/web_templates/nanobanana.html
     p = BASE_DIR / "web_templates" / "nanobanana.html"
