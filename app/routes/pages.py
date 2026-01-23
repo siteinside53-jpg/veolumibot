@@ -34,3 +34,8 @@ async def veo31_page(request: Request):
 @router.get("/sora2pro", response_class=HTMLResponse)
 async def sora2pro_page(request: Request):
     return templates.TemplateResponse("sora2pro.html", {"request": request})
+
+@router.get("/grok", response_class=HTMLResponse)
+async def grok_page(request: Request):
+    return templates.TemplateResponse("grok.html", {"request": request})
+    
