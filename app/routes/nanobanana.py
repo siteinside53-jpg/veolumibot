@@ -20,6 +20,8 @@ from ..db import (
 
 router = APIRouter()
 
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+
 def _gemini_model_name() -> str:
     # Nano Banana (cheap/fast) default
     return os.getenv("GEMINI_NANOBANANA_MODEL", "gemini-2.5-flash-image").strip()
