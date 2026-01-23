@@ -40,6 +40,8 @@ def _webapp_sora2pro_url() -> str:
 def _webapp_nanobanana_url() -> str:
     return f"{_base_url()}/nanobanana"
 
+def _webapp_grok_url() -> str:
+    return f"{_base_url()}/grok"
 
 def start_inline_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
@@ -74,7 +76,7 @@ def image_models_menu() -> InlineKeyboardMarkup:
             [InlineKeyboardButton("🍌 Nano Banana AI", web_app=WebAppInfo(url=_webapp_nanobanana_url()))],
             [InlineKeyboardButton("🟣 Midjourney", callback_data="menu:set:image:midjourney")],
             [InlineKeyboardButton("🧪 Flux Kontext", callback_data="menu:set:image:flux_kontext")],
-            [InlineKeyboardButton("⚪ Grok Imagine (0.8–4)", callback_data="menu:set:image:grok_imagine")],
+            [InlineKeyboardButton("⚪ Grok Imagine (0.8–4)", web_app=WebAppInfo(url=_webapp_grok_url()))],
             [InlineKeyboardButton("← Πίσω", callback_data="menu:home")],
         ]
     )
