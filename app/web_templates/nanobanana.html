@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <title>Nano Banana</title>
   <style>
     :root{
@@ -537,10 +538,11 @@
         res = await fetch(API_URL, {
           method: "POST",
           headers: {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
             "X-Telegram-Init-Data": TG_INIT_DATA
           },
           body: JSON.stringify({
+            initData: TG_INIT_DATA,
             prompt,
             n,
             mode: "text_to_image"
