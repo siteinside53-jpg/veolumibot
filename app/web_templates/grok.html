@@ -2,10 +2,10 @@
 <html lang="el">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <title>Grok Imagine</title>
   <style>
-
     :root{
       --bg:#0b0c12;
       --card:#121422;
@@ -69,36 +69,6 @@
     }
     .section-sub{font-size:13px; color:var(--muted); margin:0 0 10px}
 
-    .tabs{
-      background: rgba(0,0,0,.25);
-      border:1px solid rgba(255,255,255,.06);
-      border-radius: 14px;
-      padding:8px;
-      display:flex;
-      gap:8px;
-      align-items:center;
-    }
-    .tab{
-      flex:1;
-      padding:10px 10px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.06);
-      color:var(--muted);
-      background: rgba(255,255,255,.02);
-      font-weight:700;
-      font-size:13px;
-      display:flex;
-      justify-content:center;
-      gap:8px;
-      cursor:pointer;
-      user-select:none;
-    }
-    .tab.active{
-      background: linear-gradient(180deg, rgba(124,58,237,.35), rgba(124,58,237,.18));
-      border-color: rgba(124,58,237,.55);
-      color: var(--text);
-    }
-
     .block{
       margin-top:12px;
       background: rgba(0,0,0,.22);
@@ -112,6 +82,7 @@
       color:var(--muted);
       font-size:12px;
     }
+
     textarea{
       width:100%;
       min-height:120px;
@@ -127,25 +98,31 @@
     }
     textarea:focus{border-color: rgba(124,58,237,.55); box-shadow: 0 0 0 4px rgba(124,58,237,.15)}
 
-    .uploader{
-      border:1px dashed rgba(255,255,255,.16);
-      background: rgba(255,255,255,.02);
-      border-radius: 14px;
-      padding:14px;
-      display:flex;
-      align-items:center;
-      gap:12px;
-    }
-    .upload-icon{
-      width:36px; height:36px; border-radius:12px;
-      background: rgba(255,255,255,.04);
+    /* Selects styled like the rest */
+    select{
+      width:100%;
+      border-radius:12px;
       border:1px solid rgba(255,255,255,.08);
-      display:grid; place-items:center;
-      flex:0 0 auto;
+      background: rgba(255,255,255,.03);
+      color: var(--text);
+      padding:10px 12px;
+      outline:none;
+      font-size:14px;
+      line-height:1.35;
+      appearance:none;
+      -webkit-appearance:none;
+      -moz-appearance:none;
+      background-image:
+        linear-gradient(45deg, transparent 50%, rgba(233,233,245,.75) 50%),
+        linear-gradient(135deg, rgba(233,233,245,.75) 50%, transparent 50%);
+      background-position:
+        calc(100% - 18px) calc(50% + 1px),
+        calc(100% - 12px) calc(50% + 1px);
+      background-size: 6px 6px, 6px 6px;
+      background-repeat:no-repeat;
     }
-    .upload-meta{flex:1}
-    .upload-meta .h{font-weight:700; font-size:13px}
-    .upload-meta .p{font-size:12px; color:var(--muted); margin-top:2px}
+    select:focus{border-color: rgba(124,58,237,.55); box-shadow: 0 0 0 4px rgba(124,58,237,.15)}
+
     .btn{
       border:0;
       background: linear-gradient(180deg, var(--accent), var(--accent2));
@@ -161,29 +138,7 @@
       background: rgba(255,255,255,.06);
       box-shadow:none;
       border:1px solid rgba(255,255,255,.12);
-    }
-
-    .qty-row{
-      display:flex;
-      gap:10px;
-      margin-top:10px;
-      align-items:center;
-      flex-wrap:wrap;
-    }
-    .qty-pill{
-      width:42px; height:38px;
-      display:grid; place-items:center;
-      border-radius: 14px;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.03);
       color: var(--text);
-      font-weight:800;
-      cursor:pointer;
-      user-select:none;
-    }
-    .qty-pill.active{
-      background: linear-gradient(180deg, rgba(124,58,237,.45), rgba(124,58,237,.18));
-      border-color: rgba(124,58,237,.55);
     }
 
     .cost{
@@ -197,351 +152,197 @@
       background: rgba(0,0,0,.18);
     }
     .cost .left{color:var(--muted); font-size:12px}
-    .cost .right{
-      font-size:18px; font-weight:900;
-    }
+    .cost .right{font-size:18px; font-weight:900;}
 
-    .footer{
-      margin-top:12px;
-    }
-    .big-generate{
-      width:100%;
-      padding:14px 16px;
-      border-radius: 16px;
-      font-size:15px;
-      letter-spacing:.2px;
-    }
-
-    .status{
-      margin-top:10px;
-      font-size:13px;
-      color:var(--muted);
-      display:flex;
-      gap:10px;
-      align-items:center;
-      justify-content:space-between;
-    }
-    .chip{
-      font-size:12px;
-      padding:6px 10px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.03);
-      color:var(--muted);
-    }
-    .chip.ok{border-color: rgba(25,195,125,.35); color: rgba(25,195,125,.95); background: rgba(25,195,125,.08)}
-    .chip.bad{border-color: rgba(239,68,68,.35); color: rgba(239,68,68,.95); background: rgba(239,68,68,.08)}
-
-    .preview{
-      margin-top:12px;
-      display:none;
-      gap:10px;
-      flex-direction:column;
-    }
-    .preview img{
-      width:100%;
-      border-radius: 14px;
-      border:1px solid rgba(255,255,255,.08);
-      background: rgba(255,255,255,.03);
-    }
     .small{font-size:12px; color:var(--muted)}
-    .row{display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap}
-    .link{
-      color:#c4b5fd;
-      text-decoration:none;
-      font-weight:700;
-    }
-    </style>
+    .footer{margin-top:12px;}
+    .actions{display:flex; gap:10px; align-items:center;}
+    .actions .btn{flex:1}
+  </style>
 </head>
+
 <body>
-  <div class="app">
+  <div class="wrap">
     <div class="topbar">
       <div class="brand">
-        <div class="dot"></div>
-        <div class="brand-text">
-          <div class="title">Grok Imagine</div>
+        <div class="logo" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M7 14c4-1 6-4 7-8 3 3 4 8 2 12-1 2-4 4-7 4-4 0-6-3-6-6 0-3 2-5 4-6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div>
+          <div>Grok Imagine</div>
           <div class="subtitle">Δημιουργία εικόνας / video (WebApp)</div>
         </div>
       </div>
-      <div class="pill" id="costPill">Κόστος: —</div>
     </div>
 
     <div class="card">
-      <div class="grid">
-        <div>
-          <div class="label">Λειτουργία</div>
-          <select id="mode" class="input">
-            <option value="text_to_image">Text to Image</option>
-            <option value="text_to_video">Text to Video</option>
-            <option value="image_to_video">Image to Video</option>
+      <div class="card-inner">
+        <div class="section-title">Παράμετροι</div>
+        <div class="section-sub">Ρύθμισε τη δημιουργία</div>
+
+        <div class="block">
+          <div class="label-row"><div>Λειτουργία</div></div>
+          <select id="mode">
+            <option value="text">Text to Image</option>
+            <option value="image">Image to Image</option>
           </select>
+
+          <div style="margin-top:10px">
+            <div class="label-row"><div>Αναλογία πλευρών</div></div>
+            <select id="ar">
+              <option value="1:1">1:1</option>
+              <option value="4:5">4:5</option>
+              <option value="3:4">3:4</option>
+              <option value="16:9">16:9</option>
+              <option value="9:16">9:16</option>
+            </select>
+          </div>
+
+          <div style="margin-top:10px">
+            <div class="label-row"><div>Τόνος / στυλ</div></div>
+            <select id="tone">
+              <option value="spicy">Spicy</option>
+              <option value="neutral">Neutral</option>
+              <option value="soft">Soft</option>
+              <option value="cinematic">Cinematic</option>
+            </select>
+          </div>
         </div>
 
-        <div>
-          <div class="label">Αναλογία πλευρών</div>
-          <select id="aspect" class="input">
-            <option value="1:1">1:1</option>
-            <option value="2:3">2:3</option>
-            <option value="3:2">3:2</option>
-          </select>
+        <div class="block">
+          <div class="label-row">
+            <div>Prompt</div>
+            <div class="small"><span id="charCount">0</span>/5000</div>
+          </div>
+          <textarea id="prompt" maxlength="5000" placeholder="Περιέγραψε τι θέλεις να δημιουργηθεί…"></textarea>
         </div>
 
-        <div>
-          <div class="label">Τόνος / στυλ</div>
-          <select id="modifier" class="input">
-            <option value="fun">Fun</option>
-            <option value="normal" selected>Normal</option>
-            <option value="spicy">Spicy</option>
-          </select>
-        </div>
+        <div class="block">
+          <div class="cost" aria-label="cost">
+            <div class="left">
+              Κόστος<br />
+              <span class="small">ανά δημιουργία</span>
+            </div>
+            <div class="right"><span id="costValue">0.8</span> credits</div>
+          </div>
 
-        <div class="full">
-          <div class="label">Prompt <span class="hint" id="promptHint">0/5000</span></div>
-          <textarea id="prompt" class="textarea" maxlength="5000" placeholder="Περιέγραψε τι θέλεις να δημιουργηθεί..."></textarea>
-          <div class="hint" style="margin-top:6px;" id="promptErr"></div>
-        </div>
-
-        <div class="full" id="imageBlock" style="display:none;">
-          <div class="label">Εικόνα (απαραίτητη για Image to Video)</div>
-          <div class="dropzone" id="dropzone">
-            <input id="image" type="file" accept="image/*" />
-            <div class="drop-inner">
-              <div class="plus">+</div>
-              <div class="muted">Ανέβασε JPG/PNG (έως 10MB)</div>
+          <div class="footer">
+            <div class="actions">
+              <button id="btn-generate" class="btn" type="button">Generate</button>
+              <button id="btn-reset" class="btn secondary" type="button">Reset</button>
+            </div>
+            <div class="small" style="margin-top:10px">
+              Τα αποτελέσματα παραδίδονται στο Telegram chat. Η σελίδα αυτή ξεκινά το task και μετά κλείνει.
             </div>
           </div>
-          <div class="preview" id="preview" style="display:none;">
-            <img id="previewImg" alt="preview" />
-            <button class="ghost" id="clearImage" type="button">Αφαίρεση</button>
-          </div>
         </div>
 
-        <div class="full row">
-          <button class="btn" id="generateBtn" type="button">
-            <span class="btnText">Generate</span>
-            <span class="spinner" style="display:none;"></span>
-          </button>
-          <button class="ghost" id="resetBtn" type="button">Reset</button>
-        </div>
-
-        <div class="full result" id="result" style="display:none;">
-          <div class="result-title">Κατάσταση</div>
-          <div class="result-body" id="resultBody"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="footer">
-      <div class="muted">
-        Τα αποτελέσματα παραδίδονται στο Telegram chat. Η σελίδα αυτή ξεκινά το task και εμφανίζει μόνο status.
       </div>
     </div>
   </div>
 
-  <div class="toast" id="toast" style="display:none;"></div>
+<script>
+  // -----------------------------
+  // Config
+  // -----------------------------
+  const API_URL = "/api/grok/generate";
+  const COST_PER_RUN = 0.8;
 
-  <script>
-    const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
-    if (tg) {
-      try {
-        tg.ready();
-        tg.expand();
-        tg.setHeaderColor('#0b0c10');
-        tg.setBackgroundColor('#0b0c10');
-      } catch (e) {}
+  // Telegram WebApp
+  const tg = window.Telegram?.WebApp;
+  if (tg) { tg.expand(); tg.ready(); }
+  const TG_INIT_DATA = tg?.initData || "";
+
+  // Elements
+  const promptEl = document.getElementById("prompt");
+  const charCount = document.getElementById("charCount");
+  const modeEl = document.getElementById("mode");
+  const arEl = document.getElementById("ar");
+  const toneEl = document.getElementById("tone");
+  const btnGenerate = document.getElementById("btn-generate");
+  const btnReset = document.getElementById("btn-reset");
+  const costValue = document.getElementById("costValue");
+
+  function showAlert(msg){
+    if (tg?.showAlert) tg.showAlert(msg);
+    else alert(msg);
+  }
+
+  function showSentPopup(){
+    if (!tg?.showPopup) return;
+    tg.showPopup({
+      title: "Telegram",
+      message: "Η αίτηση στάλθηκε. Το αποτέλεσμα θα έρθει μέσα στο Telegram.",
+      buttons: [{ type: "ok", text: "Close" }]
+    }, () => {});
+  }
+
+  async function safeJson(res){
+    const txt = await res.text();
+    try { return JSON.parse(txt); } catch { return { raw: txt }; }
+  }
+
+  promptEl.addEventListener("input", () => {
+    charCount.textContent = String(promptEl.value.length);
+  });
+
+  btnReset.addEventListener("click", () => {
+    promptEl.value = "";
+    charCount.textContent = "0";
+    modeEl.value = "text";
+    arEl.value = "1:1";
+    toneEl.value = "spicy";
+  });
+
+  btnGenerate.addEventListener("click", async () => {
+    const prompt = (promptEl.value || "").trim();
+    if (!prompt) return showAlert("Γράψε prompt.");
+
+    if (!TG_INIT_DATA) {
+      return showAlert("Άνοιξέ το μέσα από Telegram (WebApp), όχι από browser.");
     }
 
-    const $ = (id) => document.getElementById(id);
+    btnGenerate.disabled = true;
+    btnGenerate.style.opacity = "0.75";
 
-    function showToast(message, type='info') {
-      const el = $('toast');
-      el.className = 'toast ' + (type === 'error' ? 'toast-error' : type === 'success' ? 'toast-success' : '');
-      el.textContent = message;
-      el.style.display = 'block';
-      clearTimeout(window.__toastTimer);
-      window.__toastTimer = setTimeout(() => { el.style.display = 'none'; }, 2400);
-    }
+    showSentPopup();
 
-    function setLoading(isLoading) {
-      $('generateBtn').disabled = isLoading;
-      $('resetBtn').disabled = isLoading;
-      const sp = $('generateBtn').querySelector('.spinner');
-      const tx = $('generateBtn').querySelector('.btnText');
-      sp.style.display = isLoading ? 'inline-block' : 'none';
-      tx.textContent = isLoading ? 'Working…' : 'Generate';
-    }
-
-    function updatePromptCounter() {
-      const v = $('prompt').value || '';
-      $('promptHint').textContent = `${v.length}/5000`;
-    }
-
-    function modeConfig(mode) {
-      // Ρύθμισε ελεύθερα τα credits σύμφωνα με το bot σου.
-      if (mode === 'text_to_image') return { cost: '0.8 credits', needsImage: false, enabled: true };
-      if (mode === 'text_to_video') return { cost: '4 credits', needsImage: false, enabled: false };
-      if (mode === 'image_to_video') return { cost: '4 credits', needsImage: true, enabled: false };
-      return { cost: '—', needsImage: false, enabled: false };
-    }
-
-    function updateModeUI() {
-      const mode = $('mode').value;
-      const cfg = modeConfig(mode);
-
-      $('costPill').textContent = `Κόστος: ${cfg.cost}`;
-      $('imageBlock').style.display = cfg.needsImage ? 'block' : 'none';
-
-      if (!cfg.enabled) $('generateBtn').classList.add('btn-disabled');
-      else $('generateBtn').classList.remove('btn-disabled');
-
-      if (!cfg.needsImage) clearImage();
-    }
-
-    function clearImage() {
-      $('image').value = '';
-      $('preview').style.display = 'none';
-      $('dropzone').style.display = 'block';
-      $('previewImg').src = '';
-    }
-
-    function setResult(html) {
-      $('result').style.display = 'block';
-      $('resultBody').innerHTML = html;
-    }
-
-    function resetAll() {
-      $('prompt').value = '';
-      $('aspect').value = '1:1';
-      $('modifier').value = 'normal';
-      $('mode').value = 'text_to_image';
-      $('promptErr').textContent = '';
-      updatePromptCounter();
-      clearImage();
-      $('result').style.display = 'none';
-      updateModeUI();
-    }
-
-    async function fileToBase64(file) {
-      const maxMB = 10;
-      if (file.size > maxMB * 1024 * 1024) throw new Error(`Η εικόνα είναι > ${maxMB}MB`);
-      const dataUrl = await new Promise((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => resolve(r.result);
-        r.onerror = reject;
-        r.readAsDataURL(file);
-      });
-      return dataUrl.split(',')[1];
-    }
-
-    async function submit() {
-      const mode = $('mode').value;
-      const cfg = modeConfig(mode);
-
-      $('promptErr').textContent = '';
-
-      if (!cfg.enabled) {
-        showToast('Αυτό το mode δεν είναι ενεργό ακόμα.', 'error');
-        return;
-      }
-
-      const prompt = ($('prompt').value || '').trim();
-      if (!prompt) {
-        $('promptErr').textContent = 'Γράψε prompt (1–5000 χαρακτήρες).';
-        $('promptErr').style.color = 'var(--bad)';
-        return;
-      }
-
-      // backend αυτή τη στιγμή χρησιμοποιεί μόνο: initData, prompt, aspect_ratio
-      const initData = (tg && tg.initData) ? tg.initData : '';
+    try {
       const payload = {
-        initData,
+        initData: TG_INIT_DATA,
         prompt,
-        aspect_ratio: $('aspect').value,
-        // κρατάμε τα παρακάτω για μελλοντική επέκταση (δεν θα σε χαλάσουν αν ο backend τα αγνοήσει)
-        mode,
-        modifier: $('modifier').value,
-        image_b64: null,
+        aspect_ratio: arEl.value,
+        tone: toneEl.value,
+        mode: modeEl.value
       };
 
-      if (cfg.needsImage) {
-        const f = $('image').files && $('image').files[0];
-        if (!f) {
-          showToast('Χρειάζεται εικόνα για αυτό το mode.', 'error');
-          return;
-        }
-        payload.image_b64 = await fileToBase64(f);
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await safeJson(res);
+
+      if (!res.ok || data?.ok === false) {
+        const msg = data?.error || data?.detail || data?.message || "Αποτυχία";
+        throw new Error(msg);
       }
 
-      setLoading(true);
-      try {
-        const res = await fetch('/api/grok/generate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
+      if (tg?.close) tg.close();
 
-        const data = await res.json().catch(() => ({}));
-
-        if (!res.ok || !data.ok) {
-          const msg = data.detail || data.error || 'Κάτι πήγε στραβά.';
-          showToast(msg, 'error');
-          setResult(`<div class="muted">Σφάλμα: ${msg}</div>`);
-          return;
-        }
-
-        showToast('Ξεκίνησε! Θα λάβεις αποτέλεσμα στο Telegram.', 'success');
-
-        const costLine = (typeof data.cost !== 'undefined')
-          ? `<div><b>Κόστος:</b> <code>${data.cost}</code></div>`
-          : '';
-
-        const sentLine = (typeof data.sent_to_telegram !== 'undefined')
-          ? `<div><b>Αποστολή στο Telegram:</b> <code>${data.sent_to_telegram}</code></div>`
-          : '';
-
-        setResult(`${costLine}${sentLine}<div class="muted" style="margin-top:8px;">Μείνε στο chat με το bot — το αποτέλεσμα θα σταλεί εκεί.</div>`);
-      } catch (e) {
-        showToast(e.message || 'Network error', 'error');
-        setResult(`<div class="muted">Network error: ${e.message || e}</div>`);
-      } finally {
-        setLoading(false);
-      }
+    } catch (e) {
+      showAlert("Αποτυχία. " + (e?.message || ""));
+    } finally {
+      btnGenerate.disabled = false;
+      btnGenerate.style.opacity = "1";
     }
+  });
 
-    // Events
-    $('prompt').addEventListener('input', updatePromptCounter);
-    $('mode').addEventListener('change', updateModeUI);
-    $('resetBtn').addEventListener('click', resetAll);
-    $('generateBtn').addEventListener('click', () => submit());
-    $('clearImage').addEventListener('click', (e) => { e.preventDefault(); clearImage(); });
-
-    $('image').addEventListener('change', async () => {
-      const f = $('image').files && $('image').files[0];
-      if (!f) return;
-      const url = URL.createObjectURL(f);
-      $('previewImg').src = url;
-      $('preview').style.display = 'flex';
-      $('dropzone').style.display = 'none';
-    });
-
-    const dz = $('dropzone');
-    dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dropzone-hover'); });
-    dz.addEventListener('dragleave', () => dz.classList.remove('dropzone-hover'));
-    dz.addEventListener('drop', (e) => {
-      e.preventDefault();
-      dz.classList.remove('dropzone-hover');
-      const f = e.dataTransfer.files && e.dataTransfer.files[0];
-      if (!f) return;
-      $('image').files = e.dataTransfer.files;
-      const url = URL.createObjectURL(f);
-      $('previewImg').src = url;
-      $('preview').style.display = 'flex';
-      $('dropzone').style.display = 'none';
-    });
-
-    // init
-    updatePromptCounter();
-    updateModeUI();
-  </script>
+  // init
+  costValue.textContent = String(COST_PER_RUN);
+</script>
 </body>
 </html>
