@@ -33,8 +33,10 @@ async def grok_page():
     return FileResponse(p)
 
 def _grok_model_name() -> str:
-    # άλλαξέ το αν θες άλλο grok image model
-    return os.getenv("GROK_IMAGE_MODEL", "grok-2-image").strip()
+    name = os.getenv("GROK_IMAGE_MODEL", "").strip()
+    if not name:
+        raise RuntimeError("GROK_IMAGE_MODEL is not set")
+    return name
 
 
 async def _run_grok_job(
