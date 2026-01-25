@@ -336,7 +336,7 @@
   const imgErr = document.getElementById("imgErr");
   const previewImg = document.getElementById("previewImg");
   const uploadPlaceholder = document.getElementById("uploadPlaceholder");
-  const btnRemoveImg = document.getElementById("btnRemoveImg");
+  const removeImg = document.getElementById("removeImg");
 
   const costTop = document.getElementById("costTop");
 
@@ -432,9 +432,21 @@ function clearImage(){
   drop.addEventListener("click", () => fileEl.click());
 
 fileEl.addEventListener("change", () => {
-  file = fileEl.files && fileEl.files[0] ? fileEl.files[0] : null;
+  const f = fileEl.files && fileEl.files[0] ? fileEl.files[0] : null;
+  if (!f) return;
+
+  file = f;
+  fileCount.textContent = "1";
   imgErr.style.display = "none";
-  setPreviewFromFile(file);
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    previewImg.src = reader.result;
+    previewImg.style.display = "block";
+    removeImg.style.display = "block";
+    uploadPlaceholder.style.display = "none";
+  };
+  reader.readAsDataURL(f);
 });
 
 drop.addEventListener("dragover", (e) => e.preventDefault());
@@ -448,9 +460,15 @@ drop.addEventListener("drop", (e) => {
   setPreviewFromFile(file);
 });
 
-btnRemoveImg.addEventListener("click", (e) => {
-  e.stopPropagation();
-  clearImage();
+removeImg.addEventListener("click", () => {
+  file = null;
+  fileEl.value = "";
+  fileCount.textContent = "0";
+
+  previewImg.src = "";
+  previewImg.style.display = "none";
+  removeImg.style.display = "none";
+  uploadPlaceholder.style.display = "flex";
 });
 
   btn.addEventListener("click", async () => {
