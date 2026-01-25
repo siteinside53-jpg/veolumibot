@@ -16,7 +16,7 @@ from .routes.gpt_image import router as gpt_image_router
 from .routes.nanobanana_pro import router as nanobanana_pro_router
 from .routes.veo31 import router as veo31_router
 from .routes.sora2pro import router as sora2pro_router
-from app.routes.nanobanana import router as nanobanana_router
+from .routes.nanobanana import router as nanobanana_router
 from .routes.grok import router as grok_router
 
 
