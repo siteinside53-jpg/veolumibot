@@ -182,8 +182,8 @@ async def grok_generate(request: Request, background_tasks: BackgroundTasks):
     try:
         spend_credits_by_user_id(db_user_id, COST, "Grok Image", "xai", _grok_model_name())
     except Exception as e:
-        logger.error(f"Not enough credits: {e}")
-        return {"ok": False, "error": "not_enough_credits"}
+        logger.error(f"Spend credits failed: {e}")
+        return {"ok": False, "error": str(e)[:120]}
 
     try:
         await tg_send_message(tg_chat_id, "🧠 Grok: Η εικόνα ετοιμάζεται…")
