@@ -36,8 +36,7 @@ def _grok_model_name() -> str:
     name = os.getenv("GROK_IMAGE_MODEL", "").strip()
     if not name:
         raise RuntimeError("GROK_IMAGE_MODEL is not set")
-    return name
-
+    return "grok-image-1"
 
 async def _run_grok_job(
     tg_chat_id: int,
