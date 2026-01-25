@@ -312,6 +312,9 @@
   const fileEl = document.getElementById("file");
   const fileCount = document.getElementById("fileCount");
   const imgErr = document.getElementById("imgErr");
+  const previewImg = document.getElementById("previewImg");
+  const uploadPlaceholder = document.getElementById("uploadPlaceholder");
+  const btnRemoveImg = document.getElementById("btnRemoveImg");
 
   const costTop = document.getElementById("costTop");
 
@@ -361,6 +364,42 @@
     try { return JSON.parse(txt); } catch { return { raw: txt }; }
   }
 
+  function setPreviewFromFile(f){
+  if (!f) {
+    previewImg.style.display = "none";
+    previewImg.src = "";
+    uploadPlaceholder.style.display = "grid";
+    btnRemoveImg.style.display = "none";
+    fileCount.textContent = "0";
+    return;
+  }
+
+  // Size check (≤ 10MB)
+  const maxBytes = 10 * 1024 * 1024;
+  if (f.size > maxBytes) {
+    showAlert("Η εικόνα είναι πάνω από 10MB.");
+    file = null;
+    fileEl.value = "";
+    setPreviewFromFile(null);
+    return;
+  }
+
+  const r = new FileReader();
+  r.onload = () => {
+    previewImg.src = String(r.result || "");
+    previewImg.style.display = "block";
+    uploadPlaceholder.style.display = "none";
+    btnRemoveImg.style.display = "block";
+    fileCount.textContent = "1";
+  };
+  r.readAsDataURL(f);
+}
+
+function clearImage(){
+  file = null;
+  fileEl.value = "";
+  setPreviewFromFile(null);
+}
   modeEl.addEventListener("change", setModeUI);
 
   promptEl.addEventListener("input", () => {
@@ -369,21 +408,28 @@
   });
 
   drop.addEventListener("click", () => fileEl.click());
-  fileEl.addEventListener("change", () => {
-    file = fileEl.files && fileEl.files[0] ? fileEl.files[0] : null;
-    fileCount.textContent = file ? "1" : "0";
-    if (file) imgErr.style.display = "none";
-  });
 
-  drop.addEventListener("dragover", (e) => e.preventDefault());
-  drop.addEventListener("drop", (e) => {
-    e.preventDefault();
-    const f = e.dataTransfer.files && e.dataTransfer.files[0] ? e.dataTransfer.files[0] : null;
-    if (!f) return;
-    file = f;
-    fileCount.textContent = "1";
-    imgErr.style.display = "none";
-  });
+fileEl.addEventListener("change", () => {
+  file = fileEl.files && fileEl.files[0] ? fileEl.files[0] : null;
+  imgErr.style.display = "none";
+  setPreviewFromFile(file);
+});
+
+drop.addEventListener("dragover", (e) => e.preventDefault());
+
+drop.addEventListener("drop", (e) => {
+  e.preventDefault();
+  const f = e.dataTransfer.files && e.dataTransfer.files[0] ? e.dataTransfer.files[0] : null;
+  if (!f) return;
+  file = f;
+  imgErr.style.display = "none";
+  setPreviewFromFile(file);
+});
+
+btnRemoveImg.addEventListener("click", (e) => {
+  e.stopPropagation();
+  clearImage();
+});
 
   btn.addEventListener("click", async () => {
     const mode = modeEl.value;
