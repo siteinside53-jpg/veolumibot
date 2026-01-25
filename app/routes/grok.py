@@ -69,14 +69,54 @@ async def _run_grok_job(
         data = r.json()
 
         # Validate API response structure
-        if r.status_code >= 400:
-            raise RuntimeError(f"xAI error {r.status_code}: {data.get('error', 'Unknown Error')}")
+if r.status_code >= 400:
+    # xAI μπορεί να επιστρέφει error ως dict ή string
+    err = None
+    if isinstance(data, dict):
+        err = data.get("error") or data.get("message") or data.get("detail")
+    raise RuntimeError(f"xAI error {r.status_code}: {err or 'Unknown Error'}")
 
-        if not data.get("data") or not data["data"][0].get("b64_json"):
-            raise RuntimeError("Invalid response structure from xAI API")
+def _strip_data_url(s: str) -> str:
+    # supports: "data:image/png;base64,AAAA..."
+    if s.startswith("data:") and "base64," in s:
+        return s.split("base64,", 1)[1]
+    return s
 
-        img_b64 = data["data"][0]["b64_json"]
-        img_bytes = base64.b64decode(img_b64)
+async def _download_bytes(url: str) -> bytes:
+    # κατεβάζουμε την εικόνα αν η xAI επιστρέψει url αντί για b64_json
+    async with httpx.AsyncClient(timeout=120) as c2:
+        rr = await c2.get(url)
+        rr.raise_for_status()
+        return rr.content
+
+if not isinstance(data, dict):
+    raise RuntimeError(f"Invalid xAI response type: {type(data)} - {data}")
+
+items = data.get("data")
+if not isinstance(items, list) or not items:
+    raise RuntimeError(f"Invalid response structure from xAI API. Keys: {list(data.keys())}. Full: {data}")
+
+item0 = items[0] if isinstance(items[0], dict) else None
+if not isinstance(item0, dict):
+    raise RuntimeError(f"Invalid xAI data[0] structure: {items[0]}")
+
+# 1) Preferred: b64_json (may be raw base64 OR data-url)
+b64 = item0.get("b64_json")
+if isinstance(b64, str) and b64.strip():
+    b64_clean = _strip_data_url(b64.strip())
+    try:
+        img_bytes = base64.b64decode(b64_clean)
+    except Exception as e:
+        raise RuntimeError(f"Failed to decode b64_json. Error: {e}. First 80 chars: {b64_clean[:80]}")
+else:
+    # 2) Alternative: url (download then send)
+    url = item0.get("url")
+    if isinstance(url, str) and url.strip():
+        img_bytes = await _download_bytes(url.strip())
+    else:
+        raise RuntimeError(
+            f"Invalid response structure from xAI API. data[0] keys: {list(item0.keys())}. Full: {data}"
+        )
 
         name = f"grok_{uuid.uuid4().hex}.png"
         img_path = IMAGES_DIR / name
