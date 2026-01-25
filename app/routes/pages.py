@@ -38,4 +38,8 @@ async def sora2pro_page(request: Request):
 @router.get("/grok", response_class=HTMLResponse)
 async def grok_page(request: Request):
     return templates.TemplateResponse("grok.html", {"request": request})
+
+@router.get("/nanobanana", response_class=HTMLResponse)
+async def nanobanana_page(request: Request):
+    return templates.TemplateResponse("nanobanana.html", {"request": request})
     
