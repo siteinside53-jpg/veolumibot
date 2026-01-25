@@ -40,16 +40,14 @@ def _grok_model_name() -> str:
     return (os.getenv("GROK_IMAGE_MODEL") or "grok-2-image").strip()
 
 
-def _extract_b64(data: dict) -> str | None:
-    """
-    xAI responses μπορεί να διαφέρουν ελαφρά.
-    Προσπαθούμε σε πολλά πιθανά keys.
-    """
-    try:
-        item0 = (data.get("data") or [None])[0] or {}
-        return item0.get("b64_json") or item0.get("b64") or item0.get("base64")
-    except Exception:
-        return None
+def _extract_image(data: dict):
+    item0 = (data.get("data") or [None])[0] or {}
+    if item0.get("b64_json"):
+        return ("b64", item0["b64_json"])
+    if item0.get("url"):
+        return ("url", item0["url"])
+    return None
+
 
 
 async def _run_grok_job(
@@ -96,6 +94,18 @@ async def _run_grok_job(
             if isinstance(data, dict):
                 err = data.get("error") or data.get("message")
             raise RuntimeError(f"xAI error {r.status_code}: {err or 'Unknown Error'}")
+
+        img = _extract_image(data)
+if not img:
+    raise RuntimeError("xAI did not return image data")
+
+kind, value = img
+
+if kind == "b64":
+    img_bytes = base64.b64decode(value)
+elif kind == "url":
+    async with httpx.AsyncClient() as c:
+        img_bytes = (await c.get(value)).content
 
         img_b64 = _extract_b64(data)
         if not img_b64:
