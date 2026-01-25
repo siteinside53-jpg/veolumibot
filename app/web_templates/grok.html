@@ -13,7 +13,7 @@
       --text:#e9e9f5;
       --muted:#a4a7c0;
       --stroke:#242646;
-      --accent:#7c3aed;      /* purple */
+      --accent:#7c3aed;
       --accent2:#6d28d9;
       --good:#19c37d;
       --bad:#ef4444;
@@ -35,24 +35,6 @@
       padding:18px 14px 28px;
     }
     .wrap{width:min(520px, 100%)}
-    .topbar{
-      display:flex; align-items:center; gap:12px;
-      padding:8px 6px 14px;
-      color:var(--muted);
-    }
-    .brand{
-      display:flex; align-items:center; gap:10px;
-      font-weight:700; color:var(--text);
-    }
-    .logo{
-      width:34px; height:34px; border-radius:12px;
-      background: linear-gradient(135deg, rgba(124,58,237,.9), rgba(124,58,237,.35));
-      display:grid; place-items:center;
-      box-shadow: 0 10px 20px rgba(124,58,237,.25);
-      border:1px solid rgba(255,255,255,.08);
-    }
-    .logo svg{opacity:.95}
-    .subtitle{font-size:12px; color:var(--muted); margin-top:2px}
 
     .card{
       background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
@@ -62,20 +44,31 @@
       overflow:hidden;
     }
     .card-inner{padding:16px}
-    .section-title{
-      font-size:15px;
-      font-weight:700;
-      margin:2px 0 10px;
-    }
-    .section-sub{font-size:13px; color:var(--muted); margin:0 0 10px}
 
-    .big-generate{
-      width:100%;
-      padding:14px 16px;
-      border-radius:16px;
-      font-size:15px;
+    /* Header like Grok Imagine */
+    .header{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:14px;
+    }
+    .title{
+      font-size:20px;
+      font-weight:900;
       letter-spacing:.2px;
     }
+    .pill{
+      font-size:12px;
+      padding:8px 12px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      color: var(--text);
+      white-space:nowrap;
+      opacity:.95;
+    }
+    .pill b{font-weight:900}
 
     .block{
       margin-top:12px;
@@ -84,16 +77,41 @@
       border-radius: 14px;
       padding:12px;
     }
-    .label-row{
-      display:flex; justify-content:space-between; align-items:center;
-      margin-bottom:8px;
-      color:var(--muted);
+    .label{
       font-size:12px;
+      color:var(--muted);
+      margin-bottom:8px;
+      letter-spacing:.2px;
+      text-transform:uppercase;
+      opacity:.9;
+    }
+
+    .select{
+      width:100%;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
+      color: var(--text);
+      padding:12px 12px;
+      outline:none;
+      font-size:14px;
+      appearance:none;
+    }
+    .select:focus{border-color: rgba(124,58,237,.55); box-shadow: 0 0 0 4px rgba(124,58,237,.15)}
+    .select-wrap{position:relative}
+    .select-wrap:after{
+      content:"▾";
+      position:absolute;
+      right:12px; top:50%;
+      transform:translateY(-50%);
+      color:rgba(233,233,245,.75);
+      pointer-events:none;
+      font-size:14px;
     }
 
     textarea{
       width:100%;
-      min-height:120px;
+      min-height:140px;
       resize:vertical;
       border-radius:12px;
       border:1px solid rgba(255,255,255,.08);
@@ -106,171 +124,201 @@
     }
     textarea:focus{border-color: rgba(124,58,237,.55); box-shadow: 0 0 0 4px rgba(124,58,237,.15)}
 
-    /* Selects styled like the rest */
-    select{
-      width:100%;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.08);
-      background: rgba(255,255,255,.03);
-      color: var(--text);
-      padding:10px 12px;
-      outline:none;
-      font-size:14px;
-      line-height:1.35;
-      appearance:none;
-      -webkit-appearance:none;
-      -moz-appearance:none;
-      background-image:
-        linear-gradient(45deg, transparent 50%, rgba(233,233,245,.75) 50%),
-        linear-gradient(135deg, rgba(233,233,245,.75) 50%, transparent 50%);
-      background-position:
-        calc(100% - 18px) calc(50% + 1px),
-        calc(100% - 12px) calc(50% + 1px);
-      background-size: 6px 6px, 6px 6px;
-      background-repeat:no-repeat;
+    .row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      flex-wrap:wrap;
     }
-    select:focus{border-color: rgba(124,58,237,.55); box-shadow: 0 0 0 4px rgba(124,58,237,.15)}
+    .counter{font-size:12px; color:var(--muted)}
+    .error{
+      margin-top:8px;
+      font-size:12px;
+      color: var(--bad);
+      display:none;
+    }
 
+    /* Upload area like screenshot */
+    .uploader{
+      border:1px dashed rgba(255,255,255,.16);
+      background: rgba(255,255,255,.02);
+      border-radius: 14px;
+      padding:14px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+    .upload-box{
+      width:100%;
+      aspect-ratio: 4 / 3;
+      border-radius: 14px;
+      border:1px dashed rgba(255,255,255,.18);
+      background:
+        radial-gradient(600px 280px at 30% 10%, rgba(124,58,237,.10), transparent 55%),
+        rgba(0,0,0,.18);
+      display:grid;
+      place-items:center;
+      color:rgba(233,233,245,.85);
+      user-select:none;
+    }
+    .upload-plus{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:6px;
+      font-weight:900;
+    }
+    .upload-plus .p{font-size:12px; font-weight:700; color:rgba(233,233,245,.7)}
+    .meta{font-size:12px; color:var(--muted); margin-top:10px}
     .btn{
       border:0;
       background: linear-gradient(180deg, var(--accent), var(--accent2));
       color:white;
-      font-weight:800;
-      border-radius: 14px;
-      padding:11px 14px;
+      font-weight:900;
+      border-radius: 16px;
+      padding:14px 16px;
       cursor:pointer;
       box-shadow: 0 12px 22px rgba(124,58,237,.25);
+      width:100%;
+      font-size:15px;
+      letter-spacing:.2px;
+      margin-top:14px;
     }
-    .btn:active{transform: translateY(1px)}
-    .btn.secondary{
-      background: rgba(255,255,255,.06);
-      box-shadow:none;
-      border:1px solid rgba(255,255,255,.12);
-      color: var(--text);
-    }
-
-    .cost{
-      margin-top:12px;
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-end;
-      padding:10px 12px;
-      border-radius: 14px;
-      border:1px solid rgba(255,255,255,.06);
-      background: rgba(0,0,0,.18);
-    }
-    .cost .left{color:var(--muted); font-size:12px}
-    .cost .right{font-size:18px; font-weight:900;}
-
-    .small{font-size:12px; color:var(--muted)}
-    .footer{margin-top:12px;}
-    .actions{display:flex; gap:10px; align-items:center;}
-    .actions .btn{flex:1}
+    .btn:disabled{opacity:.6; cursor:not-allowed}
   </style>
 </head>
 
 <body>
   <div class="wrap">
-    <div class="topbar">
-      <div class="brand">
-        <div class="logo" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M7 14c4-1 6-4 7-8 3 3 4 8 2 12-1 2-4 4-7 4-4 0-6-3-6-6 0-3 2-5 4-6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-        <div>
-          <div>Grok Imagine</div>
-          <div class="subtitle">Δημιουργία εικόνας / video</div>
-        </div>
-      </div>
-    </div>
-
     <div class="card">
       <div class="card-inner">
-        <div class="section-title">Παράμετροι</div>
-        <div class="section-sub">Ρύθμισε τη δημιουργία</div>
 
+        <div class="header">
+          <div class="title">Grok Imagine</div>
+          <div class="pill">Κόστος: <b><span id="costTop">0.8</span></b> credits</div>
+        </div>
+
+        <!-- MODE -->
         <div class="block">
-          <div class="label-row"><div>Λειτουργία</div></div>
-          <select id="mode">
-            <option value="text">Text to Image</option>
-            <option value="image">Image to Image</option>
-          </select>
-
-          <div style="margin-top:10px">
-            <div class="label-row"><div>Αναλογία πλευρών</div></div>
-            <select id="ar">
-              <option value="1:1">1:1</option>
-              <option value="4:5">4:5</option>
-              <option value="3:4">3:4</option>
-              <option value="16:9">16:9</option>
-              <option value="9:16">9:16</option>
-            </select>
-          </div>
-
-          <div style="margin-top:10px">
-            <div class="label-row"><div>Τόνος / στυλ</div></div>
-            <select id="tone">
-              <option value="spicy">Spicy</option>
-              <option value="neutral">Neutral</option>
-              <option value="soft">Soft</option>
-              <option value="cinematic">Cinematic</option>
+          <div class="label">ΡΕΖΙΜ</div>
+          <div class="select-wrap">
+            <select id="mode" class="select">
+              <option value="text_to_image" selected>Text to Image</option>
+              <option value="text_to_video">Text to Video</option>
+              <option value="image_to_video">Image to Video</option>
             </select>
           </div>
         </div>
 
+        <!-- PROMPT -->
         <div class="block">
-          <div class="label-row">
-            <div>Prompt</div>
-            <div class="small"><span id="charCount">0</span>/5000</div>
+          <div class="row" style="margin-bottom:8px">
+            <div class="label" style="margin:0">PROMPT</div>
+            <div class="counter"><span id="charCount">0</span>/5000</div>
           </div>
-          <textarea id="prompt" maxlength="5000" placeholder="Περιέγραψε τι θέλεις να δημιουργηθεί…"></textarea>
+          <textarea id="prompt" maxlength="5000" placeholder="Περιέγραψε τι θέλεις..."></textarea>
+          <div id="promptErr" class="error">Βάλε prompt (1–5000 χαρακτήρες).</div>
         </div>
 
+        <!-- ASPECT RATIO -->
         <div class="block">
-          <div class="cost" aria-label="cost">
-            <div class="left">
-              Κόστος<br />
-              <span class="small">ανά δημιουργία</span>
-            </div>
-            <div class="right"><span id="costValue">0.8</span> credits</div>
-          </div>
-
-          <div class="footer">
-            <div class="actions">
-              <button id="btn-generate" class="btn big-generate" type="button">Δημιουργία</button>
-            </div>
-            <div class="small" style="margin-top:10px">
-              Τα αποτελέσματα παραδίδονται στο Telegram chat. Η σελίδα αυτή ξεκινά το task και μετά κλείνει.
-            </div>
+          <div class="label">ΣΥΝΑΛΟΓΙΑ ΠΛΕΥΡΩΝ</div>
+          <div class="select-wrap">
+            <select id="aspect" class="select">
+              <option value="1:1" selected>1:1</option>
+              <option value="2:3">2:3</option>
+              <option value="3:2">3:2</option>
+            </select>
           </div>
         </div>
+
+        <!-- MODIFICATION -->
+        <div class="block">
+          <div class="label">ΜΟΔΙΦΙΚΑΣΙΑ</div>
+          <div class="select-wrap">
+            <select id="modifier" class="select">
+              <option value="spicy" selected>Spicy</option>
+              <option value="normal">Normal</option>
+              <option value="fun">Fun</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- IMAGE (optional / required for image_to_video) -->
+        <div id="imageBlock" class="block" style="display:none">
+          <div class="row">
+            <div class="label" style="margin:0">ΕΙΚΟΝΑ (JPG/PNG ≤ 10MB)</div>
+            <div class="counter"><span id="fileCount">0</span>/1</div>
+          </div>
+
+          <div id="drop" class="upload-box" style="margin-top:10px">
+            <div class="upload-plus">
+              <div style="font-size:22px">+</div>
+              <div class="p">Upload</div>
+            </div>
+          </div>
+
+          <input id="file" type="file" accept="image/*" style="display:none" />
+          <div class="meta">Tip: Για Image to Video χρειάζεται εικόνα. Για τα άλλα modes είναι προαιρετική.</div>
+          <div id="imgErr" class="error">Βάλε 1 εικόνα για Image to Video.</div>
+        </div>
+
+        <button id="btn" class="btn" type="button">Δημιουργία</button>
 
       </div>
     </div>
   </div>
 
 <script>
-  // -----------------------------
-  // Config
-  // -----------------------------
+  // Routes
   const API_URL = "/api/grok/generate";
-  const COST_PER_RUN = 0.8;
 
-  // Telegram WebApp
+  // Costs (μόνο UI, δεν αλλάζω χρώματα/design)
+  const COSTS = {
+    text_to_image: 0.8,
+    text_to_video: 4.0,
+    image_to_video: 4.0
+  };
+
   const tg = window.Telegram?.WebApp;
   if (tg) { tg.expand(); tg.ready(); }
   const TG_INIT_DATA = tg?.initData || "";
 
-  // Elements
-  const promptEl = document.getElementById("prompt");
-  const charCount = document.getElementById("charCount");
   const modeEl = document.getElementById("mode");
-  const arEl = document.getElementById("ar");
-  const toneEl = document.getElementById("tone");
-  const btnGenerate = document.getElementById("btn-generate");
-  const btnReset = document.getElementById("btn-reset");
-  const costValue = document.getElementById("costValue");
+  const promptEl = document.getElementById("prompt");
+  const aspectEl = document.getElementById("aspect");
+  const modifierEl = document.getElementById("modifier");
+  const btn = document.getElementById("btn");
+
+  const charCount = document.getElementById("charCount");
+  const promptErr = document.getElementById("promptErr");
+
+  const imageBlock = document.getElementById("imageBlock");
+  const drop = document.getElementById("drop");
+  const fileEl = document.getElementById("file");
+  const fileCount = document.getElementById("fileCount");
+  const imgErr = document.getElementById("imgErr");
+
+  const costTop = document.getElementById("costTop");
+
+  let file = null;
+
+  function setCost(){
+    const m = modeEl.value;
+    const c = COSTS[m] ?? 0.8;
+    costTop.textContent = String(c).replace(/\.0$/, "");
+  }
+
+  function setModeUI(){
+    const m = modeEl.value;
+    // Στο screenshot, Image to Video έχει upload section.
+    imageBlock.style.display = (m === "image_to_video") ? "block" : "none";
+    // reset errors
+    imgErr.style.display = "none";
+    promptErr.style.display = "none";
+    setCost();
+  }
 
   function showAlert(msg){
     if (tg?.showAlert) tg.showAlert(msg);
@@ -286,48 +334,83 @@
     }, () => {});
   }
 
+  function fileToDataURL(f){
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result || ""));
+      r.onerror = () => reject(new Error("File read failed"));
+      r.readAsDataURL(f);
+    });
+  }
+
   async function safeJson(res){
     const txt = await res.text();
     try { return JSON.parse(txt); } catch { return { raw: txt }; }
   }
 
+  modeEl.addEventListener("change", setModeUI);
+
   promptEl.addEventListener("input", () => {
     charCount.textContent = String(promptEl.value.length);
+    if (promptEl.value.trim().length > 0) promptErr.style.display = "none";
   });
 
-  btnReset.addEventListener("click", () => {
-    promptEl.value = "";
-    charCount.textContent = "0";
-    modeEl.value = "text";
-    arEl.value = "1:1";
-    toneEl.value = "spicy";
+  drop.addEventListener("click", () => fileEl.click());
+  fileEl.addEventListener("change", () => {
+    file = fileEl.files && fileEl.files[0] ? fileEl.files[0] : null;
+    fileCount.textContent = file ? "1" : "0";
+    if (file) imgErr.style.display = "none";
   });
 
-  btnGenerate.addEventListener("click", async () => {
+  drop.addEventListener("dragover", (e) => e.preventDefault());
+  drop.addEventListener("drop", (e) => {
+    e.preventDefault();
+    const f = e.dataTransfer.files && e.dataTransfer.files[0] ? e.dataTransfer.files[0] : null;
+    if (!f) return;
+    file = f;
+    fileCount.textContent = "1";
+    imgErr.style.display = "none";
+  });
+
+  btn.addEventListener("click", async () => {
+    const mode = modeEl.value;
     const prompt = (promptEl.value || "").trim();
-    if (!prompt) return showAlert("Γράψε prompt.");
+    const aspect_ratio = aspectEl.value;
+    const modifier = modifierEl.value;
 
-    if (!TG_INIT_DATA) {
-      return showAlert("Άνοιξέ το μέσα από Telegram (WebApp), όχι από browser.");
+    // validation UI like screenshot
+    if (!prompt) {
+      promptErr.style.display = "block";
+      showAlert("Βάλε prompt.");
+      return;
     }
 
-    btnGenerate.disabled = true;
-    btnGenerate.style.opacity = "0.75";
+    if (mode === "image_to_video" && !file) {
+      imgErr.style.display = "block";
+      showAlert("Βάλε 1 εικόνα για Image to Video.");
+      return;
+    }
 
-    showSentPopup();
+    btn.disabled = true;
 
     try {
+      let images_data_urls = [];
+      if (file) images_data_urls = [await fileToDataURL(file)];
+
       const payload = {
         initData: TG_INIT_DATA,
         prompt,
-        aspect_ratio: arEl.value,
-        tone: toneEl.value,
-        mode: modeEl.value
+        aspect_ratio,
+        mode,         // text_to_image | text_to_video | image_to_video
+        modifier,     // spicy | normal | fun
+        images_data_urls
       };
+
+      showSentPopup();
 
       const res = await fetch(API_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {"Content-Type":"application/json"},
         body: JSON.stringify(payload),
       });
 
@@ -338,18 +421,19 @@
         throw new Error(msg);
       }
 
+      // κλείσιμο, όπως κάνουν τα Pro webapps
       if (tg?.close) tg.close();
 
     } catch (e) {
       showAlert("Αποτυχία. " + (e?.message || ""));
     } finally {
-      btnGenerate.disabled = false;
-      btnGenerate.style.opacity = "1";
+      btn.disabled = false;
     }
   });
 
   // init
-  costValue.textContent = String(COST_PER_RUN);
+  setCost();
+  setModeUI();
 </script>
 </body>
 </html>
