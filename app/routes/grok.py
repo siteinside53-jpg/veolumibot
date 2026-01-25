@@ -34,9 +34,6 @@ async def grok_page():
 
 
 def _grok_model_name() -> str:
-    # Αν δεν έχεις πρόσβαση στο grok-2-image, βάλε στο Railway env:
-    # GROK_IMAGE_MODEL = <το model που έχεις access>
-    # Κρατάμε default για να μην σκάει το σύστημα όταν λείπει env.
     return (os.getenv("GROK_IMAGE_MODEL") or "grok-2-image").strip()
 
 
@@ -47,7 +44,6 @@ def _extract_image(data: dict):
     if item0.get("url"):
         return ("url", item0["url"])
     return None
-
 
 
 async def _run_grok_job(
@@ -82,36 +78,28 @@ async def _run_grok_job(
                 headers=headers,
             )
 
-        # Πρώτα διάβασε json με ασφάλεια
         try:
             data = r.json()
         except Exception:
             data = {"raw": (r.text or "")[:2000]}
 
         if r.status_code >= 400:
-            # βγάλε καθαρό error από xAI
             err = None
             if isinstance(data, dict):
                 err = data.get("error") or data.get("message")
             raise RuntimeError(f"xAI error {r.status_code}: {err or 'Unknown Error'}")
 
         img = _extract_image(data)
-if not img:
-    raise RuntimeError("xAI did not return image data")
+        if not img:
+            raise RuntimeError("xAI did not return image data")
 
-kind, value = img
+        kind, value = img
 
-if kind == "b64":
-    img_bytes = base64.b64decode(value)
-elif kind == "url":
-    async with httpx.AsyncClient() as c:
-        img_bytes = (await c.get(value)).content
-
-        img_b64 = _extract_b64(data)
-        if not img_b64:
-            raise RuntimeError("Invalid response structure from xAI API (missing base64 image)")
-
-        img_bytes = base64.b64decode(img_b64)
+        if kind == "b64":
+            img_bytes = base64.b64decode(value)
+        elif kind == "url":
+            async with httpx.AsyncClient() as c:
+                img_bytes = (await c.get(value)).content
 
         IMAGES_DIR.mkdir(parents=True, exist_ok=True)
         name = f"grok_{uuid.uuid4().hex}.png"
@@ -137,7 +125,6 @@ elif kind == "url":
 
     except Exception as e:
         logger.exception("Error during Grok job")
-        # refund
         try:
             add_credits_by_user_id(db_user_id, cost, "Refund Grok fail", "system", None)
         except Exception:
@@ -154,7 +141,6 @@ elif kind == "url":
 
 @router.post("/api/grok/generate")
 async def grok_generate(request: Request, background_tasks: BackgroundTasks):
-    # IMPORTANT: αυτό πρέπει να χτυπιέται από grok.html (POST).
     try:
         payload = await request.json()
     except Exception:
@@ -164,7 +150,6 @@ async def grok_generate(request: Request, background_tasks: BackgroundTasks):
     prompt = (payload.get("prompt") or "").strip()
     aspect_ratio = (payload.get("aspect_ratio") or "1:1").strip()
 
-    # UI στέλνει κι αυτά (δεν χαλάνε κάτι αν δεν τα χρησιμοποιείς τώρα):
     mode = (payload.get("mode") or "text_to_image").strip()
     modifier = (payload.get("modifier") or "spicy").strip()
 
@@ -173,8 +158,6 @@ async def grok_generate(request: Request, background_tasks: BackgroundTasks):
     if not prompt:
         return JSONResponse({"ok": False, "error": "empty_prompt"}, status_code=400)
 
-    # Προς το παρόν υποστηρίζουμε μόνο Image generation (Text to Image).
-    # Αν θες να προσθέσουμε video μετά, θα το δέσουμε σε άλλο endpoint/model.
     if mode != "text_to_image":
         return JSONResponse(
             {"ok": False, "error": f"mode_not_supported_yet:{mode}"},
@@ -190,11 +173,9 @@ async def grok_generate(request: Request, background_tasks: BackgroundTasks):
     except Exception:
         return JSONResponse({"ok": False, "error": "auth_failed"}, status_code=401)
 
-    # Spend credits
     try:
         spend_credits_by_user_id(db_user_id, COST, "Grok Image", "xai", _grok_model_name())
     except Exception as e:
-        # Μην το βαφτίζεις “not enough credits” αν το error είναι άλλο.
         msg = str(e)
         logger.error(f"spend_credits failed: {msg}")
         if "not enough" in msg.lower():
