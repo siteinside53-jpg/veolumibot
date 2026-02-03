@@ -42,4 +42,8 @@ async def grok_page(request: Request):
 @router.get("/nanobanana", response_class=HTMLResponse)
 async def nanobanana_page(request: Request):
     return templates.TemplateResponse("nanobanana.html", {"request": request})
+
+@router.get("/kling26", response_class=HTMLResponse)
+async def kling26_page(request: Request):
+    return templates.TemplateResponse("kling26.html", {"request": request})
     
