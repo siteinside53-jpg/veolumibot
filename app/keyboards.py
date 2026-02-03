@@ -43,6 +43,9 @@ def _webapp_nanobanana_url() -> str:
 def _webapp_grok_url() -> str:
     return f"{_base_url()}/grok"
 
+def _webapp_kling26_url() -> str:
+    return f"{_base_url()}/kling26"
+
 def start_inline_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
@@ -59,7 +62,7 @@ def start_inline_menu() -> InlineKeyboardMarkup:
 def video_models_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("🟢 Kling 2.6 (11–44 credits)", callback_data="menu:set:video:kling_26")],
+            [InlineKeyboardButton("🟢 Kling 2.6 (11–44 credits)", web_app=WebAppInfo(url=_webapp_kling26_url()))],
             [InlineKeyboardButton("🌀 Wan 2.6 (14–56 credits)", callback_data="menu:set:video:wan_26")],
             [InlineKeyboardButton("🛰 Sora 2 PRO (18–80 credits)",  web_app=WebAppInfo(url=_webapp_sora2pro_url()))],
             [InlineKeyboardButton("🎬 Veo 3.1 (10-60 credits)", web_app=WebAppInfo(url=_webapp_veo31_url()))],
