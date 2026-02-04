@@ -1,23 +1,30 @@
 import os
 import time
+import uuid
 import hmac
 import base64
 import hashlib
+import logging
 import httpx
 
-from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-from typing import Optional
+from fastapi import APIRouter, Request, BackgroundTasks
+from fastapi.responses import JSONResponse, FileResponse
 
+from ..core.telegram_auth import db_user_from_webapp
+from ..core.telegram_client import tg_send_message, tg_send_video
+from ..db import spend_credits_by_user_id, add_credits_by_user_id
+
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
-KLING_ACCESS_KEY = os.getenv("KLING_ACCESS_KEY")
-KLING_SECRET_KEY = os.getenv("KLING_SECRET_KEY")
-KLING_BASE_URL = os.getenv("KLING_BASE_URL", "https://api.klingai.com")
+KLING_ACCESS_KEY = os.getenv("KLING_ACCESS_KEY", "").strip()
+KLING_SECRET_KEY = os.getenv("KLING_SECRET_KEY", "").strip()
+KLING_BASE_URL = os.getenv("KLING_BASE_URL", "https://api.klingai.com").strip()
 
 
-# ---------- AUTH ----------
+# -------------------------
+# AUTH HEADERS (HMAC)
+# -------------------------
 def kling_headers():
     ts = str(int(time.time()))
     msg = KLING_ACCESS_KEY + ts
@@ -27,64 +34,115 @@ def kling_headers():
         hashlib.sha256
     ).digest()
 
+    signature = base64.b64encode(sign).decode()
+
     return {
         "Content-Type": "application/json",
         "X-Access-Key": KLING_ACCESS_KEY,
-        "X-Signature": base64.b64encode(sign).decode(),
+        "X-Signature": signature,
         "X-Timestamp": ts,
     }
 
 
-# ---------- REQUEST MODEL ----------
-class Kling26Request(BaseModel):
-    generation_type: str              # "text" | "image"
-    prompt: str
-    negative_prompt: Optional[str] = ""
-    duration: int                     # 5 ή 10
-    aspect_ratio: str                 # "1:1" | "9:16" | "16:9"
-    image: Optional[str] = None       # base64 or url
+# -------------------------
+# CREATE TASK
+# -------------------------
+async def create_kling_task(payload: dict) -> str:
+    url = f"{KLING_BASE_URL}/v1/videos/text2video"
+    async with httpx.AsyncClient(timeout=60) as client:
+        r = await client.post(url, json=payload, headers=kling_headers())
+        data = r.json()
+
+    if r.status_code != 200 or data.get("code") != 0:
+        raise RuntimeError(f"Kling create error: {data}")
+
+    return data["data"]["task_id"]
 
 
-# ---------- CREATE TASK ----------
-async def create_kling_task(data: Kling26Request):
-    if data.generation_type == "text":
-        url = f"{KLING_BASE_URL}/v1/videos/text2video"
-    else:
-        url = f"{KLING_BASE_URL}/v1/videos/image2video"
-
-    payload = {
-        "model_name": "kling-v2-6",
-        "prompt": data.prompt,
-        "negative_prompt": data.negative_prompt,
-        "duration": data.duration,
-        "aspect_ratio": data.aspect_ratio,
-        "mode": "std",
-    }
-
-    if data.generation_type == "image":
-        payload["image"] = data.image
+# -------------------------
+# POLL TASK
+# -------------------------
+async def poll_kling_task(task_id: str) -> str:
+    url = f"{KLING_BASE_URL}/v1/videos/query"
+    payload = {"task_id": task_id}
 
     async with httpx.AsyncClient(timeout=60) as client:
-        r = await client.post(
-            url,
-            headers=kling_headers(),
-            json=payload
-        )
+        for _ in range(60):  # ~5 λεπτά max
+            r = await client.post(url, json=payload, headers=kling_headers())
+            data = r.json()
 
-    if r.status_code != 200:
-        raise RuntimeError(f"Kling error {r.status_code}: {r.text}")
+            if data.get("data", {}).get("task_status") == "success":
+                videos = data["data"]["task_result"]["videos"]
+                return videos[0]["url"]
 
-    return r.json()
+            await asyncio.sleep(5)
+
+    raise RuntimeError("Kling task timeout")
 
 
-# ---------- API ----------
-@router.post("/api/kling26/generate")
-async def kling26_generate(req: Kling26Request):
+# -------------------------
+# BACKGROUND JOB
+# -------------------------
+async def run_kling_job(
+    tg_chat_id: int,
+    db_user_id: int,
+    prompt: str,
+    aspect_ratio: str,
+    cost: float
+):
     try:
-        result = await create_kling_task(req)
-        return JSONResponse(result)
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"error": str(e)}
+        payload = {
+            "model_name": "kling-v2-6",
+            "prompt": prompt,
+            "aspect_ratio": aspect_ratio,
+            "duration": 5,
+            "mode": "std"
+        }
+
+        task_id = await create_kling_task(payload)
+        video_url = await poll_kling_task(task_id)
+
+        await tg_send_video(
+            chat_id=tg_chat_id,
+            video_url=video_url,
+            caption="🎬 Kling Video: Έτοιμο"
         )
+
+    except Exception as e:
+        logger.exception("Kling job failed")
+        add_credits_by_user_id(db_user_id, cost, "Refund Kling", "system", None)
+        await tg_send_message(tg_chat_id, f"❌ Kling error:\n{str(e)[:300]}")
+
+
+# -------------------------
+# API ENDPOINT
+# -------------------------
+@router.post("/api/kling26/generate")
+async def kling_generate(request: Request, background_tasks: BackgroundTasks):
+    payload = await request.json()
+
+    prompt = (payload.get("prompt") or "").strip()
+    aspect_ratio = payload.get("aspect_ratio", "16:9")
+
+    if not prompt:
+        return JSONResponse({"ok": False, "error": "empty_prompt"}, status_code=400)
+
+    dbu = db_user_from_webapp(payload.get("initData", ""))
+    tg_chat_id = int(dbu["tg_user_id"])
+    db_user_id = int(dbu["id"])
+
+    COST = 3.0
+    spend_credits_by_user_id(db_user_id, COST, "Kling Video", "kling", "kling-v2-6")
+
+    await tg_send_message(tg_chat_id, "🎥 Kling: Δημιουργία video…")
+
+    background_tasks.add_task(
+        run_kling_job,
+        tg_chat_id,
+        db_user_id,
+        prompt,
+        aspect_ratio,
+        COST
+    )
+
+    return {"ok": True}
