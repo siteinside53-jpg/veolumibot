@@ -25,7 +25,7 @@ KLING_BASE_URL = os.getenv("KLING_BASE_URL", "https://api.klingai.com").strip()
 # -------------------------
 # AUTH HEADERS (HMAC)
 # -------------------------
-def kling_headers():
+def kling_headers() -> dict:
     if not KLING_ACCESS_KEY or not KLING_SECRET_KEY:
         raise RuntimeError("Missing KLING_ACCESS_KEY / KLING_SECRET_KEY")
 
@@ -40,15 +40,19 @@ def kling_headers():
 # -------------------------
 async def create_kling_task(payload: dict) -> str:
     url = f"{KLING_BASE_URL}/v1/videos/text2video"
+
     async with httpx.AsyncClient(timeout=60) as client:
         r = await client.post(url, json=payload, headers=kling_headers())
-        data = r.json()
+
+        try:
+            data = r.json()
+        except Exception:
+            data = {"raw": r.text}
 
     if r.status_code != 200 or data.get("code") != 0:
         raise RuntimeError(f"Kling create error: {data}")
 
     return data["data"]["task_id"]
-
 
 # -------------------------
 # POLL TASK
