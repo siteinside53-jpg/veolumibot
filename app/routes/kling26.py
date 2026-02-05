@@ -25,13 +25,14 @@ KLING_BASE_URL = os.getenv("KLING_BASE_URL", "https://api.klingai.com").strip()
 # -------------------------
 # AUTH HEADERS (HMAC)
 # -------------------------
-def kling_headers():
+def _kling_headers() -> dict:
     if not KLING_ACCESS_KEY or not KLING_SECRET_KEY:
-        raise RuntimeError("KLING API keys missing")
+        raise RuntimeError("Missing KLING_ACCESS_KEY / KLING_SECRET_KEY")
 
     return {
+        "Authorization": f"Bearer {KLING_ACCESS_KEY}",
+        "X-Kling-Secret": KLING_SECRET_KEY,
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {KLING_ACCESS_KEY}:{KLING_SECRET_KEY}"
     }
 
 
