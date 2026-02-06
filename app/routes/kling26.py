@@ -28,8 +28,7 @@ KLING_BASE_URL = os.getenv("KLING_BASE_URL", "https://api.klingai.com").strip()
 
 # Endpoints (όπως τα έχεις ήδη στήσει)
 TEXT2VIDEO_PATH = os.getenv("KLING_TEXT2VIDEO_PATH", "/v1/videos/text2video").strip()
-QUERY_PATH = os.getenv("KLING_QUERY_PATH", "/v1/videos/query").strip()
-
+QUERY_PATH = os.getenv("KLING_QUERY_PATH", "/v1/video_tasks/query").strip()
 
 # -------------------------
 # JWT helpers (HS256)
