@@ -112,7 +112,7 @@ async def create_kling_task(payload: dict) -> str:
 # -------------------------
 async def poll_kling_task(task_id: str) -> str:
     url = _join(KLING_BASE_URL, QUERY_PATH)
-    payload = {"task_id": task_id}
+    payload = {"task_ids": [task_id]}
 
     async with httpx.AsyncClient(timeout=60) as client:
         for _ in range(80):  # ~6-7 λεπτά
@@ -122,22 +122,22 @@ async def poll_kling_task(task_id: str) -> str:
             if r.status_code != 200 or data.get("code") != 0:
                 raise RuntimeError(f"Kling query error: {data}")
 
-            d = data.get("data") or {}
-            status = d.get("task_status")
+            items = (data.get("data") or [])
+            if not items:
+                await asyncio.sleep(5)
+                continue
+
+            item = items[0]
+            status = item.get("task_status")
 
             if status == "success":
-                # Συνήθως: data.task_result.videos[0].url
-                task_result = d.get("task_result") or {}
-                videos = task_result.get("videos") or []
+                videos = (item.get("task_result") or {}).get("videos") or []
                 if videos and videos[0].get("url"):
                     return videos[0]["url"]
-                # fallback
-                if d.get("video_url"):
-                    return d["video_url"]
-                raise RuntimeError(f"Kling success but missing video url: {data}")
+                raise RuntimeError(f"Kling success but no video url: {item}")
 
             if status in ("failed", "error"):
-                raise RuntimeError(f"Kling task failed: {data}")
+                raise RuntimeError(f"Kling task failed: {item}")
 
             await asyncio.sleep(5)
 
