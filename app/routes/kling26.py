@@ -164,7 +164,7 @@ async def run_kling_job(
 
         await tg_send_video(
             chat_id=tg_chat_id,
-            video_url=video_url,
+            video=video_url,
             caption="🎬 Kling 2.6: Έτοιμο",
         )
 
