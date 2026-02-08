@@ -102,6 +102,84 @@ input[type="file"]{
   border-style:dashed;
   border-color: rgba(255,255,255,.16);
 }
+
+/* Remove purple background from bottom action area */
+.price-line,
+.action-area,
+.footer,
+.bottom,
+.generate-wrap {
+  background: rgba(0,0,0,0.35) !important;
+  box-shadow: none !important;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+/* ===== Image picker: grid thumbnails + add tile (no DOM changes required) ===== */
+#images{ display:none; } /* we use the + tile to open picker */
+
+.img-grid{
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap:10px;
+  margin-top:10px;
+}
+.img-tile{
+  position:relative;
+  aspect-ratio: 1 / 1;
+  border-radius:14px;
+  overflow:hidden;
+  background: rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.10);
+}
+.img-tile img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+.img-remove{
+  position:absolute;
+  top:6px;
+  right:6px;
+  width:22px;
+  height:22px;
+  border-radius:50%;
+  border:0;
+  background: rgba(0,0,0,.65);
+  color:#fff;
+  font-size:16px;
+  line-height:22px;
+  padding:0;
+  cursor:pointer;
+}
+.img-add{
+  aspect-ratio: 1 / 1;
+  border-radius:14px;
+  border: 2px dashed rgba(255,255,255,.18);
+  background: transparent;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  user-select:none;
+}
+.img-add span{
+  font-size:28px;
+  font-weight:900;
+  color: rgba(255,255,255,.55);
+}
+.img-add:hover{
+  border-color: rgba(255,255,255,.35);
+}
+.img-add:hover span{
+  color:#fff;
+}
+.img-count{
+  margin-top:8px;
+  font-size:13px;
+  color: rgba(255,255,255,.55);
+  font-weight:800;
+}
+
 </style>
 </head>
 
@@ -132,6 +210,8 @@ input[type="file"]{
         <option value="4:5">4:5</option>
         <option value="5:4">5:4</option>
         <option value="9:16">9:16</option>
+        <option value="16:9">16:9</option>
+        <option value="21:9">21:9</option>
       </select>
 
       <label for="quality">Ποιότητα (resolution)</label>
@@ -273,8 +353,130 @@ input[type="file"]{
     }
   }
 
+  
+// ===== Image grid UI (thumbnails + + tile) =====
+(function setupImageGrid(){
+  const input = $("images");
+  if (!input) return;
+
+  // Create UI nodes right after the hint (or after input if hint not found)
+  const hint = input.nextElementSibling; // .hint
+  const imgErr = $("imgErr");
+
+  const grid = document.createElement("div");
+  grid.id = "imgGrid";
+  grid.className = "img-grid";
+
+  const count = document.createElement("div");
+  count.id = "imgCount";
+  count.className = "img-count";
+  count.textContent = "0/8";
+
+  // Insert: after hint, before imgErr
+  const anchor = (hint && hint.classList && hint.classList.contains("hint")) ? hint : input;
+  anchor.insertAdjacentElement("afterend", grid);
+  grid.insertAdjacentElement("afterend", count);
+
+  // Maintain editable list of selected files
+  let filesArr = [];
+
+  function syncInputFiles(){
+    const dt = new DataTransfer();
+    filesArr.forEach(f => dt.items.add(f));
+    input.files = dt.files;
+  }
+
+  function setCount(){
+    count.textContent = `${filesArr.length}/8`;
+  }
+
+  function clearGrid(){
+    while (grid.firstChild) grid.removeChild(grid.firstChild);
+  }
+
+  function render(){
+    clearGrid();
+
+    // thumbs
+    filesArr.forEach((file, idx) => {
+      const tile = document.createElement("div");
+      tile.className = "img-tile";
+
+      const img = document.createElement("img");
+      const url = URL.createObjectURL(file);
+      img.src = url;
+      img.onload = () => URL.revokeObjectURL(url);
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "img-remove";
+      btn.textContent = "×";
+      btn.addEventListener("click", () => {
+        filesArr.splice(idx, 1);
+        syncInputFiles();
+        render();
+      });
+
+      tile.appendChild(img);
+      tile.appendChild(btn);
+      grid.appendChild(tile);
+    });
+
+    // add tile (if < 8)
+    if (filesArr.length < 8){
+      const add = document.createElement("div");
+      add.className = "img-add";
+      add.innerHTML = "<span>+</span>";
+      add.addEventListener("click", () => input.click());
+      grid.appendChild(add);
+    }
+
+    setCount();
+  }
+
+  function addFiles(newFiles){
+    const incoming = Array.from(newFiles || []);
+    if (!incoming.length) return;
+
+    // de-dupe by signature
+    const sig = f => `${f.name}|${f.size}|${f.lastModified}`;
+    const existing = new Set(filesArr.map(sig));
+
+    for (const f of incoming){
+      if (filesArr.length >= 8) break;
+      const s = sig(f);
+      if (existing.has(s)) continue;
+      filesArr.push(f);
+      existing.add(s);
+    }
+    syncInputFiles();
+    render();
+  }
+
+  input.addEventListener("change", () => {
+    // validate
+    const vf = validateFiles(input.files);
+    if (!vf.ok){
+      if (imgErr){
+        imgErr.textContent = vf.error;
+        imgErr.style.display = "block";
+      }
+      // keep previous selection (re-sync)
+      syncInputFiles();
+      render();
+      return;
+    }
+    if (imgErr) imgErr.style.display = "none";
+    addFiles(input.files);
+    // reset native picker value so you can re-pick same file later
+    input.value = "";
+  });
+
+  // initial render
+  render();
+})();
+
   $("btnGenerate").addEventListener("click", generate);
-</script>
 </script>
 </body>
 </html>
