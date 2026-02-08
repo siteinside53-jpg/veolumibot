@@ -10,10 +10,8 @@
   :root{
     --bg:#0b0c12;
     --card:#121422;
-    --card2:#0f1020;
     --text:#e9e9f5;
     --muted:#a4a7c0;
-    --stroke:#242646;
     --accent:#7c3aed;
     --accent2:#6d28d9;
     --good:#19c37d;
@@ -35,7 +33,7 @@
     justify-content:center;
     padding:18px 14px 28px;
   }
-  .wrap{width:min(520px, 100%)}
+  .wrap{width:min(520px, 100%);margin:0 auto}
 
   .card{
     background: var(--card);
@@ -43,22 +41,17 @@
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     overflow:hidden;
+    padding:16px;
   }
-  .card-inner{padding:16px}
 
-  .header{
-    display:flex;
-    align-items:flex-start;
-    justify-content:space-between;
-    gap:12px;
-    margin-bottom:14px;
-  }
-  .brand{display:flex; align-items:center; gap:10px; min-width:0}
+  /* Grok-like header */
+  .header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
+  .brand{display:flex;align-items:center;gap:10px;min-width:0}
   .logo{
-    width:34px; height:34px; border-radius:12px;
+    width:34px;height:34px;border-radius:12px;
     background: linear-gradient(135deg, rgba(124,58,237,.9), rgba(124,58,237,.35));
-    display:grid; place-items:center;
-    box-shadow: 0 10px 20px rgba(124,58,237,.25);
+    display:grid;place-items:center;
+    box-shadow:0 10px 20px rgba(124,58,237,.25);
     border:1px solid rgba(255,255,255,.08);
     flex:0 0 auto;
   }
@@ -74,54 +67,25 @@
     color: var(--text);
     white-space:nowrap;
     opacity:.95;
+    font-weight:800;
   }
   .pill b{font-weight:900}
 
-  .block{
-    margin-top:12px;
-    background: rgba(0,0,0,.22);
-    border:1px solid rgba(255,255,255,.06);
-    border-radius: 14px;
-    padding:12px;
-  }
-  .label{
-    font-size:12px;
+  /* Keep legacy .row if used elsewhere */
+  .row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+
+  label{
+    display:block;
+    font-weight:800;
+    margin:12px 0 6px;
     color:var(--muted);
-    margin-bottom:8px;
-    letter-spacing:.2px;
     text-transform:uppercase;
-    opacity:.9;
-    font-weight:800;
+    letter-spacing:.2px;
+    font-size:12px;
+    opacity:.95;
   }
-
-  .select{
+  select,textarea,input[type="file"]{
     width:100%;
-    border-radius:12px;
-    border:1px solid rgba(255,255,255,.08);
-    background: rgba(255,255,255,.03);
-    color: var(--text);
-    padding:12px 12px;
-    outline:none;
-    font-size:14px;
-    font-weight:800;
-    appearance:none;
-  }
-  .select:focus{border-color: rgba(124,58,237,.55); box-shadow: 0 0 0 4px rgba(124,58,237,.15)}
-  .select-wrap{position:relative}
-  .select-wrap:after{
-    content:"▾";
-    position:absolute;
-    right:12px; top:50%;
-    transform:translateY(-50%);
-    color:rgba(233,233,245,.75);
-    pointer-events:none;
-    font-size:14px;
-  }
-
-  textarea{
-    width:100%;
-    min-height:140px;
-    resize:vertical;
     border-radius:12px;
     border:1px solid rgba(255,255,255,.08);
     background: rgba(255,255,255,.03);
@@ -129,32 +93,44 @@
     padding:12px;
     outline:none;
     font-size:14px;
+    font-weight:800;
     line-height:1.35;
-    font-weight:700;
   }
-  textarea:focus{border-color: rgba(124,58,237,.55); box-shadow: 0 0 0 4px rgba(124,58,237,.15)}
+  textarea{resize:vertical;min-height:140px;height:140px}
 
-  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
-  .counter{font-size:12px;color:var(--muted);font-weight:800}
-  .hint{margin-top:10px;color:var(--muted);font-weight:700;font-size:13px;line-height:1.35}
-  .error{margin-top:8px;font-size:12px;color: var(--bad);display:none;white-space:pre-wrap;font-weight:900}
-  .ok{margin-top:8px;font-size:12px;color: var(--good);display:none;white-space:pre-wrap;font-weight:900}
+  select{
+    appearance:none;
+    background-image: linear-gradient(45deg, transparent 50%, rgba(233,233,245,.75) 50%),
+                      linear-gradient(135deg, rgba(233,233,245,.75) 50%, transparent 50%);
+    background-position: calc(100% - 18px) 55%, calc(100% - 12px) 55%;
+    background-size: 6px 6px, 6px 6px;
+    background-repeat: no-repeat;
+    padding-right: 34px;
+  }
+
+  select:focus, textarea:focus, input[type="file"]:focus{
+    border-color: rgba(124,58,237,.55);
+    box-shadow: 0 0 0 4px rgba(124,58,237,.15);
+  }
+
+  input[type="file"]{border-style:dashed;border-color: rgba(255,255,255,.16)}
 
   .btn{
+    margin-top:14px;
+    width:100%;
+    padding:14px 16px;
+    border-radius:16px;
     border:0;
     background: linear-gradient(180deg, var(--accent), var(--accent2));
     color:white;
     font-weight:900;
-    border-radius: 16px;
-    padding:14px 16px;
     cursor:pointer;
-    box-shadow:0 10px 18px rgba(0,0,0,.45), 0 8px 18px rgba(124,58,237,.16);
-    width:100%;
-    font-size:15px;
+    box-shadow: 0 12px 22px rgba(124,58,237,.25);
     letter-spacing:.2px;
-    margin-top:14px;
+    font-size:15px;
   }
-  .btn:disabled{opacity:.6; cursor:not-allowed}
+  .btn:active{transform: translateY(1px)}
+  .btn[disabled]{opacity:.6;cursor:not-allowed;box-shadow:none}
 
   .price-line{
     margin-top:12px;
@@ -170,25 +146,28 @@
   }
   .price-line .price{font-size:18px;color:var(--text);font-weight:900}
 
-  /* Image grid UI */
-  #images{display:none;}
+  .hint{margin-top:10px;color:var(--muted);font-weight:700;font-size:13px;line-height:1.35}
+  .err{color: rgba(239,68,68,.95);font-weight:900;display:none;margin-top:8px;white-space:pre-wrap}
+  .ok{color: rgba(25,195,125,.95);font-weight:900;display:none;margin-top:8px;white-space:pre-wrap}
+
+  /* Image grid UI (from your reference) */
+  #images{ display:none; }
   .img-grid{display:grid;grid-template-columns: repeat(4, 1fr);gap:10px;margin-top:10px;}
-  .img-tile{position:relative;aspect-ratio:1/1;border-radius:14px;overflow:hidden;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.10);}
+  .img-tile{position:relative;aspect-ratio: 1/1;border-radius:14px;overflow:hidden;background: rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.10);}
   .img-tile img{width:100%;height:100%;object-fit:cover;display:block;}
-  .img-remove{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;border:0;background:rgba(0,0,0,.65);color:#fff;font-size:16px;line-height:22px;padding:0;cursor:pointer;}
+  .img-remove{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;border:0;background: rgba(0,0,0,.65);color:#fff;font-size:16px;line-height:22px;padding:0;cursor:pointer;}
   .img-add{aspect-ratio:1/1;border-radius:14px;border:2px dashed rgba(255,255,255,.18);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;}
-  .img-add span{font-size:28px;font-weight:900;color:rgba(255,255,255,.55);}
-  .img-add:hover{border-color:rgba(255,255,255,.35);}
+  .img-add span{font-size:28px;font-weight:900;color: rgba(255,255,255,.55);}
+  .img-add:hover{border-color: rgba(255,255,255,.35);}
   .img-add:hover span{color:#fff;}
-  .img-count{margin-top:8px;font-size:13px;color:rgba(255,255,255,.55);font-weight:800;}
+  .img-count{margin-top:8px;font-size:13px;color: rgba(255,255,255,.55);font-weight:800;}
 </style>
 </head>
 
 <body>
   <div class="wrap">
     <div class="card">
-      <div class="card-inner">
-<div class="header">
+      <div class="header">
   <div class="brand">
     <div class="logo" aria-hidden="true">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -203,193 +182,292 @@
   <div class="pill">Κόστος: <b>4</b> credits</div>
 </div>
 
-<div class="block">
-          <div class="row" style="margin-bottom:8px">
-            <div class="label" style="margin:0">PROMPT</div>
-            <div class="counter"><span id="charCountPro">0</span>/3000</div>
-          </div>
-          <textarea id="prompt" maxlength="3000" placeholder="Πληκτρολόγησε prompt (έως 3000 χαρακτήρες)..."></textarea>
-          <div id="promptErr" class="error">Το prompt είναι υποχρεωτικό (1–3000 χαρακτήρες).</div>
-        </div>
+      <label for="prompt">Prompt</label>
+      <textarea id="prompt" maxlength="3000" placeholder="Πληκτρολόγησε prompt (έως 3000 χαρακτήρες)..."></textarea>
+      <div id="promptErr" class="err">Το prompt είναι υποχρεωτικό (1–3000 χαρακτήρες).</div>
 
-<div class="block">
-          <div class="row">
-            <div class="label" style="margin:0">ΕΙΚΟΝΕΣ (ΠΡΟΑΙΡΕΤΙΚΑ)</div>
-            <div class="counter">JPG/PNG • ≤ 10 MB • έως 8</div>
-          </div>
+      <label for="images">Εικόνες (προαιρετικά)</label>
+      <input id="images" type="file" accept="image/png,image/jpeg,image/jpg" multiple />
+      <div class="hint">Έως 8 εικόνες. Έως 10MB/εικόνα. JPG/PNG.</div>
+      <div id="imgErr" class="err"></div>
 
-          <input id="images" type="file" accept="image/png,image/jpeg,image/jpg" multiple />
-          <div class="hint">Πρόσθεσε έως 8 εικόνες αναφοράς. Πάτησε στο <b>+</b>.</div>
-          <div id="imgErr" class="error"></div>
-        </div>
+      <label for="ratio">Αναλογία πλευρών</label>
+      <select id="ratio">
+        <option value="1:1" selected>1:1</option>
+        <option value="2:3">2:3</option>
+        <option value="3:2">3:2</option>
+        <option value="3:4">3:4</option>
+        <option value="4:3">4:3</option>
+        <option value="4:5">4:5</option>
+        <option value="5:4">5:4</option>
+        <option value="9:16">9:16</option>
+        <option value="16:9">16:9</option>
+        <option value="21:9">21:9</option>
+      </select>
 
-<div class="block">
-          <div class="label">ΑΝΑΛΟΓΙΑ ΠΛΕΥΡΩΝ</div>
-          <div class="select-wrap">
-            <select id="ratio" class="select">
-              <option value="1:1" selected>1:1</option>
-              <option value="2:3">2:3</option>
-              <option value="3:2">3:2</option>
-              <option value="3:4">3:4</option>
-              <option value="4:3">4:3</option>
-              <option value="4:5">4:5</option>
-              <option value="5:4">5:4</option>
-              <option value="9:16">9:16</option>
-            </select>
-          </div>
-        </div>
+      <label for="quality">Ποιότητα (resolution)</label>
+      <select id="quality">
+        <option value="1k" selected>1K</option>
+        <option value="2k">2K</option>
+        <option value="4k">4K</option>
+      </select>
 
-<div class="block">
-          <div class="label">ΠΟΙΟΤΗΤΑ (RESOLUTION)</div>
-          <div class="select-wrap">
-            <select id="quality" class="select">
-              <option value="1k" selected>1K</option>
-              <option value="2k">2K</option>
-              <option value="4k">4K</option>
-            </select>
-          </div>
-        </div>
+      <label for="format">Μορφή αρχείου</label>
+      <select id="format">
+        <option value="png" selected>PNG</option>
+        <option value="jpg">JPG</option>
+      </select>
 
-<div class="block">
-          <div class="label">ΜΟΡΦΗ ΑΡΧΕΙΟΥ</div>
-          <div class="select-wrap">
-            <select id="format" class="select">
-              <option value="png" selected>PNG</option>
-              <option value="jpg">JPG</option>
-            </select>
-          </div>
+      <div class="price-line">
+        <div>Κόστος</div><div class="price">4 credits</div>
+      </div>
 
-          <div class="price-line">
-            <div>Κόστος</div><div class="price">4 credits</div>
-          </div>
+      <button class="btn" id="btnGenerate">Δημιουργία</button>
+      <div class="hint">Θα εμφανιστεί popup “στάλθηκε” και το αποτέλεσμα θα έρθει μέσα στο Telegram chat.</div>
 
-          <button class="btn" id="btnGenerate" type="button">Δημιουργία</button>
-          <div class="hint">Θα εμφανιστεί popup “στάλθηκε” και το αποτέλεσμα θα έρθει μέσα στο Telegram chat.</div>
-
-          <div id="okBox" class="ok"></div>
-          <div id="errBox" class="error"></div>
-        </div>
-</div>
+      <div id="okBox" class="ok"></div>
+      <div id="errBox" class="err"></div>
     </div>
   </div>
 
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <script>
-  // UI: live char counter + image grid (thumbnails)
-  (function(){
-    const promptEl = document.getElementById("prompt");
-    const cc = document.getElementById("charCountPro");
-    if (promptEl && cc){
-      const upd = () => cc.textContent = String((promptEl.value||"").length);
-      promptEl.addEventListener("input", upd);
-      upd();
+  const $ = id => document.getElementById(id);
+  const tg = window.Telegram?.WebApp;
+  if (tg) { tg.expand(); tg.ready(); }
+
+  const API_ENDPOINT = "/api/nanobanana-pro/generate";
+
+  function showSentPopup(){
+    if (!tg?.showPopup) return;
+    tg.showPopup({
+      title: "Telegram",
+      message: "Η αίτηση στάλθηκε. Το αποτέλεσμα θα έρθει μέσα στο Telegram.",
+      buttons: [{ type: "ok", text: "Close" }]
+    }, () => {});
+  }
+  function showAlert(msg){
+    if (tg?.showAlert) tg.showAlert(msg);
+  }
+
+  function validateFiles(fileList){
+    if (!fileList || fileList.length === 0) return { ok:true };
+    if (fileList.length > 8) return { ok:false, error:"Μέγιστο 8 εικόνες." };
+    for (const f of fileList){
+      const max = 10 * 1024 * 1024;
+      if (f.size > max) return { ok:false, error:`Η εικόνα "${f.name}" είναι πάνω από 10MB.` };
+      const t = (f.type || "").toLowerCase();
+      if (!(t.includes("png") || t.includes("jpeg") || t.includes("jpg") || t.startsWith("image/")))
+        return { ok:false, error:`Η εικόνα "${f.name}" δεν είναι PNG/JPG.` };
     }
-  })();
+    return { ok:true };
+  }
 
-  (function setupImageGrid(){
-    const input = document.getElementById("images");
-    if (!input) return;
+  function fileToDataURL(file){
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("File read failed"));
+      reader.readAsDataURL(file);
+    });
+  }
 
-    const block = input.closest(".block") || input.parentElement;
-    const err = document.getElementById("imgErr");
+  async function generate(){
+    $("okBox").style.display = "none";
+    $("errBox").style.display = "none";
+    $("promptErr").style.display = "none";
+    $("imgErr").style.display = "none";
 
-    const grid = document.createElement("div");
-    grid.id = "imgGrid";
-    grid.className = "img-grid";
-
-    const count = document.createElement("div");
-    count.id = "imgCount";
-    count.className = "img-count";
-    count.textContent = "0/8";
-
-    const hint = block.querySelector(".hint");
-    (hint || input).insertAdjacentElement("afterend", grid);
-    grid.insertAdjacentElement("afterend", count);
-
-    let filesArr = [];
-
-    function syncInputFiles(){
-      const dt = new DataTransfer();
-      filesArr.forEach(f => dt.items.add(f));
-      input.files = dt.files;
+    const prompt = $("prompt").value.trim();
+    if (prompt.length < 1 || prompt.length > 3000){
+      $("promptErr").style.display = "block";
+      return;
     }
-    function setCount(){ count.textContent = `${filesArr.length}/8`; }
-    function clearGrid(){ while(grid.firstChild) grid.removeChild(grid.firstChild); }
 
-    function render(){
-      clearGrid();
+    const files = $("images").files;
+    const vf = validateFiles(files);
+    if (!vf.ok){
+      $("imgErr").textContent = vf.error;
+      $("imgErr").style.display = "block";
+      return;
+    }
 
-      filesArr.forEach((file, idx) => {
-        const tile = document.createElement("div");
-        tile.className = "img-tile";
+    $("btnGenerate").disabled = true;
+    $("btnGenerate").textContent = "⏳ Αποστολή...";
 
-        const img = document.createElement("img");
-        const url = URL.createObjectURL(file);
-        img.src = url;
-        img.onload = () => URL.revokeObjectURL(url);
+    showSentPopup();
 
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "img-remove";
-        btn.textContent = "×";
-        btn.addEventListener("click", () => {
-          filesArr.splice(idx, 1);
-          syncInputFiles();
-          render();
-        });
+    try{
+      // Convert images to data URLs (max 8)
+      let images_data_urls = [];
+      if (files && files.length){
+        const arr = Array.from(files).slice(0, 8);
+        images_data_urls = await Promise.all(arr.map(fileToDataURL));
+      }
 
-        tile.appendChild(img);
-        tile.appendChild(btn);
-        grid.appendChild(tile);
+      // Map UI -> backend expected fields
+      const sizeMap = { "1k":"1K", "2k":"2K", "4k":"4K" };
+      const payload = {
+        initData: tg?.initData || "",
+        prompt,
+        aspect_ratio: $("ratio").value,
+        image_size: sizeMap[String($("quality").value).toLowerCase()] || "1K",
+        output_format: $("format").value,
+        images_data_urls,
+      };
+
+      const res = await fetch(API_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
-      if (filesArr.length < 8){
-        const add = document.createElement("div");
-        add.className = "img-add";
-        add.innerHTML = "<span>+</span>";
-        add.addEventListener("click", () => input.click());
-        grid.appendChild(add);
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data.ok){
+        const msg = data?.error || data?.detail || "Αποτυχία δημιουργίας.";
+        throw new Error(msg);
       }
-      setCount();
+
+      $("okBox").textContent = data.message || "Έτοιμο. Στάλθηκε στο Telegram.";
+      $("okBox").style.display = "block";
+
+      if (tg?.close) tg.close();
+
+    }catch(e){
+      showAlert("Αποτυχία. " + (e?.message || ""));
+      $("errBox").textContent = "Σφάλμα: " + (e?.message || "Άγνωστο σφάλμα");
+      $("errBox").style.display = "block";
+    }finally{
+      $("btnGenerate").disabled = false;
+      $("btnGenerate").textContent = "Δημιουργία";
     }
+  }
 
-    function addFiles(newFiles){
-      const incoming = Array.from(newFiles || []);
-      if (!incoming.length) return;
+  
+// ===== Image grid UI (thumbnails + + tile) =====
+(function setupImageGrid(){
+  const input = $("images");
+  if (!input) return;
 
-      const sig = f => `${f.name}|${f.size}|${f.lastModified}`;
-      const existing = new Set(filesArr.map(sig));
+  // Create UI nodes right after the hint (or after input if hint not found)
+  const hint = input.nextElementSibling; // .hint
+  const imgErr = $("imgErr");
 
-      for (const f of incoming){
-        if (filesArr.length >= 8) break;
-        const s = sig(f);
-        if (existing.has(s)) continue;
-        filesArr.push(f);
-        existing.add(s);
-      }
-      syncInputFiles();
-      render();
-    }
+  const grid = document.createElement("div");
+  grid.id = "imgGrid";
+  grid.className = "img-grid";
 
-    input.addEventListener("change", () => {
-      const vf = (typeof validateFiles === "function") ? validateFiles(input.files) : {ok:true};
-      if (!vf.ok){
-        if (err){
-          err.textContent = vf.error || "Λάθος αρχείο.";
-          err.style.display = "block";
-        }
+  const count = document.createElement("div");
+  count.id = "imgCount";
+  count.className = "img-count";
+  count.textContent = "0/8";
+
+  // Insert: after hint, before imgErr
+  const anchor = (hint && hint.classList && hint.classList.contains("hint")) ? hint : input;
+  anchor.insertAdjacentElement("afterend", grid);
+  grid.insertAdjacentElement("afterend", count);
+
+  // Maintain editable list of selected files
+  let filesArr = [];
+
+  function syncInputFiles(){
+    const dt = new DataTransfer();
+    filesArr.forEach(f => dt.items.add(f));
+    input.files = dt.files;
+  }
+
+  function setCount(){
+    count.textContent = `${filesArr.length}/8`;
+  }
+
+  function clearGrid(){
+    while (grid.firstChild) grid.removeChild(grid.firstChild);
+  }
+
+  function render(){
+    clearGrid();
+
+    // thumbs
+    filesArr.forEach((file, idx) => {
+      const tile = document.createElement("div");
+      tile.className = "img-tile";
+
+      const img = document.createElement("img");
+      const url = URL.createObjectURL(file);
+      img.src = url;
+      img.onload = () => URL.revokeObjectURL(url);
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "img-remove";
+      btn.textContent = "×";
+      btn.addEventListener("click", () => {
+        filesArr.splice(idx, 1);
         syncInputFiles();
         render();
-        return;
-      }
-      if (err) err.style.display = "none";
-      addFiles(input.files);
-      input.value = "";
+      });
+
+      tile.appendChild(img);
+      tile.appendChild(btn);
+      grid.appendChild(tile);
     });
 
+    // add tile (if < 8)
+    if (filesArr.length < 8){
+      const add = document.createElement("div");
+      add.className = "img-add";
+      add.innerHTML = "<span>+</span>";
+      add.addEventListener("click", () => input.click());
+      grid.appendChild(add);
+    }
+
+    setCount();
+  }
+
+  function addFiles(newFiles){
+    const incoming = Array.from(newFiles || []);
+    if (!incoming.length) return;
+
+    // de-dupe by signature
+    const sig = f => `${f.name}|${f.size}|${f.lastModified}`;
+    const existing = new Set(filesArr.map(sig));
+
+    for (const f of incoming){
+      if (filesArr.length >= 8) break;
+      const s = sig(f);
+      if (existing.has(s)) continue;
+      filesArr.push(f);
+      existing.add(s);
+    }
+    syncInputFiles();
     render();
-  })();
+  }
+
+  input.addEventListener("change", () => {
+    // validate
+    const vf = validateFiles(input.files);
+    if (!vf.ok){
+      if (imgErr){
+        imgErr.textContent = vf.error;
+        imgErr.style.display = "block";
+      }
+      // keep previous selection (re-sync)
+      syncInputFiles();
+      render();
+      return;
+    }
+    if (imgErr) imgErr.style.display = "none";
+    addFiles(input.files);
+    // reset native picker value so you can re-pick same file later
+    input.value = "";
+  });
+
+  // initial render
+  render();
+})();
+
+  $("btnGenerate").addEventListener("click", generate);
 </script>
 </body>
 </html>
