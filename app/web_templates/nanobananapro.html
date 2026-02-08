@@ -284,8 +284,8 @@
       return;
     }
 
-    const files = $("images").files;
-    const vf = validateFiles(files);
+    const filesArr = (window.__nbProFiles && Array.isArray(window.__nbProFiles)) ? window.__nbProFiles : Array.from($("images").files || []);
+    const vf = validateFiles(filesArr);
     if (!vf.ok){
       $("imgErr").textContent = vf.error;
       $("imgErr").style.display = "block";
@@ -300,8 +300,8 @@
     try{
       // Convert images to data URLs (max 8)
       let images_data_urls = [];
-      if (files && files.length){
-        const arr = Array.from(files).slice(0, 8);
+      if (filesArr && filesArr.length){
+        const arr = Array.from(filesArr).slice(0, 8);
         images_data_urls = await Promise.all(arr.map(fileToDataURL));
       }
 
@@ -372,10 +372,15 @@
   let filesArr = [];
 
   function syncInputFiles(){
-    const dt = new DataTransfer();
-    filesArr.forEach(f => dt.items.add(f));
-    input.files = dt.files;
-  }
+      try{
+        const dt = new DataTransfer();
+        filesArr.forEach(f => dt.items.add(f));
+        input.files = dt.files;
+      }catch(e){
+        // Some WebViews (iOS Telegram) do not allow programmatic FileList assignment.
+        // We still keep filesArr and use it for upload.
+      }
+    }
 
   function setCount(){
     count.textContent = `${filesArr.length}/8`;
