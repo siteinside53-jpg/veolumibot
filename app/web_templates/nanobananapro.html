@@ -370,6 +370,7 @@
 
   // Maintain editable list of selected files
   let filesArr = [];
+  window.__nbProFiles = filesArr;
 
   function syncInputFiles(){
       try{
@@ -411,7 +412,9 @@
         filesArr.splice(idx, 1);
         syncInputFiles();
         render();
-      });
+                  window.__nbProFiles = filesArr;
+window.__nbProFiles = filesArr;
+});
 
       tile.appendChild(img);
       tile.appendChild(btn);
@@ -447,11 +450,13 @@
     }
     syncInputFiles();
     render();
+    window.__nbProFiles = filesArr;
   }
 
   input.addEventListener("change", () => {
+    const selected = Array.from(input.files || []);
     // validate
-    const vf = validateFiles(input.files);
+    const vf = validateFiles(selected);
     if (!vf.ok){
       if (imgErr){
         imgErr.textContent = vf.error;
@@ -463,7 +468,7 @@
       return;
     }
     if (imgErr) imgErr.style.display = "none";
-    addFiles(input.files);
+    addFiles(selected);
     // reset native picker value so you can re-pick same file later
     input.value = "";
   });
