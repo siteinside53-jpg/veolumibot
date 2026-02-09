@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="el">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<title>Midjourney</title>
+
+<style>
+:root{
+  --bg:#0b0c12;
+  --card:#121422;
+  --text:#e9e9f5;
+  --muted:#a4a7c0;
+  --accent:#7c3aed;
+  --accent2:#6d28d9;
+  --border:rgba(255,255,255,.08);
+  --radius:18px;
+  --shadow:0 14px 40px rgba(0,0,0,.55);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto;
+  background:
+    radial-gradient(800px 500px at 20% 10%, rgba(124,58,237,.18), transparent 55%),
+    radial-gradient(700px 500px at 80% 40%, rgba(124,58,237,.12), transparent 60%),
+    var(--bg);
+  color:var(--text);
+}
+.wrap{max-width:520px;margin:0 auto;padding:18px}
+.card{
+  background:var(--card);
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:16px;
+}
+.header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  margin-bottom:14px;
+}
+.brand{display:flex;gap:10px;align-items:center}
+.logo{
+  width:34px;height:34px;border-radius:12px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:grid;place-items:center;
+  font-weight:900;
+}
+.pill{
+  font-size:12px;
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  background:rgba(255,255,255,.03);
+  font-weight:900;
+}
+.title{font-size:18px;font-weight:900}
+.subtitle{font-size:12px;color:var(--muted)}
+.block{
+  margin-top:12px;
+  background:rgba(0,0,0,.22);
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:14px;
+  padding:12px;
+}
+.label{
+  font-size:12px;
+  color:var(--muted);
+  font-weight:800;
+  text-transform:uppercase;
+  margin-bottom:8px;
+}
+textarea{
+  width:100%;
+  min-height:120px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  background:rgba(255,255,255,.03);
+  color:var(--text);
+  padding:12px;
+  resize:vertical;
+}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+}
+.opt{
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:10px 0;
+  text-align:center;
+  font-weight:900;
+  cursor:pointer;
+  background:rgba(255,255,255,.02);
+}
+.opt.active{
+  background:linear-gradient(180deg,var(--accent),var(--accent2));
+}
+.range{
+  width:100%;
+}
+.btn{
+  width:100%;
+  margin-top:14px;
+  padding:14px;
+  border-radius:16px;
+  border:0;
+  background:linear-gradient(180deg,var(--accent),var(--accent2));
+  color:white;
+  font-weight:900;
+  font-size:15px;
+}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+  <div class="card">
+
+    <div class="header">
+      <div class="brand">
+        <div class="logo">MJ</div>
+        <div>
+          <div class="title">Midjourney</div>
+          <div class="subtitle">Γεννήτρια εικόνων</div>
+        </div>
+      </div>
+      <div class="pill">2 credits</div>
+    </div>
+
+    <div class="block">
+      <div class="label">Prompt</div>
+      <textarea placeholder="Περιέγραψε τι θέλεις να δημιουργηθεί..."></textarea>
+    </div>
+
+    <div class="block">
+      <div class="label">Αναλογία πλευρών</div>
+      <div class="grid">
+        <div class="opt active">1:1</div>
+        <div class="opt">1:2</div>
+        <div class="opt">9:16</div>
+        <div class="opt">2:3</div>
+        <div class="opt">3:4</div>
+        <div class="opt">5:6</div>
+        <div class="opt">6:5</div>
+        <div class="opt">4:3</div>
+        <div class="opt">3:2</div>
+        <div class="opt">16:9</div>
+        <div class="opt">2:1</div>
+      </div>
+    </div>
+
+    <div class="block">
+      <div class="label">Εκτεταμένες ρυθμίσεις</div>
+      <label>Stylize</label>
+      <input type="range" min="0" max="1000" value="100" class="range"/>
+      <label>Chaos</label>
+      <input type="range" min="0" max="3000" value="0" class="range"/>
+      <label>Variety</label>
+      <input type="range" min="0" max="100" value="0" class="range"/>
+    </div>
+
+    <button class="btn">Δημιουργία · 2 credits</button>
+
+  </div>
+</div>
+</body>
+</html>
