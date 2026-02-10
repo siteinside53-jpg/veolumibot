@@ -46,4 +46,8 @@ async def nanobanana_page(request: Request):
 @router.get("/kling26", response_class=HTMLResponse)
 async def kling26_page(request: Request):
     return templates.TemplateResponse("kling26.html", {"request": request})
+
+@router.get("/midjourney", response_class=HTMLResponse)
+async def midjourney_page(request: Request):
+    return templates.TemplateResponse("midjourney.html", {"request": request})
     
