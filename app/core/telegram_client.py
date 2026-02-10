@@ -51,3 +51,11 @@ async def tg_send_video(
         if not j.get("ok"):
             raise RuntimeError(f"Telegram sendVideo failed: {j}")
         return j["result"]
+
+
+async def tg_send_message_safe(chat_id: int, text: str) -> None:
+    """Στέλνει μήνυμα στο Telegram χωρίς να σκάει η ροή σε περίπτωση σφάλματος."""
+    try:
+        await tg_send_message(chat_id, text)
+    except Exception:
+        return
