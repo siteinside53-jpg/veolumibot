@@ -46,6 +46,9 @@ def _webapp_grok_url() -> str:
 def _webapp_kling26_url() -> str:
     return f"{_base_url()}/kling26"
 
+def _webapp_midjourney_url() -> str:
+    return f"{_base_url()}/midjourney"
+
 def start_inline_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
@@ -77,7 +80,7 @@ def image_models_menu() -> InlineKeyboardMarkup:
             [InlineKeyboardButton("🧠 GPT Image 1.5", web_app=WebAppInfo(url=_webapp_gpt_image_url()))],
             [InlineKeyboardButton("🍌 Nano Banana PRO", web_app=WebAppInfo(url=_webapp_nanobanana_pro_url()))],
             [InlineKeyboardButton("🍌 Nano Banana AI", web_app=WebAppInfo(url=_webapp_nanobanana_url()))],
-            [InlineKeyboardButton("🟣 Midjourney", callback_data="menu:set:image:midjourney")],
+            [InlineKeyboardButton("🟣 Midjourney", web_app=WebAppInfo(url=_webapp_midjourney_url()))],
             [InlineKeyboardButton("🧪 Flux Kontext", callback_data="menu:set:image:flux_kontext")],
             [InlineKeyboardButton("⚪ Grok Imagine (0.8–4)", web_app=WebAppInfo(url=_webapp_grok_url()))],
             [InlineKeyboardButton("← Πίσω", callback_data="menu:home")],
