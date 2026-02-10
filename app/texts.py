@@ -61,3 +61,62 @@ ABOUT_TEXT = (
     "• την Πολιτική Απορρήτου\n\n"
     "🔗 https://telegra.ph/OROI-CHRISIS-VeoLumiBot"
 )
+
+
+# ==========================
+# Friendly Tool Error (GR)
+# ==========================
+
+def map_provider_error_to_gr(raw_error: str) -> tuple[str, str]:
+    """Μετατρέπει raw provider error σε (αιτία, τι να κάνεις) στα Ελληνικά."""
+    e = (raw_error or "").lower()
+
+    # Policy / moderation / blocked prompt
+    if any(k in e for k in [
+        "policy", "content policy", "moderation", "safety", "unsafe",
+        "failed the review", "disallowed", "prohibited", "blocked",
+        "prompt was rejected", "rejected"
+    ]):
+        return (
+            "Το κείμενο/περιεχόμενο απορρίφθηκε (μη επιτρεπτό περιεχόμενο).",
+            "Άλλαξε τη διατύπωση και απόφυγε ευαίσθητους ή απαγορευμένους όρους."
+        )
+
+    # Rate limit / quota
+    if any(k in e for k in ["rate limit", "too many requests", "quota", "429"]):
+        return (
+            "Το εργαλείο έχει προσωρινό φόρτο (πάρα πολλά αιτήματα).",
+            "Δοκίμασε ξανά σε λίγο ή με πιο σύντομο prompt."
+        )
+
+    # Timeouts / provider down
+    if any(k in e for k in ["timeout", "timed out", "gateway", "502", "503", "504"]):
+        return (
+            "Το εργαλείο δεν απάντησε εγκαίρως.",
+            "Δοκίμασε ξανά σε 30–60 δευτερόλεπτα."
+        )
+
+    # Bad/invalid images
+    if any(k in e for k in ["invalid image", "cannot decode", "unsupported", "bad image", "corrupt"]):
+        return (
+            "Η εικόνα δεν διαβάζεται σωστά ή δεν υποστηρίζεται.",
+            "Δοκίμασε άλλη εικόνα (JPG/PNG) ή ξανα-ανέβασέ την."
+        )
+
+    # Generic
+    return (
+        "Παρουσιάστηκε σφάλμα κατά τη δημιουργία.",
+        "Δοκίμασε ξανά ή άλλαξε λίγο το prompt."
+    )
+
+
+def tool_error_message_gr(*, reason: str, tips: str, refunded: float | None = None) -> str:
+    """Το μήνυμα που θα βλέπει ο χρήστης στο Telegram (χωρίς raw errors)."""
+    msg = (
+        "⛔ Δεν μπόρεσα να δημιουργήσω αποτέλεσμα\n"
+        f"Αιτία: {reason}\n"
+        f"Τι να κάνεις: {tips}"
+    )
+    if refunded is not None:
+        msg += f"\n\n💎 Τα credits επιστράφηκαν: {refunded:.2f}"
+    return msg
