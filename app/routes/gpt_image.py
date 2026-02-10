@@ -27,7 +27,6 @@ async def _run_gpt_image_job(
     cost: int,
 ):
     try:
-        try:
             if client is None:
                 raise RuntimeError("openai_not_configured")
             res = client.images.generate(
