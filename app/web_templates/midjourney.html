@@ -97,13 +97,12 @@ textarea{
   font-weight:900;
   cursor:pointer;
   background:rgba(255,255,255,.02);
+  user-select:none;
 }
 .opt.active{
   background:linear-gradient(180deg,var(--accent),var(--accent2));
 }
-.range{
-  width:100%;
-}
+.range{width:100%}
 .btn{
   width:100%;
   margin-top:14px;
@@ -115,6 +114,25 @@ textarea{
   font-weight:900;
   font-size:15px;
 }
+.small{font-size:11px;color:var(--muted);margin-top:6px}
+.toggle{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  cursor:pointer;
+  gap:10px;
+}
+.arrow{
+  transition:.25s;
+  font-weight:900;
+  opacity:.9;
+}
+.adv{display:none;margin-top:6px}
+.adv.open{display:block}
+.arrow.open{transform:rotate(180deg)}
+.row{display:flex;justify-content:space-between;align-items:center;margin:8px 0 4px}
+.val{font-size:12px;color:var(--muted);font-weight:800}
+hr.sep{border:0;border-top:1px solid rgba(255,255,255,.06);margin:10px 0}
 </style>
 </head>
 
@@ -130,44 +148,107 @@ textarea{
           <div class="subtitle">Γεννήτρια εικόνων</div>
         </div>
       </div>
-      <div class="pill">2 credits</div>
+      <div class="pill">Κόστος · <span id="costPill">2</span> credits</div>
     </div>
 
     <div class="block">
-      <div class="label">Prompt</div>
-      <textarea placeholder="Περιέγραψε τι θέλεις να δημιουργηθεί..."></textarea>
+      <div class="label">Κείμενο prompt</div>
+      <textarea id="prompt" maxlength="2000" placeholder="Περιέγραψε τι θέλεις να δημιουργηθεί..."></textarea>
+      <div class="small">Έως 2000 χαρακτήρες</div>
     </div>
 
     <div class="block">
       <div class="label">Αναλογία πλευρών</div>
-      <div class="grid">
-        <div class="opt active">1:1</div>
-        <div class="opt">1:2</div>
-        <div class="opt">9:16</div>
-        <div class="opt">2:3</div>
-        <div class="opt">3:4</div>
-        <div class="opt">5:6</div>
-        <div class="opt">6:5</div>
-        <div class="opt">4:3</div>
-        <div class="opt">3:2</div>
-        <div class="opt">16:9</div>
-        <div class="opt">2:1</div>
+      <div class="grid" id="ratioGrid">
+        <div class="opt active" data-ratio="1:1">1:1</div>
+        <div class="opt" data-ratio="1:2">1:2</div>
+        <div class="opt" data-ratio="9:16">9:16</div>
+        <div class="opt" data-ratio="2:3">2:3</div>
+        <div class="opt" data-ratio="3:4">3:4</div>
+        <div class="opt" data-ratio="5:6">5:6</div>
+        <div class="opt" data-ratio="6:5">6:5</div>
+        <div class="opt" data-ratio="4:3">4:3</div>
+        <div class="opt" data-ratio="3:2">3:2</div>
+        <div class="opt" data-ratio="16:9">16:9</div>
+        <div class="opt" data-ratio="2:1">2:1</div>
       </div>
+      <input type="hidden" id="ratio" value="1:1"/>
     </div>
 
     <div class="block">
-      <div class="label">Εκτεταμένες ρυθμίσεις</div>
-      <label>Stylize</label>
-      <input type="range" min="0" max="1000" value="100" class="range"/>
-      <label>Chaos</label>
-      <input type="range" min="0" max="3000" value="0" class="range"/>
-      <label>Variety</label>
-      <input type="range" min="0" max="100" value="0" class="range"/>
+      <div class="toggle" id="advToggle">
+        <div class="label" style="margin:0">Εκτεταμένες ρυθμίσεις</div>
+        <div id="arr" class="arrow">⌄</div>
+      </div>
+
+      <div id="adv" class="adv">
+        <hr class="sep"/>
+
+        <div class="row"><label for="stylize">Στυλ (Stylize)</label><div class="val"><span id="stylizeVal">100</span> / 1000</div></div>
+        <input id="stylize" type="range" min="0" max="1000" value="100" class="range"/>
+
+        <div class="row"><label for="chaos">Χάος (Chaos)</label><div class="val"><span id="chaosVal">0</span> / 3000</div></div>
+        <input id="chaos" type="range" min="0" max="3000" value="0" class="range"/>
+
+        <div class="row"><label for="variety">Ποικιλία (Variety)</label><div class="val"><span id="varietyVal">0</span> / 100</div></div>
+        <input id="variety" type="range" min="0" max="100" value="0" class="range"/>
+      </div>
     </div>
 
-    <button class="btn">Δημιουργία · 2 credits</button>
+    <button class="btn" id="btn">Δημιουργία · <span id="costBtn">2</span> credits</button>
 
   </div>
 </div>
+
+<script>
+  // Telegram WebApp polish
+  try {
+    const tg = window.Telegram?.WebApp;
+    tg?.ready?.();
+    tg?.expand?.();
+  } catch (e) {}
+
+  // Accordion like the screenshot
+  const adv = document.getElementById('adv');
+  const arr = document.getElementById('arr');
+  document.getElementById('advToggle').addEventListener('click', () => {
+    const open = adv.classList.toggle('open');
+    arr.classList.toggle('open', open);
+  });
+
+  // Ratio selection behavior
+  const grid = document.getElementById('ratioGrid');
+  const ratioInput = document.getElementById('ratio');
+  grid.addEventListener('click', (e) => {
+    const item = e.target.closest('.opt');
+    if (!item) return;
+    grid.querySelectorAll('.opt').forEach(x => x.classList.remove('active'));
+    item.classList.add('active');
+    ratioInput.value = item.dataset.ratio || item.textContent.trim();
+  });
+
+  // Slider value labels
+  const stylize = document.getElementById('stylize');
+  const chaos = document.getElementById('chaos');
+  const variety = document.getElementById('variety');
+  const stylizeVal = document.getElementById('stylizeVal');
+  const chaosVal = document.getElementById('chaosVal');
+  const varietyVal = document.getElementById('varietyVal');
+
+  function bindRange(el, out){
+    const upd = () => out.textContent = el.value;
+    el.addEventListener('input', upd);
+    upd();
+  }
+  bindRange(stylize, stylizeVal);
+  bindRange(chaos, chaosVal);
+  bindRange(variety, varietyVal);
+
+  // Placeholder click (backend wiring later)
+  document.getElementById('btn').addEventListener('click', () => {
+    // keep UI-only; you will wire this to your backend route
+    alert('Εστάλη! (demo UI)\n\nPrompt: ' + document.getElementById('prompt').value.trim());
+  });
+</script>
 </body>
 </html>
