@@ -136,13 +136,12 @@ async def _run_grok_job(
         except Exception:
             logger.exception("Error refunding credits")
 
-    # map error → greek reason/tips
+        # map error → greek reason/tips
         try:
             reason, tips = map_provider_error_to_gr(str(e))
             msg = tool_error_message_gr(reason=reason, tips=tips, refunded=refunded)
             await tg_send_message(tg_chat_id, msg)
-
-         except Exception:
+        except Exception:
              logger.exception("Error sending failure message")
 
 
