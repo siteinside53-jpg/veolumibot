@@ -3,10 +3,12 @@ import os
 import uuid
 import base64
 import asyncio
+import logging
 from typing import Dict, Any, Optional, List
 
 import httpx
 from fastapi import APIRouter, BackgroundTasks, UploadFile, File, Form
+from fastapi.responses import JSONResponse
 
 from ..core.telegram_auth import db_user_from_webapp
 from ..core.telegram_client import tg_send_message, tg_send_video
@@ -19,6 +21,9 @@ from ..db import (
     set_last_result,
 )
 
+from ..texts import map_provider_error_to_gr, tool_error_message_gr
+
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
@@ -32,7 +37,7 @@ def _veo31_model_name() -> str:
 async def veo31_generate(
     background_tasks: BackgroundTasks,
     tg_init_data: str = Form(""),
-    mode: str = Form("text"),             # text | image | ref
+    mode: str = Form("text"),  # text | image | ref
     prompt: str = Form(""),
     aspect_ratio: str = Form("16:9"),
     image: Optional[UploadFile] = File(None),        # image->video start frame
@@ -40,27 +45,35 @@ async def veo31_generate(
 ):
     init_data = (tg_init_data or "").strip()
     prompt = (prompt or "").strip()
-    mode = (mode or "text").strip()
+    mode = (mode or "text").strip().lower()
+    aspect_ratio = (aspect_ratio or "16:9").strip()
 
     if not prompt:
-        return {"ok": False, "error": "empty_prompt"}
-
+        return JSONResponse({"ok": False, "error": "empty_prompt"}, status_code=400)
 
     if mode == "text":
         COST = 10
     elif mode == "image":
         COST = 12
-    else:
+    elif mode == "ref":
         COST = 60
+    else:
+        return JSONResponse({"ok": False, "error": "bad_mode"}, status_code=400)
 
-    dbu = db_user_from_webapp(init_data)
-    tg_chat_id = int(dbu["tg_user_id"])
-    db_user_id = int(dbu["id"])
+    try:
+        dbu = db_user_from_webapp(init_data)
+        tg_chat_id = int(dbu["tg_user_id"])
+        db_user_id = int(dbu["id"])
+    except Exception:
+        return JSONResponse({"ok": False, "error": "auth_failed"}, status_code=401)
 
     try:
         spend_credits_by_user_id(db_user_id, COST, f"Veo 3.1 ({mode})", "gemini", _veo31_model_name())
-    except Exception:
-        return {"ok": False, "error": "not_enough_credits"}
+    except Exception as e:
+        msg = str(e)
+        if "not enough" in msg.lower():
+            return JSONResponse({"ok": False, "error": "not_enough_credits"}, status_code=402)
+        return JSONResponse({"ok": False, "error": msg[:200]}, status_code=400)
 
     image_bytes = await image.read() if image else None
 
@@ -75,20 +88,20 @@ async def veo31_generate(
         try:
             add_credits_by_user_id(db_user_id, COST, "Refund Veo31 missing image", "system", None)
         except Exception:
-            pass
-        return {"ok": False, "error": "missing_image"}
+            logger.exception("Refund Veo31 missing image failed")
+        return JSONResponse({"ok": False, "error": "missing_image"}, status_code=400)
 
     if mode == "ref" and (len(ref_bytes) < 1 or len(ref_bytes) > 3):
         try:
             add_credits_by_user_id(db_user_id, COST, "Refund Veo31 bad ref_images", "system", None)
         except Exception:
-            pass
-        return {"ok": False, "error": "bad_ref_images"}
+            logger.exception("Refund Veo31 bad ref_images failed")
+        return JSONResponse({"ok": False, "error": "bad_ref_images"}, status_code=400)
 
     try:
         await tg_send_message(tg_chat_id, "🎬 Veo 3.1: Το βίντεο ετοιμάζεται…")
     except Exception:
-        pass
+        logger.exception("Failed to send preparation message")
 
     background_tasks.add_task(
         _run_veo31_job,
@@ -117,7 +130,7 @@ async def _run_veo31_job(
 ):
     try:
         if not GEMINI_API_KEY:
-            raise RuntimeError("GEMINI_API_KEY missing")
+            raise RuntimeError("GEMINI_API_KEY missing (set it in Railway env)")
 
         model = _veo31_model_name()
         base_url = "https://generativelanguage.googleapis.com/v1beta"
@@ -131,9 +144,7 @@ async def _run_veo31_job(
 
         final_prompt = f"{ratio_hint}\n{prompt}".strip()
 
-        instance: Dict[str, Any] = {
-            "prompt": final_prompt,
-        }
+        instance: Dict[str, Any] = {"prompt": final_prompt}
 
         if mode == "image":
             instance["image"] = {
@@ -157,9 +168,14 @@ async def _run_veo31_job(
                 headers={"x-goog-api-key": GEMINI_API_KEY, "Content-Type": "application/json"},
                 json=body,
             )
+
+        try:
             data = r.json()
-            if r.status_code >= 400:
-                raise RuntimeError(f"Veo31 start error {r.status_code}: {data}")
+        except Exception:
+            data = {"raw": (r.text or "")[:2000]}
+
+        if r.status_code >= 400:
+            raise RuntimeError(f"Veo31 start error {r.status_code}: {data}")
 
         op_name = data.get("name")
         if not op_name:
@@ -169,7 +185,10 @@ async def _run_veo31_job(
         async with httpx.AsyncClient(timeout=60) as c:
             for _ in range(120):  # ~6 λεπτά
                 rs = await c.get(f"{base_url}/{op_name}", headers={"x-goog-api-key": GEMINI_API_KEY})
-                status = rs.json()
+                try:
+                    status = rs.json()
+                except Exception:
+                    status = {"raw": (rs.text or "")[:2000]}
                 if rs.status_code >= 400:
                     raise RuntimeError(f"Veo31 poll error {rs.status_code}: {status}")
                 if status.get("done") is True:
@@ -190,7 +209,7 @@ async def _run_veo31_job(
         async with httpx.AsyncClient(timeout=300, follow_redirects=True) as c:
             vd = await c.get(video_uri, headers={"x-goog-api-key": GEMINI_API_KEY})
             if vd.status_code >= 400:
-                raise RuntimeError(f"Video download error {vd.status_code}: {vd.text[:300]}")
+                raise RuntimeError(f"Video download error {vd.status_code}: {(vd.text or '')[:300]}")
             video_bytes = vd.content
 
         name = f"veo31_{uuid.uuid4().hex}.mp4"
@@ -214,12 +233,18 @@ async def _run_veo31_job(
         )
 
     except Exception as e:
+        logger.exception("Error during Veo31 job")
+
+        refunded = None
         try:
             add_credits_by_user_id(db_user_id, cost, "Refund Veo31 fail", "system", None)
+            refunded = float(cost)
         except Exception:
-            pass
+            logger.exception("Error refunding credits")
 
         try:
-            await tg_send_message(tg_chat_id, f"❌ Αποτυχία Veo 3.1.\nΛεπτομέρεια: {str(e)[:250]}")
+            reason, tips = map_provider_error_to_gr(str(e))
+            msg = tool_error_message_gr(reason=reason, tips=tips, refunded=refunded)
+            await tg_send_message(tg_chat_id, msg)
         except Exception:
-            pass
+            logger.exception("Error sending failure message")
