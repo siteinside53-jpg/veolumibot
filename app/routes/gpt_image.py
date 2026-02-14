@@ -64,7 +64,7 @@ async def _run_gpt_image_job(
             pass
 
         try:
-            await tg_send_message(tg_chat_id, f"❌ Αποτυχία δημιουργίας εικόνας.\nΛεπτομέρεια: {str(e)[:250]}")
+            await tg_send_message(tg_chat_id, msg)
         except Exception:
             pass
 
