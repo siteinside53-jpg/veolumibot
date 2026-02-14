@@ -18,6 +18,7 @@ router = APIRouter()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 
+
 async def _run_gpt_image_job(
     tg_chat_id: int,
     db_user_id: int,
@@ -58,15 +59,22 @@ async def _run_gpt_image_job(
         )
 
     except Exception as e:
+        # 1) refund credits (best-effort)
+        refunded = None
         try:
             add_credits_by_user_id(db_user_id, cost, "Refund GPT Image fail", "system", None)
+            refunded = float(cost)
         except Exception:
             pass
 
+        # 2) friendly greek message (no raw errors)
         try:
+            reason, tips = map_provider_error_to_gr(str(e))
+            msg = tool_error_message_gr(reason=reason, tips=tips, refunded=refunded)
             await tg_send_message(tg_chat_id, msg)
         except Exception:
             pass
+
 
 @router.post("/api/gpt_image/generate")
 async def gpt_image_generate(payload: dict, background_tasks: BackgroundTasks):
