@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from ..core.telegram_auth import db_user_from_webapp
 from ..core.telegram_client import tg_send_message, tg_send_photo
+from ..texts import map_provider_error_to_gr, tool_error_message_gr
 from ..core.paths import STATIC_DIR
 from ..web_shared import public_base_url
 from ..db import (
