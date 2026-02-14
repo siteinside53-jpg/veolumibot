@@ -2,6 +2,7 @@
 import os
 import base64
 import uuid
+import logging
 
 import httpx
 from fastapi import APIRouter, BackgroundTasks, Request
@@ -12,12 +13,14 @@ from ..core.telegram_client import tg_send_message, tg_send_photo
 from ..core.paths import IMAGES_DIR
 from ..web_shared import public_base_url
 
+from ..texts import map_provider_error_to_gr, tool_error_message_gr
 from ..db import (
     spend_credits_by_user_id,
     add_credits_by_user_id,
     set_last_result,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
@@ -25,6 +28,19 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 
 def _gemini_model_name() -> str:
     return os.getenv("GEMINI_NANOBANANA_PRO_MODEL", "gemini-3-pro-image-preview").strip()
+
+
+def _extract_gemini_image_b64(data: dict) -> str | None:
+    candidates = data.get("candidates") or []
+    if not candidates:
+        return None
+
+    parts_out = (((candidates[0].get("content") or {}).get("parts")) or [])
+    for p in parts_out:
+        inline = p.get("inline_data") or p.get("inlineData")
+        if inline and inline.get("data"):
+            return inline["data"]
+    return None
 
 
 async def _run_nanobanana_pro_job(
@@ -39,7 +55,7 @@ async def _run_nanobanana_pro_job(
 ):
     try:
         if not GEMINI_API_KEY:
-            raise RuntimeError("GEMINI_API_KEY missing")
+            raise RuntimeError("GEMINI_API_KEY missing (set it in Railway env)")
 
         parts = [{"text": prompt}]
 
@@ -70,24 +86,21 @@ async def _run_nanobanana_pro_job(
 
         async with httpx.AsyncClient(timeout=120) as c:
             r = await c.post(url, params={"key": GEMINI_API_KEY}, json=body)
+
+        try:
             data = r.json()
-            if r.status_code >= 400:
-                raise RuntimeError(f"Gemini error {r.status_code}: {data}")
+        except Exception:
+            data = {"raw": (r.text or "")[:2000]}
 
-        candidates = data.get("candidates") or []
-        if not candidates:
-            raise RuntimeError(f"No candidates: {data}")
+        if r.status_code >= 400:
+            err = None
+            if isinstance(data, dict):
+                err = data.get("error") or data.get("message") or data
+            raise RuntimeError(f"Gemini error {r.status_code}: {err}")
 
-        parts_out = (((candidates[0].get("content") or {}).get("parts")) or [])
-        img_b64 = None
-        for p in parts_out:
-            inline = p.get("inline_data") or p.get("inlineData")
-            if inline and inline.get("data"):
-                img_b64 = inline["data"]
-                break
-
+        img_b64 = _extract_gemini_image_b64(data)
         if not img_b64:
-            raise RuntimeError(f"No image in response: {data}")
+            raise RuntimeError("Gemini did not return image data")
 
         img_bytes = base64.b64decode(img_b64)
 
@@ -114,15 +127,24 @@ async def _run_nanobanana_pro_job(
         )
 
     except Exception as e:
+        logger.exception("Error during NanoBananaPro job")
+
+        refunded = None
+
+        # refund credits
         try:
             add_credits_by_user_id(db_user_id, cost, "Refund NanoBananaPro fail", "system", None)
+            refunded = float(cost)
         except Exception:
-            pass
+            logger.exception("Error refunding credits")
 
+        # map error → greek reason/tips + send friendly message (same format as Grok)
         try:
-            await tg_send_message(tg_chat_id, f"❌ Αποτυχία Nano Banana Pro.\nΛεπτομέρεια: {str(e)[:250]}")
+            reason, tips = map_provider_error_to_gr(str(e))
+            msg = tool_error_message_gr(reason=reason, tips=tips, refunded=refunded)
+            await tg_send_message(tg_chat_id, msg)
         except Exception:
-            pass
+            logger.exception("Error sending failure message")
 
 
 @router.post("/api/nanobanana-pro/generate")
@@ -140,7 +162,7 @@ async def nanobanana_pro_generate(request: Request, background_tasks: Background
     images_data_urls = payload.get("images_data_urls") or []
 
     if not prompt:
-        return {"ok": False, "error": "empty_prompt"}
+        return JSONResponse({"ok": False, "error": "empty_prompt"}, status_code=400)
 
     if not isinstance(images_data_urls, list):
         images_data_urls = []
@@ -150,21 +172,27 @@ async def nanobanana_pro_generate(request: Request, background_tasks: Background
     if output_format not in ("png", "jpg"):
         output_format = "png"
 
-    COST = 4
+    COST = 4.0
 
-    dbu = db_user_from_webapp(init_data)
-    tg_chat_id = int(dbu["tg_user_id"])
-    db_user_id = int(dbu["id"])
+    try:
+        dbu = db_user_from_webapp(init_data)
+        tg_chat_id = int(dbu["tg_user_id"])
+        db_user_id = int(dbu["id"])
+    except Exception:
+        return JSONResponse({"ok": False, "error": "auth_failed"}, status_code=401)
 
     try:
         spend_credits_by_user_id(db_user_id, COST, "Nano Banana Pro", "gemini", _gemini_model_name())
-    except Exception:
-        return {"ok": False, "error": "not_enough_credits"}
+    except Exception as e:
+        msg = str(e)
+        if "not enough" in msg.lower():
+            return JSONResponse({"ok": False, "error": "not_enough_credits"}, status_code=402)
+        return JSONResponse({"ok": False, "error": msg[:200]}, status_code=400)
 
     try:
         await tg_send_message(tg_chat_id, "🍌 Nano Banana Pro: Η εικόνα ετοιμάζεται…")
     except Exception:
-        pass
+        logger.exception("Failed to send preparation message")
 
     background_tasks.add_task(
         _run_nanobanana_pro_job,
