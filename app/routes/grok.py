@@ -124,20 +124,22 @@ async def _run_grok_job(
             reply_markup=kb,
         )
 
-    except Exception as e:
-        logger.exception("Error during Grok job")
+   except Exception as e:
+        # 1) refund credits (best-effort)
+        refunded = None
         try:
             add_credits_by_user_id(db_user_id, cost, "Refund Grok fail", "system", None)
+            refunded = float(cost)
         except Exception:
-            logger.exception("Error refunding credits")
+            pass
 
+        # 2) friendly greek message (no raw errors)
         try:
-            await tg_send_message(
-                tg_chat_id,
-                f"❌ Αποτυχία Grok.\nΛεπτομέρεια: {str(e)[:250]}",
-            )
+            reason, tips = map_provider_error_to_gr(str(e))
+            msg = tool_error_message_gr(reason=reason, tips=tips, refunded=refunded)
+            await tg_send_message(tg_chat_id, msg)
         except Exception:
-            logger.exception("Error sending failure message")
+            pass
 
 
 @router.post("/api/grok/generate")
