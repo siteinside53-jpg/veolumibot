@@ -7,108 +7,150 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <style>
-:root{
- --bg:#0b0c12;
- --card:#121422;
- --text:#e9e9f5;
- --muted:#a4a7c0;
- --accent:#7c3aed;
- --accent2:#6d28d9;
- --radius:18px;
- --shadow:0 14px 40px rgba(0,0,0,.55);
-}
-*{box-sizing:border-box}
-body{
- margin:0;
- font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto;
- background:
- radial-gradient(800px 500px at 20% 10%, rgba(124,58,237,.18), transparent 55%),
- radial-gradient(700px 500px at 80% 40%, rgba(124,58,237,.12), transparent 60%),
- var(--bg);
- color:var(--text);
- display:flex;
- justify-content:center;
- padding:18px 14px 28px;
-}
-.wrap{width:min(520px,100%)}
-.card{
- background:var(--card);
- border-radius:var(--radius);
- padding:16px;
- border:1px solid rgba(255,255,255,.06);
- box-shadow:var(--shadow);
-}
+  :root{
+    --bg:#0b0c12;
+    --card:#121422;
+    --text:#e9e9f5;
+    --muted:#a4a7c0;
+    --accent:#7c3aed;
+    --accent2:#6d28d9;
+    --good:#19c37d;
+    --bad:#ef4444;
+    --shadow: 0 14px 40px rgba(0,0,0,.55);
+    --radius:18px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    background:
+      radial-gradient(800px 500px at 20% 10%, rgba(124,58,237,.18), transparent 55%),
+      radial-gradient(700px 500px at 80% 40%, rgba(124,58,237,.12), transparent 60%),
+      var(--bg);
+    color:var(--text);
+    display:flex;
+    justify-content:center;
+    padding:18px 14px 28px;
+  }
+  .wrap{width:min(520px, 100%);margin:0 auto}
 
-/* header */
-.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
-.brand{display:flex;gap:10px;align-items:center}
-.logo{
- width:34px;height:34px;border-radius:12px;
- background:linear-gradient(135deg, rgba(124,58,237,.9), rgba(124,58,237,.35));
- display:grid;place-items:center;
- box-shadow:0 10px 20px rgba(124,58,237,.25);
-}
-.title{font-weight:900;font-size:18px}
-.subtitle{font-size:12px;color:var(--muted);font-weight:700}
-.pill{
- font-size:12px;
- padding:8px 12px;
- border-radius:999px;
- border:1px solid rgba(255,255,255,.10);
- background:rgba(255,255,255,.03);
- font-weight:900;
-}
+  .card{
+    background: var(--card);
+    border:1px solid rgba(255,255,255,.06);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow:hidden;
+    padding:16px;
+  }
 
-/* inputs */
-label{
- display:block;
- margin:12px 0 6px;
- font-size:12px;
- font-weight:900;
- color:var(--muted);
- text-transform:uppercase;
-}
-textarea,select,input[type=file]{
- width:100%;
- border-radius:12px;
- border:1px solid rgba(255,255,255,.08);
- background:rgba(255,255,255,.03);
- color:white;
- padding:12px;
- font-weight:800;
-}
-textarea{height:140px}
+  /* Header (NB Pro style) */
+  .header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
+  .brand{display:flex;align-items:center;gap:10px;min-width:0}
+  .logo{
+    width:34px;height:34px;border-radius:12px;
+    background: linear-gradient(135deg, rgba(124,58,237,.9), rgba(124,58,237,.35));
+    display:grid;place-items:center;
+    box-shadow:0 10px 20px rgba(124,58,237,.25);
+    border:1px solid rgba(255,255,255,.08);
+    flex:0 0 auto;
+    font-weight:900;
+  }
+  .title{font-size:18px;font-weight:900;letter-spacing:.2px;line-height:1.15}
+  .subtitle{font-size:12px;color:var(--muted);margin-top:2px;font-weight:700;opacity:.95}
 
-/* grid */
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .pill{
+    font-size:12px;
+    padding:8px 12px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.10);
+    background: rgba(255,255,255,.03);
+    color: var(--text);
+    white-space:nowrap;
+    opacity:.95;
+    font-weight:800;
+  }
+  .pill b{font-weight:900}
 
-/* upload box */
-.filebox{
- border:1px dashed rgba(255,255,255,.18);
- border-radius:14px;
- padding:12px;
- background:rgba(255,255,255,.02);
-}
+  /* Inputs (NB Pro style) */
+  label{
+    display:block;
+    font-weight:800;
+    margin:12px 0 6px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.2px;
+    font-size:12px;
+    opacity:.95;
+  }
+  select,textarea,input[type="file"]{
+    width:100%;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.08);
+    background: rgba(255,255,255,.03);
+    color: var(--text);
+    padding:12px;
+    outline:none;
+    font-size:14px;
+    font-weight:800;
+    line-height:1.35;
+  }
+  textarea{resize:vertical;min-height:140px;height:140px}
 
-/* button */
-.btn{
- margin-top:16px;
- width:100%;
- padding:14px;
- border-radius:16px;
- border:0;
- background:linear-gradient(180deg,var(--accent),var(--accent2));
- font-weight:900;
- color:white;
- cursor:pointer;
- box-shadow:0 12px 22px rgba(124,58,237,.25);
-}
-.btn:disabled{opacity:.6}
+  /* Select arrow (NB Pro style) */
+  select{
+    appearance:none;
+    background-image: linear-gradient(45deg, transparent 50%, rgba(233,233,245,.75) 50%),
+                      linear-gradient(135deg, rgba(233,233,245,.75) 50%, transparent 50%);
+    background-position: calc(100% - 18px) 55%, calc(100% - 12px) 55%;
+    background-size: 6px 6px, 6px 6px;
+    background-repeat: no-repeat;
+    padding-right: 34px;
+  }
 
-/* feedback */
-.err{display:none;color:#ef4444;font-weight:900;margin-top:10px}
-.ok{display:none;color:#22c55e;font-weight:900;margin-top:10px}
-.hint{color:var(--muted);font-size:13px;margin-top:6px;font-weight:700}
+  select:focus, textarea:focus, input[type="file"]:focus{
+    border-color: rgba(124,58,237,.55);
+    box-shadow: 0 0 0 4px rgba(124,58,237,.15);
+  }
+
+  input[type="file"]{
+    border-style:dashed;
+    border-color: rgba(255,255,255,.16);
+    background: rgba(255,255,255,.02);
+  }
+
+  /* Keep your existing blocks but style them like NB Pro */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .filebox{
+    border:1px dashed rgba(255,255,255,.18);
+    background:rgba(255,255,255,.02);
+    border-radius:16px;
+    padding:12px;
+  }
+
+  .btn{
+    margin-top:14px;
+    width:100%;
+    padding:14px 16px;
+    border-radius:16px;
+    border:0;
+    background: linear-gradient(180deg, var(--accent), var(--accent2));
+    color:white;
+    font-weight:900;
+    cursor:pointer;
+    box-shadow: 0 12px 22px rgba(124,58,237,.25);
+    letter-spacing:.2px;
+    font-size:15px;
+  }
+  .btn:active{transform: translateY(1px)}
+  .btn[disabled]{opacity:.6;cursor:not-allowed;box-shadow:none}
+
+  .hint{margin-top:8px;color:var(--muted);font-weight:700;font-size:13px;line-height:1.35}
+  .err{color: rgba(239,68,68,.95);font-weight:900;display:none;margin-top:8px;white-space:pre-wrap}
+  .ok{color: rgba(25,195,125,.95);font-weight:900;display:none;margin-top:8px;white-space:pre-wrap}
+
+  /* Small spacing polish without changing DOM */
+  #imageBlock, #refBlock{margin-top:10px}
 </style>
 </head>
 
@@ -116,62 +158,64 @@ textarea{height:140px}
 <div class="wrap">
 <div class="card">
 
-<!-- HEADER -->
-<div class="header">
-<div class="brand">
-<div class="logo">🎬</div>
-<div>
-<div class="title">Veo 3.1</div>
-<div class="subtitle">Δημιουργία βίντεο AI</div>
-</div>
-</div>
-<div class="pill" id="costLabel">Κόστος: 10</div>
-</div>
+  <!-- HEADER (ίδια δομή: .header, #costLabel κλπ) -->
+  <div class="header">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">🎬</div>
+      <div>
+        <div class="title">Veo 3.1</div>
+        <div class="subtitle">Δημιουργία βίντεο AI</div>
+      </div>
+    </div>
+    <div class="pill" id="costLabel">Κόστος: <b>10</b> credits</div>
+  </div>
 
-<label>Λειτουργία</label>
-<select id="mode">
-<option value="text">Κείμενο → Βίντεο</option>
-<option value="image">Εικόνα → Βίντεο</option>
-<option value="ref">Εικόνες Αναφοράς → Βίντεο</option>
-</select>
+  <label>Λειτουργία</label>
+  <select id="mode">
+    <option value="text">Κείμενο → Βίντεο</option>
+    <option value="image">Εικόνα → Βίντεο</option>
+    <option value="ref">Εικόνες Αναφοράς → Βίντεο</option>
+  </select>
 
-<label>Prompt</label>
-<textarea id="prompt" maxlength="5000" placeholder="Περιέγραψε σκηνή, κίνηση, φωτισμό, στυλ..."></textarea>
-<div id="promptErr" class="err">Το prompt είναι υποχρεωτικό.</div>
+  <label>Prompt</label>
+  <textarea id="prompt" maxlength="5000" placeholder="Περιέγραψε σκηνή, κίνηση, φωτισμό, στυλ..."></textarea>
+  <div id="promptErr" class="err">Το prompt είναι υποχρεωτικό.</div>
 
-<!-- IMAGE -->
-<div id="imageBlock" style="display:none">
-<label>Αρχικό καρέ</label>
-<div class="filebox">
-<input id="imageFile" type="file" accept="image/*"/>
-<div class="hint">1 εικόνα</div>
-</div>
-</div>
+  <!-- IMAGE (ίδια ids/δομή) -->
+  <div id="imageBlock" style="display:none">
+    <label>Αρχικό καρέ</label>
+    <div class="filebox">
+      <input id="imageFile" type="file" accept="image/*"/>
+      <div class="hint">1 εικόνα (JPG/PNG/WebP). Προτείνεται ≤ 10MB.</div>
+    </div>
+  </div>
 
-<!-- REF -->
-<div id="refBlock" style="display:none">
-<label>Εικόνες αναφοράς</label>
-<div class="filebox">
-<input id="refFiles" type="file" multiple accept="image/*"/>
-<div class="hint">1–3 εικόνες</div>
-</div>
-<div id="refErr" class="err"></div>
-</div>
+  <!-- REF (ίδια ids/δομή) -->
+  <div id="refBlock" style="display:none">
+    <label>Εικόνες αναφοράς</label>
+    <div class="filebox">
+      <input id="refFiles" type="file" multiple accept="image/*"/>
+      <div class="hint">1–3 εικόνες. Προτείνεται ≤ 10MB/εικόνα.</div>
+    </div>
+    <div id="refErr" class="err"></div>
+  </div>
 
-<div class="grid">
-<div>
-<label>Αναλογία</label>
-<select id="aspect">
-<option value="16:9">16:9</option>
-<option value="9:16">9:16</option>
-</select>
-</div>
-</div>
+  <div class="grid">
+    <div>
+      <label>Αναλογία</label>
+      <select id="aspect">
+        <option value="16:9">16:9</option>
+        <option value="9:16">9:16</option>
+      </select>
+    </div>
+  </div>
 
-<button class="btn" id="btnGenerate">Δημιουργία</button>
+  <button class="btn" id="btnGenerate">Δημιουργία</button>
 
-<div id="okBox" class="ok"></div>
-<div id="errBox" class="err"></div>
+  <div class="hint">Θα εμφανιστεί popup “στάλθηκε” και το αποτέλεσμα θα έρθει μέσα στο Telegram chat.</div>
+
+  <div id="okBox" class="ok"></div>
+  <div id="errBox" class="err"></div>
 
 </div>
 </div>
@@ -182,88 +226,85 @@ const tg=window.Telegram?.WebApp;
 if(tg){tg.expand();tg.ready();}
 
 function cost(m){
- return m==="text"?10:m==="image"?12:60;
+  return m==="text"?10:m==="image"?12:60;
 }
 
 function sync(){
-const m=$("mode").value;
-$("imageBlock").style.display=m==="image"?"block":"none";
-$("refBlock").style.display=m==="ref"?"block":"none";
-$("costLabel").textContent="Κόστος: "+cost(m);
+  const m=$("mode").value;
+  $("imageBlock").style.display = m==="image" ? "block" : "none";
+  $("refBlock").style.display   = m==="ref"   ? "block" : "none";
+  $("costLabel").innerHTML = `Κόστος: <b>${cost(m)}</b> credits`;
 }
 
 async function generate(){
+  $("errBox").style.display="none";
+  $("okBox").style.display="none";
+  $("promptErr").style.display="none";
+  $("refErr").style.display="none";
 
-$("errBox").style.display="none";
-$("okBox").style.display="none";
-$("promptErr").style.display="none";
-$("refErr").style.display="none";
+  const m=$("mode").value;
+  const prompt=$("prompt").value.trim();
 
-const m=$("mode").value;
-const prompt=$("prompt").value.trim();
+  if(!prompt){
+    $("promptErr").style.display="block";
+    return;
+  }
 
-if(!prompt){
- $("promptErr").style.display="block";
- return;
-}
+  if(m==="image" && !$("imageFile").files[0]){
+    $("errBox").textContent="Σφάλμα: Βάλε εικόνα (αρχικό καρέ).";
+    $("errBox").style.display="block";
+    return;
+  }
 
-if(m==="image"&&!$("imageFile").files[0]){
- $("errBox").textContent="Βάλε εικόνα.";
- $("errBox").style.display="block";
- return;
-}
+  if(m==="ref"){
+    const files=[...$("refFiles").files];
+    if(files.length<1 || files.length>3){
+      $("refErr").textContent="Σφάλμα: Επίλεξε 1 έως 3 εικόνες.";
+      $("refErr").style.display="block";
+      return;
+    }
+  }
 
-if(m==="ref"){
- const files=[...$("refFiles").files];
- if(files.length<1||files.length>3){
-  $("refErr").textContent="Επίλεξε 1 έως 3 εικόνες.";
-  $("refErr").style.display="block";
-  return;
- }
-}
+  const fd=new FormData();
+  fd.append("tg_init_data",tg?.initData||"");
+  fd.append("mode",m);
+  fd.append("prompt",prompt);
+  fd.append("aspect_ratio",$("aspect").value);
 
-const fd=new FormData();
-fd.append("tg_init_data",tg?.initData||"");
-fd.append("mode",m);
-fd.append("prompt",prompt);
-fd.append("aspect_ratio",$("aspect").value);
+  if(m==="image"){
+    const f=$("imageFile").files[0];
+    fd.append("image",f,f.name);
+  }
 
-if(m==="image"){
- const f=$("imageFile").files[0];
- fd.append("image",f,f.name);
-}
+  if(m==="ref"){
+    [...$("refFiles").files].slice(0,3).forEach(f=>fd.append("ref_images",f,f.name));
+  }
 
-if(m==="ref"){
- [...$("refFiles").files].slice(0,3)
- .forEach(f=>fd.append("ref_images",f,f.name));
-}
+  $("btnGenerate").disabled=true;
+  $("btnGenerate").textContent="⏳ Αποστολή...";
 
-$("btnGenerate").disabled=true;
-$("btnGenerate").textContent="⏳ Αποστολή...";
+  tg?.showPopup?.({
+    title:"Telegram",
+    message:"Η αίτηση στάλθηκε. Το αποτέλεσμα θα έρθει μέσα στο Telegram.",
+    buttons:[{type:"ok",text:"Close"}]
+  });
 
-tg?.showPopup?.({
- title:"Telegram",
- message:"Η αίτηση στάλθηκε. Το αποτέλεσμα θα έρθει στο chat.",
- buttons:[{type:"ok"}]
-});
+  try{
+    const r=await fetch("/api/veo31/generate",{method:"POST",body:fd});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok || !d.ok) throw new Error(d.error || d.detail || "Αποτυχία δημιουργίας.");
 
-try{
- const r=await fetch("/api/veo31/generate",{method:"POST",body:fd});
- const d=await r.json();
- if(!r.ok||!d.ok)throw new Error(d.error||"Σφάλμα");
-
- $("okBox").textContent="Έτοιμο. Στάλθηκε στο Telegram.";
- $("okBox").style.display="block";
- tg?.close();
-
-}catch(e){
- $("errBox").textContent="Σφάλμα: "+e.message;
- $("errBox").style.display="block";
-}
-finally{
- $("btnGenerate").disabled=false;
- $("btnGenerate").textContent="Δημιουργία";
-}
+    $("okBox").textContent="✅ Στάλθηκε στο Telegram. Θα έρθει αποτέλεσμα στο chat.";
+    $("okBox").style.display="block";
+    tg?.close();
+  }catch(e){
+    $("errBox").textContent="Σφάλμα: "+(e?.message||"Άγνωστο σφάλμα");
+    $("errBox").style.display="block";
+    tg?.showAlert?.("Αποτυχία. " + (e?.message||""));
+  }finally{
+    $("btnGenerate").disabled=false;
+    $("btnGenerate").textContent="Δημιουργία";
+  }
 }
 
 $("mode").onchange=sync;
