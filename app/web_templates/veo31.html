@@ -151,6 +151,19 @@
 
   /* Small spacing polish without changing DOM */
   #imageBlock, #refBlock{margin-top:10px}
+
+  /* ====== ADD (ONLY for upload UI like Nano Banana Pro) ====== */
+  #imageFile, #refFiles{display:none;} /* hide native inputs but keep ids */
+  .img-grid{display:grid;grid-template-columns: repeat(4, 1fr);gap:10px;margin-top:10px;}
+  .img-tile{position:relative;aspect-ratio: 1/1;border-radius:14px;overflow:hidden;background: rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.10);}
+  .img-tile img{width:100%;height:100%;object-fit:cover;display:block;}
+  .img-remove{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;border:0;background: rgba(0,0,0,.65);color:#fff;font-size:16px;line-height:22px;padding:0;cursor:pointer;}
+  .img-add{aspect-ratio:1/1;border-radius:14px;border:2px dashed rgba(255,255,255,.18);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;}
+  .img-add span{font-size:28px;font-weight:900;color: rgba(255,255,255,.55);}
+  .img-add:hover{border-color: rgba(255,255,255,.35);}
+  .img-add:hover span{color:#fff;}
+  .img-count{margin-top:8px;font-size:13px;color: rgba(255,255,255,.55);font-weight:800;}
+  /* ========================================================== */
 </style>
 </head>
 
@@ -187,6 +200,11 @@
     <div class="filebox">
       <input id="imageFile" type="file" accept="image/*"/>
       <div class="hint">1 εικόνα (JPG/PNG/WebP). Προτείνεται ≤ 10MB.</div>
+
+      <!-- ADD: grid UI (doesn't change structure, only appends UI) -->
+      <div id="img1Grid" class="img-grid"></div>
+      <div id="img1Count" class="img-count">0/1</div>
+      <!-- END ADD -->
     </div>
   </div>
 
@@ -196,6 +214,11 @@
     <div class="filebox">
       <input id="refFiles" type="file" multiple accept="image/*"/>
       <div class="hint">1–3 εικόνες. Προτείνεται ≤ 10MB/εικόνα.</div>
+
+      <!-- ADD: grid UI (doesn't change structure, only appends UI) -->
+      <div id="refGrid" class="img-grid"></div>
+      <div id="refCount" class="img-count">0/3</div>
+      <!-- END ADD -->
     </div>
     <div id="refErr" class="err"></div>
   </div>
@@ -250,14 +273,14 @@ async function generate(){
     return;
   }
 
-  if(m==="image" && !$("imageFile").files[0]){
+  if(m==="image" && !window.__veoImageFile){
     $("errBox").textContent="Σφάλμα: Βάλε εικόνα (αρχικό καρέ).";
     $("errBox").style.display="block";
     return;
   }
 
   if(m==="ref"){
-    const files=[...$("refFiles").files];
+    const files = Array.isArray(window.__veoRefFiles) ? window.__veoRefFiles : [];
     if(files.length<1 || files.length>3){
       $("refErr").textContent="Σφάλμα: Επίλεξε 1 έως 3 εικόνες.";
       $("refErr").style.display="block";
@@ -272,12 +295,12 @@ async function generate(){
   fd.append("aspect_ratio",$("aspect").value);
 
   if(m==="image"){
-    const f=$("imageFile").files[0];
+    const f = window.__veoImageFile;
     fd.append("image",f,f.name);
   }
 
   if(m==="ref"){
-    [...$("refFiles").files].slice(0,3).forEach(f=>fd.append("ref_images",f,f.name));
+    (window.__veoRefFiles || []).slice(0,3).forEach(f=>fd.append("ref_images",f,f.name));
   }
 
   $("btnGenerate").disabled=true;
@@ -310,6 +333,141 @@ async function generate(){
 $("mode").onchange=sync;
 $("btnGenerate").onclick=generate;
 sync();
+
+/* ====== ADD (ONLY upload behavior like Nano Banana Pro) ====== */
+(function setupUploadLikeNB(){
+  // ---- image (1 file) ----
+  const imgInput = $("imageFile");
+  const imgGrid = $("img1Grid");
+  const imgCount = $("img1Count");
+
+  let imgFile = null;
+  window.__veoImageFile = null;
+
+  function renderImg(){
+    if(!imgGrid) return;
+    imgGrid.innerHTML = "";
+
+    if(imgFile){
+      const tile = document.createElement("div");
+      tile.className = "img-tile";
+
+      const im = document.createElement("img");
+      const url = URL.createObjectURL(imgFile);
+      im.src = url;
+      im.onload = () => URL.revokeObjectURL(url);
+
+      const rm = document.createElement("button");
+      rm.type = "button";
+      rm.className = "img-remove";
+      rm.textContent = "×";
+      rm.onclick = () => {
+        imgFile = null;
+        window.__veoImageFile = null;
+        renderImg();
+      };
+
+      tile.appendChild(im);
+      tile.appendChild(rm);
+      imgGrid.appendChild(tile);
+    } else {
+      const add = document.createElement("div");
+      add.className = "img-add";
+      add.innerHTML = "<span>+</span>";
+      add.onclick = () => imgInput?.click();
+      imgGrid.appendChild(add);
+    }
+
+    if(imgCount) imgCount.textContent = (imgFile ? "1" : "0") + "/1";
+  }
+
+  imgInput?.addEventListener("change", () => {
+    const f = imgInput.files && imgInput.files[0] ? imgInput.files[0] : null;
+    if(!f) return;
+    imgFile = f;
+    window.__veoImageFile = imgFile;
+    imgInput.value = ""; // allow picking same file again
+    renderImg();
+  });
+
+  renderImg();
+
+  // ---- refs (1-3 files) ----
+  const refInput = $("refFiles");
+  const refGrid = $("refGrid");
+  const refCount = $("refCount");
+
+  let refFiles = [];
+  window.__veoRefFiles = refFiles;
+
+  function renderRefs(){
+    if(!refGrid) return;
+    refGrid.innerHTML = "";
+
+    refFiles.forEach((file, idx) => {
+      const tile = document.createElement("div");
+      tile.className = "img-tile";
+
+      const im = document.createElement("img");
+      const url = URL.createObjectURL(file);
+      im.src = url;
+      im.onload = () => URL.revokeObjectURL(url);
+
+      const rm = document.createElement("button");
+      rm.type = "button";
+      rm.className = "img-remove";
+      rm.textContent = "×";
+      rm.onclick = () => {
+        refFiles.splice(idx, 1);
+        window.__veoRefFiles = refFiles;
+        renderRefs();
+      };
+
+      tile.appendChild(im);
+      tile.appendChild(rm);
+      refGrid.appendChild(tile);
+    });
+
+    if(refFiles.length < 3){
+      const add = document.createElement("div");
+      add.className = "img-add";
+      add.innerHTML = "<span>+</span>";
+      add.onclick = () => refInput?.click();
+      refGrid.appendChild(add);
+    }
+
+    if(refCount) refCount.textContent = `${refFiles.length}/3`;
+  }
+
+  function addRefs(incoming){
+    const arr = Array.from(incoming || []);
+    if(!arr.length) return;
+
+    // de-dupe like NB Pro
+    const sig = f => `${f.name}|${f.size}|${f.lastModified}`;
+    const existing = new Set(refFiles.map(sig));
+
+    for(const f of arr){
+      if(refFiles.length >= 3) break;
+      const s = sig(f);
+      if(existing.has(s)) continue;
+      refFiles.push(f);
+      existing.add(s);
+    }
+
+    window.__veoRefFiles = refFiles;
+    renderRefs();
+  }
+
+  refInput?.addEventListener("change", () => {
+    const selected = Array.from(refInput.files || []);
+    addRefs(selected);
+    refInput.value = ""; // allow picking same files again
+  });
+
+  renderRefs();
+})();
+/* ============================================================ */
 </script>
 </body>
 </html>
