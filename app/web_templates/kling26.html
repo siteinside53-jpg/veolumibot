@@ -52,10 +52,28 @@
       gap:12px;
       margin-bottom:14px;
     }
+    .brand{display:flex;align-items:center;gap:10px;min-width:0}
+    .logo{
+      width:34px;height:34px;border-radius:12px;
+      background: linear-gradient(135deg, rgba(124,58,237,.9), rgba(124,58,237,.35));
+      display:grid;place-items:center;
+      box-shadow:0 10px 20px rgba(124,58,237,.25);
+      border:1px solid rgba(255,255,255,.08);
+      flex:0 0 auto;
+      font-weight:900;
+    }
     .title{
-      font-size:20px;
+      font-size:18px;
       font-weight:900;
       letter-spacing:.2px;
+      line-height:1.15;
+    }
+    .subtitle{
+      font-size:12px;
+      color:var(--muted);
+      margin-top:2px;
+      font-weight:700;
+      opacity:.95;
     }
     .pill{
       font-size:12px;
@@ -66,6 +84,7 @@
       color: var(--text);
       white-space:nowrap;
       opacity:.95;
+      font-weight:800;
     }
     .pill b{font-weight:900}
 
@@ -83,6 +102,7 @@
       letter-spacing:.2px;
       text-transform:uppercase;
       opacity:.9;
+      font-weight:800;
     }
 
     .row{
@@ -92,12 +112,14 @@
       gap:10px;
       flex-wrap:wrap;
     }
-    .counter{font-size:12px; color:var(--muted)}
+    .counter{font-size:12px; color:var(--muted); font-weight:800}
     .error{
       margin-top:8px;
       font-size:12px;
       color: var(--bad);
       display:none;
+      font-weight:900;
+      white-space:pre-wrap;
     }
 
     textarea{
@@ -112,6 +134,7 @@
       outline:none;
       font-size:14px;
       line-height:1.35;
+      font-weight:800;
     }
     textarea:focus{border-color: rgba(124,58,237,.55); box-shadow: 0 0 0 4px rgba(124,58,237,.15)}
 
@@ -121,10 +144,11 @@
       border:1px solid rgba(255,255,255,.08);
       background: rgba(255,255,255,.03);
       color: var(--text);
-      padding:12px 12px;
+      padding:12px 34px 12px 12px;
       outline:none;
       font-size:14px;
       appearance:none;
+      font-weight:800;
     }
     .select:focus{border-color: rgba(124,58,237,.55); box-shadow: 0 0 0 4px rgba(124,58,237,.15)}
     .select-wrap{position:relative}
@@ -146,8 +170,9 @@
     .toggle-label{
       color:rgba(233,233,245,.85);
       font-size:13px;
-      font-weight:800;
+      font-weight:900;
       letter-spacing:.2px;
+      text-transform:uppercase;
     }
     .switch{
       position:relative;
@@ -173,7 +198,7 @@
     }
     .switch.on::after{ left:29px; background:#fff; }
 
-    /* Upload area like Kling screenshot */
+    /* Upload area like screenshot */
     .upload-box{
       width:100%;
       aspect-ratio: 4 / 3;
@@ -188,6 +213,7 @@
       user-select:none;
       position:relative;
       overflow:hidden;
+      cursor:pointer;
     }
     .upload-plus{
       display:flex;
@@ -196,7 +222,7 @@
       gap:6px;
       font-weight:900;
     }
-    .upload-plus .p{font-size:12px; font-weight:700; color:rgba(233,233,245,.7)}
+    .upload-plus .p{font-size:12px; font-weight:800; color:rgba(233,233,245,.7)}
     .remove-x{
       display:none;
       position:absolute;
@@ -238,6 +264,7 @@
       margin-top:14px;
     }
     .btn:disabled{opacity:.6; cursor:not-allowed}
+    .btn:active{transform: translateY(1px)}
   </style>
 </head>
 
@@ -247,17 +274,23 @@
       <div class="card-inner">
 
         <div class="header">
-          <div class="title">Kling 2.6</div>
-          <div class="pill">Стоимость: <b><span id="costTop">11</span> кредитов</b></div>
+          <div class="brand">
+            <div class="logo" aria-hidden="true">🎬</div>
+            <div>
+              <div class="title">Kling 2.6</div>
+              <div class="subtitle">Δημιουργία βίντεο AI</div>
+            </div>
+          </div>
+          <div class="pill">Κόστος: <b><span id="costTop">11</span></b> credits</div>
         </div>
 
         <!-- MODE -->
         <div class="block">
-          <div class="label">РЕЖИМ</div>
+          <div class="label">ΛΕΙΤΟΥΡΓΙΑ</div>
           <div class="select-wrap">
             <select id="mode" class="select">
-              <option value="text_to_video" selected>Text to Video</option>
-              <option value="image_to_video">Image to Video</option>
+              <option value="text_to_video" selected>Κείμενο → Βίντεο</option>
+              <option value="image_to_video">Εικόνα → Βίντεο</option>
             </select>
           </div>
         </div>
@@ -268,41 +301,41 @@
             <div class="label" style="margin:0">PROMPT</div>
             <div class="counter"><span id="charCount">0</span>/1000</div>
           </div>
-          <textarea id="prompt" maxlength="1000" placeholder="Опишите, что нужно..."></textarea>
-          <div id="promptErr" class="error">Введите prompt (1–1000 символов).</div>
+          <textarea id="prompt" maxlength="1000" placeholder="Περιέγραψε τι θέλεις να γίνει..."></textarea>
+          <div id="promptErr" class="error">Βάλε prompt (1–1000 χαρακτήρες).</div>
         </div>
 
         <!-- IMAGE (only for image_to_video) -->
         <div id="imageBlock" class="block" style="display:none">
           <div class="row">
-            <div class="label" style="margin:0">ИЗОБРАЖЕНИЕ (ОБЯЗАТЕЛЬНО)</div>
-            <div class="counter">JPG/PNG • 1 шт • ≤ 10 MB</div>
+            <div class="label" style="margin:0">ΕΙΚΟΝΑ (ΥΠΟΧΡΕΩΤΙΚΟ)</div>
+            <div class="counter">JPG/PNG • 1 αρχείο • ≤ 10 MB</div>
           </div>
 
           <div id="drop" class="upload-box" style="margin-top:10px;">
-            <img id="previewImg" class="preview-img" />
-            <button id="removeImg" class="remove-x" type="button">✕</button>
+            <img id="previewImg" class="preview-img" alt="preview" />
+            <button id="removeImg" class="remove-x" type="button" aria-label="Αφαίρεση">✕</button>
             <div id="uploadPlaceholder" class="upload-plus">
               <div style="font-size:22px">+</div>
-              <div class="p">Загрузить</div>
+              <div class="p">Ανέβασμα</div>
             </div>
           </div>
 
           <input id="file" type="file" accept="image/*" style="display:none" />
-          <div id="imgErr" class="error">Нужно добавить 1 изображение для Image to Video.</div>
+          <div id="imgErr" class="error">Πρέπει να βάλεις 1 εικόνα για Εικόνα → Βίντεο.</div>
         </div>
 
         <!-- AUDIO TOGGLE -->
         <div class="block">
           <div class="toggle-row">
-            <div class="toggle-label">СГЕНЕРИРОВАТЬ С АУДИО</div>
+            <div class="toggle-label">ΔΗΜΙΟΥΡΓΙΑ ΜΕ ΗΧΟ</div>
             <div id="audioSwitch" class="switch" role="switch" aria-checked="false" tabindex="0"></div>
           </div>
         </div>
 
         <!-- ASPECT -->
         <div class="block">
-          <div class="label">СООТНОШЕНИЕ СТОРОН</div>
+          <div class="label">ΑΝΑΛΟΓΙΑ ΠΛΕΥΡΩΝ</div>
           <div class="select-wrap">
             <select id="aspect" class="select">
               <option value="1:1" selected>1:1</option>
@@ -314,16 +347,16 @@
 
         <!-- DURATION -->
         <div class="block">
-          <div class="label">ДЛИТЕЛЬНОСТЬ</div>
+          <div class="label">ΔΙΑΡΚΕΙΑ</div>
           <div class="select-wrap">
             <select id="duration" class="select">
-              <option value="5" selected>5 секунд</option>
-              <option value="10">10 секунд</option>
+              <option value="5" selected>5 δευτερόλεπτα</option>
+              <option value="10">10 δευτερόλεπτα</option>
             </select>
           </div>
         </div>
 
-        <button id="btn" class="btn" type="button">Диміουργία</button>
+        <button id="btn" class="btn" type="button">Δημιουργία</button>
 
       </div>
     </div>
@@ -494,7 +527,7 @@
     }
     if (mode === "image_to_video" && !file) {
       imgErr.style.display = "block";
-      showAlert("Βάλε 1 εικόνα για Image to Video.");
+      showAlert("Βάλε 1 εικόνα για Εικόνα → Βίντεο.");
       return;
     }
 
