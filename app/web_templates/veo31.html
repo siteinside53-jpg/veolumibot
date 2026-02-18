@@ -1,12 +1,12 @@
 <!doctype html>
 <html lang="el">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>VeoLumi – Veo 3.1</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>VeoLumi – Veo 3.1</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <style>
+<style>
   :root{
     --bg:#0b0c12;
     --card:#121422;
@@ -44,7 +44,7 @@
     padding:16px;
   }
 
-  /* Grok-like header (Nano Banana Pro style) */
+  /* Header (NB Pro style) */
   .header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
   .brand{display:flex;align-items:center;gap:10px;min-width:0}
   .logo{
@@ -54,10 +54,11 @@
     box-shadow:0 10px 20px rgba(124,58,237,.25);
     border:1px solid rgba(255,255,255,.08);
     flex:0 0 auto;
+    font-weight:900;
   }
-  .logo svg{opacity:.95}
   .title{font-size:18px;font-weight:900;letter-spacing:.2px;line-height:1.15}
   .subtitle{font-size:12px;color:var(--muted);margin-top:2px;font-weight:700;opacity:.95}
+
   .pill{
     font-size:12px;
     padding:8px 12px;
@@ -71,6 +72,7 @@
   }
   .pill b{font-weight:900}
 
+  /* Inputs (NB Pro style) */
   label{
     display:block;
     font-weight:800;
@@ -95,6 +97,7 @@
   }
   textarea{resize:vertical;min-height:140px;height:140px}
 
+  /* Select arrow (NB Pro style) */
   select{
     appearance:none;
     background-image: linear-gradient(45deg, transparent 50%, rgba(233,233,245,.75) 50%),
@@ -110,7 +113,20 @@
     box-shadow: 0 0 0 4px rgba(124,58,237,.15);
   }
 
-  input[type="file"]{border-style:dashed;border-color: rgba(255,255,255,.16)}
+  input[type="file"]{
+    border-style:dashed;
+    border-color: rgba(255,255,255,.16);
+    background: rgba(255,255,255,.02);
+  }
+
+  /* Keep your existing blocks but style them like NB Pro */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .filebox{
+    border:1px dashed rgba(255,255,255,.18);
+    background:rgba(255,255,255,.02);
+    border-radius:16px;
+    padding:12px;
+  }
 
   .btn{
     margin-top:14px;
@@ -129,381 +145,171 @@
   .btn:active{transform: translateY(1px)}
   .btn[disabled]{opacity:.6;cursor:not-allowed;box-shadow:none}
 
-  .hint{margin-top:10px;color:var(--muted);font-weight:700;font-size:13px;line-height:1.35}
+  .hint{margin-top:8px;color:var(--muted);font-weight:700;font-size:13px;line-height:1.35}
   .err{color: rgba(239,68,68,.95);font-weight:900;display:none;margin-top:8px;white-space:pre-wrap}
   .ok{color: rgba(25,195,125,.95);font-weight:900;display:none;margin-top:8px;white-space:pre-wrap}
 
-  /* Image grid UI (ίδιο με Nano Banana Pro) */
-  .img-grid{display:grid;grid-template-columns: repeat(4, 1fr);gap:10px;margin-top:10px;}
-  .img-tile{position:relative;aspect-ratio: 1/1;border-radius:14px;overflow:hidden;background: rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.10);}
-  .img-tile img{width:100%;height:100%;object-fit:cover;display:block;}
-  .img-remove{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;border:0;background: rgba(0,0,0,.65);color:#fff;font-size:16px;line-height:22px;padding:0;cursor:pointer;}
-  .img-add{aspect-ratio:1/1;border-radius:14px;border:2px dashed rgba(255,255,255,.18);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;}
-  .img-add span{font-size:28px;font-weight:900;color: rgba(255,255,255,.55);}
-  .img-add:hover{border-color: rgba(255,255,255,.35);}
-  .img-add:hover span{color:#fff;}
-  .img-count{margin-top:8px;font-size:13px;color: rgba(255,255,255,.55);font-weight:800;}
-
-  /* small layout helpers */
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  </style>
+  /* Small spacing polish without changing DOM */
+  #imageBlock, #refBlock{margin-top:10px}
+</style>
 </head>
 
 <body>
-  <div class="wrap">
-    <div class="card">
+<div class="wrap">
+<div class="card">
 
-      <div class="header">
-        <div class="brand">
-          <div class="logo" aria-hidden="true">🎬</div>          
-          </div>
-          <div class="brand-text">
-            <div class="title">Veo 3.1</div>
-            <div class="subtitle">Δημιουργία βίντεο AI</div>
-          </div>
-        </div>
-        <div class="pill" id="costPill">Κόστος: <b id="costLabel">10</b> credits</div>
+  <!-- HEADER (ίδια δομή: .header, #costLabel κλπ) -->
+  <div class="header">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">🎬</div>
+      <div>
+        <div class="title">Veo 3.1</div>
+        <div class="subtitle">Δημιουργία βίντεο AI</div>
       </div>
+    </div>
+    <div class="pill" id="costLabel">Κόστος: <b>10</b> credits</div>
+  </div>
 
-      <label for="mode">Λειτουργία</label>
-      <select id="mode">
-        <option value="text" selected>Κείμενο → Βίντεο</option>
-        <option value="image">Εικόνα → Βίντεο</option>
-        <option value="ref">Εικόνες Αναφοράς → Βίντεο (1–3)</option>
-      </select>
+  <label>Λειτουργία</label>
+  <select id="mode">
+    <option value="text">Κείμενο → Βίντεο</option>
+    <option value="image">Εικόνα → Βίντεο</option>
+    <option value="ref">Εικόνες Αναφοράς → Βίντεο</option>
+  </select>
 
-      <label for="prompt">Prompt</label>
-      <textarea id="prompt" maxlength="5000" placeholder="Περιέγραψε σκηνή, κίνηση, φωτισμό, στυλ..."></textarea>
-      <div id="promptErr" class="err">Το prompt είναι υποχρεωτικό.</div>
+  <label>Prompt</label>
+  <textarea id="prompt" maxlength="5000" placeholder="Περιέγραψε σκηνή, κίνηση, φωτισμό, στυλ..."></textarea>
+  <div id="promptErr" class="err">Το prompt είναι υποχρεωτικό.</div>
 
-      <!-- IMAGE -> VIDEO (1 image) -->
-      <div id="imageBlock" style="display:none;margin-top:10px">
-        <label for="imageFile">Αρχικό καρέ (1 εικόνα)</label>
-        <!-- hide native input and use grid UI -->
-        <input id="imageFile" type="file" accept="image/png,image/jpeg,image/jpg,image/webp" style="display:none" />
-        <div class="hint">Έως 10MB · PNG/JPG/WebP.</div>
-        <div id="img1Grid" class="img-grid"></div>
-        <div id="img1Count" class="img-count">0/1</div>
-        <div id="img1Err" class="err"></div>
-      </div>
-
-      <!-- REF -> VIDEO (1-3 images) -->
-      <div id="refBlock" style="display:none;margin-top:10px">
-        <label for="refFiles">Εικόνες αναφοράς (1–3)</label>
-        <!-- hide native input and use grid UI -->
-        <input id="refFiles" type="file" multiple accept="image/png,image/jpeg,image/jpg,image/webp" style="display:none" />
-        <div class="hint">Έως 3 εικόνες · έως 10MB/εικόνα · PNG/JPG/WebP.</div>
-        <div id="refGrid" class="img-grid"></div>
-        <div id="refCount" class="img-count">0/3</div>
-        <div id="refErr" class="err"></div>
-      </div>
-
-      <div class="grid2" style="margin-top:10px">
-        <div>
-          <label for="aspect">Αναλογία</label>
-          <select id="aspect">
-            <option value="16:9" selected>16:9</option>
-            <option value="9:16">9:16</option>
-          </select>
-        </div>
-      </div>
-
-      <button class="btn" id="btnGenerate">Δημιουργία</button>
-      <div class="hint">Θα εμφανιστεί popup “στάλθηκε” και το αποτέλεσμα θα έρθει μέσα στο Telegram chat.</div>
-
-      <div id="okBox" class="ok"></div>
-      <div id="errBox" class="err"></div>
-
+  <!-- IMAGE (ίδια ids/δομή) -->
+  <div id="imageBlock" style="display:none">
+    <label>Αρχικό καρέ</label>
+    <div class="filebox">
+      <input id="imageFile" type="file" accept="image/*"/>
+      <div class="hint">1 εικόνα (JPG/PNG/WebP). Προτείνεται ≤ 10MB.</div>
     </div>
   </div>
 
+  <!-- REF (ίδια ids/δομή) -->
+  <div id="refBlock" style="display:none">
+    <label>Εικόνες αναφοράς</label>
+    <div class="filebox">
+      <input id="refFiles" type="file" multiple accept="image/*"/>
+      <div class="hint">1–3 εικόνες. Προτείνεται ≤ 10MB/εικόνα.</div>
+    </div>
+    <div id="refErr" class="err"></div>
+  </div>
+
+  <div class="grid">
+    <div>
+      <label>Αναλογία</label>
+      <select id="aspect">
+        <option value="16:9">16:9</option>
+        <option value="9:16">9:16</option>
+      </select>
+    </div>
+  </div>
+
+  <button class="btn" id="btnGenerate">Δημιουργία</button>
+
+  <div class="hint">Θα εμφανιστεί popup “στάλθηκε” και το αποτέλεσμα θα έρθει μέσα στο Telegram chat.</div>
+
+  <div id="okBox" class="ok"></div>
+  <div id="errBox" class="err"></div>
+
+</div>
+</div>
+
 <script>
-  const $ = id => document.getElementById(id);
-  const tg = window.Telegram?.WebApp;
-  if (tg) { tg.expand(); tg.ready(); }
+const $=id=>document.getElementById(id);
+const tg=window.Telegram?.WebApp;
+if(tg){tg.expand();tg.ready();}
 
-  const API_ENDPOINT = "/api/veo31/generate";
+function cost(m){
+  return m==="text"?10:m==="image"?12:60;
+}
 
-  function showSentPopup(){
-    if (!tg?.showPopup) return;
-    tg.showPopup({
-      title: "Telegram",
-      message: "Η αίτηση στάλθηκε. Το αποτέλεσμα θα έρθει μέσα στο Telegram.",
-      buttons: [{ type: "ok", text: "Κλείσιμο" }]
-    }, () => {});
-  }
-  function showAlert(msg){
-    if (tg?.showAlert) tg.showAlert(msg);
-  }
+function sync(){
+  const m=$("mode").value;
+  $("imageBlock").style.display = m==="image" ? "block" : "none";
+  $("refBlock").style.display   = m==="ref"   ? "block" : "none";
+  $("costLabel").innerHTML = `Κόστος: <b>${cost(m)}</b> credits`;
+}
 
-  function costByMode(m){
-    return (m === "text") ? 10 : (m === "image") ? 12 : 60;
-  }
+async function generate(){
+  $("errBox").style.display="none";
+  $("okBox").style.display="none";
+  $("promptErr").style.display="none";
+  $("refErr").style.display="none";
 
-  function resetFeedback(){
-    $("okBox").style.display = "none";
-    $("errBox").style.display = "none";
-    $("promptErr").style.display = "none";
-    $("refErr").style.display = "none";
-    $("img1Err").style.display = "none";
-  }
+  const m=$("mode").value;
+  const prompt=$("prompt").value.trim();
 
-  function syncUI(){
-    const m = $("mode").value;
-    $("imageBlock").style.display = (m === "image") ? "block" : "none";
-    $("refBlock").style.display   = (m === "ref")   ? "block" : "none";
-    $("costLabel").textContent = String(costByMode(m));
-    resetFeedback();
+  if(!prompt){
+    $("promptErr").style.display="block";
+    return;
   }
 
-  function validateFilesGeneric(files, maxCount, maxMB){
-    const list = Array.from(files || []);
-    if (!list.length) return { ok:true };
-    if (list.length > maxCount) return { ok:false, error:`Μέγιστο ${maxCount} εικόνες.` };
-    const maxBytes = (maxMB || 10) * 1024 * 1024;
-    for (const f of list){
-      if (f.size > maxBytes) return { ok:false, error:`Η εικόνα "${f.name}" είναι πάνω από ${maxMB}MB.` };
-      const t = (f.type || "").toLowerCase();
-      if (!t.startsWith("image/")) return { ok:false, error:`Η εικόνα "${f.name}" δεν είναι εικόνα.` };
-    }
-    return { ok:true };
+  if(m==="image" && !$("imageFile").files[0]){
+    $("errBox").textContent="Σφάλμα: Βάλε εικόνα (αρχικό καρέ).";
+    $("errBox").style.display="block";
+    return;
   }
 
-  // ===== Grid UI: Image (1 file) =====
-  (function setupSingleImageGrid(){
-    const input = $("imageFile");
-    const grid  = $("img1Grid");
-    const count = $("img1Count");
-    const err   = $("img1Err");
-    if (!input || !grid || !count) return;
-
-    let fileOne = null;
-    window.__veoImage = fileOne;
-
-    function render(){
-      grid.innerHTML = "";
-
-      if (fileOne){
-        const tile = document.createElement("div");
-        tile.className = "img-tile";
-
-        const img = document.createElement("img");
-        const url = URL.createObjectURL(fileOne);
-        img.src = url;
-        img.onload = () => URL.revokeObjectURL(url);
-
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "img-remove";
-        btn.textContent = "×";
-        btn.onclick = () => {
-          fileOne = null;
-          window.__veoImage = null;
-          render();
-        };
-
-        tile.appendChild(img);
-        tile.appendChild(btn);
-        grid.appendChild(tile);
-      }
-
-      if (!fileOne){
-        const add = document.createElement("div");
-        add.className = "img-add";
-        add.innerHTML = "<span>+</span>";
-        add.addEventListener("click", () => input.click());
-        grid.appendChild(add);
-      }
-
-      count.textContent = (fileOne ? "1" : "0") + "/1";
-    }
-
-    input.addEventListener("change", () => {
-      err.style.display = "none";
-      const f = (input.files && input.files[0]) ? input.files[0] : null;
-      if (!f) return;
-
-      const vf = validateFilesGeneric([f], 1, 10);
-      if (!vf.ok){
-        err.textContent = vf.error;
-        err.style.display = "block";
-        input.value = "";
-        return;
-      }
-
-      fileOne = f;
-      window.__veoImage = fileOne;
-      input.value = "";
-      render();
-    });
-
-    render();
-  })();
-
-  // ===== Grid UI: Reference images (1-3 files) =====
-  (function setupRefGrid(){
-    const input = $("refFiles");
-    const grid  = $("refGrid");
-    const count = $("refCount");
-    const err   = $("refErr");
-    if (!input || !grid || !count) return;
-
-    let filesArr = [];
-    window.__veoRefs = filesArr;
-
-    function render(){
-      grid.innerHTML = "";
-
-      filesArr.forEach((file, idx) => {
-        const tile = document.createElement("div");
-        tile.className = "img-tile";
-
-        const img = document.createElement("img");
-        const url = URL.createObjectURL(file);
-        img.src = url;
-        img.onload = () => URL.revokeObjectURL(url);
-
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "img-remove";
-        btn.textContent = "×";
-        btn.addEventListener("click", () => {
-          filesArr.splice(idx, 1);
-          window.__veoRefs = filesArr;
-          render();
-        });
-
-        tile.appendChild(img);
-        tile.appendChild(btn);
-        grid.appendChild(tile);
-      });
-
-      if (filesArr.length < 3){
-        const add = document.createElement("div");
-        add.className = "img-add";
-        add.innerHTML = "<span>+</span>";
-        add.addEventListener("click", () => input.click());
-        grid.appendChild(add);
-      }
-
-      count.textContent = `${filesArr.length}/3`;
-    }
-
-    function addFiles(newFiles){
-      const incoming = Array.from(newFiles || []);
-      if (!incoming.length) return;
-
-      // de-dupe by signature
-      const sig = f => `${f.name}|${f.size}|${f.lastModified}`;
-      const existing = new Set(filesArr.map(sig));
-
-      for (const f of incoming){
-        if (filesArr.length >= 3) break;
-        const s = sig(f);
-        if (existing.has(s)) continue;
-        filesArr.push(f);
-        existing.add(s);
-      }
-      window.__veoRefs = filesArr;
-      render();
-    }
-
-    input.addEventListener("change", () => {
-      err.style.display = "none";
-      const selected = Array.from(input.files || []);
-      if (!selected.length) return;
-
-      const vf = validateFilesGeneric(selected, 3, 10);
-      if (!vf.ok){
-        err.textContent = vf.error;
-        err.style.display = "block";
-        input.value = "";
-        return;
-      }
-
-      addFiles(selected);
-      input.value = "";
-    });
-
-    render();
-  })();
-
-  async function generate(){
-    resetFeedback();
-
-    const mode = $("mode").value;
-    const prompt = ($("prompt").value || "").trim();
-
-    if (!prompt){
-      $("promptErr").style.display = "block";
+  if(m==="ref"){
+    const files=[...$("refFiles").files];
+    if(files.length<1 || files.length>3){
+      $("refErr").textContent="Σφάλμα: Επίλεξε 1 έως 3 εικόνες.";
+      $("refErr").style.display="block";
       return;
     }
-
-    // validations by mode
-    if (mode === "image"){
-      const f = window.__veoImage || null;
-      if (!f){
-        $("img1Err").textContent = "Βάλε 1 εικόνα για Αρχικό καρέ.";
-        $("img1Err").style.display = "block";
-        return;
-      }
-    }
-
-    if (mode === "ref"){
-      const files = Array.isArray(window.__veoRefs) ? window.__veoRefs : [];
-      if (files.length < 1 || files.length > 3){
-        $("refErr").textContent = "Επίλεξε 1 έως 3 εικόνες αναφοράς.";
-        $("refErr").style.display = "block";
-        return;
-      }
-    }
-
-    const fd = new FormData();
-    fd.append("tg_init_data", tg?.initData || "");
-    fd.append("mode", mode);
-    fd.append("prompt", prompt);
-    fd.append("aspect_ratio", $("aspect").value);
-
-    if (mode === "image"){
-      const f = window.__veoImage;
-      fd.append("image", f, f.name);
-    }
-
-    if (mode === "ref"){
-      (window.__veoRefs || []).slice(0,3).forEach(f => fd.append("ref_images", f, f.name));
-    }
-
-    $("btnGenerate").disabled = true;
-    $("btnGenerate").textContent = "⏳ Αποστολή...";
-    showSentPopup();
-
-    try{
-      const res = await fetch(API_ENDPOINT, { method: "POST", body: fd });
-      const data = await res.json().catch(() => ({}));
-
-      if (!res.ok || !data.ok){
-        const msg = data?.error || data?.detail || "Αποτυχία δημιουργίας.";
-        throw new Error(msg);
-      }
-
-      $("okBox").textContent = data.message || "Στάλθηκε στο Telegram. Θα έρθει αποτέλεσμα στο chat.";
-      $("okBox").style.display = "block";
-
-      if (tg?.close) tg.close();
-
-    }catch(e){
-      showAlert("Αποτυχία. " + (e?.message || ""));
-      $("errBox").textContent = "Σφάλμα: " + (e?.message || "Άγνωστο σφάλμα");
-      $("errBox").style.display = "block";
-    }finally{
-      $("btnGenerate").disabled = false;
-      $("btnGenerate").textContent = "Δημιουργία";
-    }
   }
 
-  $("mode").addEventListener("change", syncUI);
-  $("btnGenerate").addEventListener("click", generate);
-  syncUI();
+  const fd=new FormData();
+  fd.append("tg_init_data",tg?.initData||"");
+  fd.append("mode",m);
+  fd.append("prompt",prompt);
+  fd.append("aspect_ratio",$("aspect").value);
+
+  if(m==="image"){
+    const f=$("imageFile").files[0];
+    fd.append("image",f,f.name);
+  }
+
+  if(m==="ref"){
+    [...$("refFiles").files].slice(0,3).forEach(f=>fd.append("ref_images",f,f.name));
+  }
+
+  $("btnGenerate").disabled=true;
+  $("btnGenerate").textContent="⏳ Αποστολή...";
+
+  tg?.showPopup?.({
+    title:"Telegram",
+    message:"Η αίτηση στάλθηκε. Το αποτέλεσμα θα έρθει μέσα στο Telegram.",
+    buttons:[{type:"ok",text:"Close"}]
+  });
+
+  try{
+    const r=await fetch("/api/veo31/generate",{method:"POST",body:fd});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok || !d.ok) throw new Error(d.error || d.detail || "Αποτυχία δημιουργίας.");
+
+    $("okBox").textContent="✅ Στάλθηκε στο Telegram. Θα έρθει αποτέλεσμα στο chat.";
+    $("okBox").style.display="block";
+    tg?.close();
+  }catch(e){
+    $("errBox").textContent="Σφάλμα: "+(e?.message||"Άγνωστο σφάλμα");
+    $("errBox").style.display="block";
+    tg?.showAlert?.("Αποτυχία. " + (e?.message||""));
+  }finally{
+    $("btnGenerate").disabled=false;
+    $("btnGenerate").textContent="Δημιουργία";
+  }
+}
+
+$("mode").onchange=sync;
+$("btnGenerate").onclick=generate;
+sync();
 </script>
 </body>
 </html>
