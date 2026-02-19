@@ -120,3 +120,26 @@ def tool_error_message_gr(*, reason: str, tips: str, refunded: float | None = No
     if refunded is not None:
         msg += f"\n\n💎 Τα credits επιστράφηκαν: {refunded:.2f}"
     return msg
+
+# =========================
+# JOBS SYSTEM TEXTS
+# =========================
+
+JOBS_MENU = """
+💼 <b>Jobs Hub</b>
+
+Επίλεξε τι θέλεις να κάνεις:
+"""
+
+JOBS_POST_TITLE = "📝 Στείλε τίτλο εργασίας:"
+JOBS_POST_DESC = "📄 Στείλε περιγραφή:"
+JOBS_POST_BUDGET = "💰 Budget;"
+
+JOBS_POST_SUCCESS = "✅ Η εργασία δημοσιεύτηκε!"
+
+JOBS_EMPTY = "📭 Δεν υπάρχουν διαθέσιμες εργασίες."
+
+FREELANCER_SKILLS = "🧠 Στείλε skills σου (πχ Python, Design, AI)"
+FREELANCER_ABOUT = "👤 Πες λίγα λόγια για σένα"
+
+FREELANCER_DONE = "✅ Εγγράφηκες ως freelancer!"
