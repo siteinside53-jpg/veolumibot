@@ -5,7 +5,7 @@ BTN_PROFILE = "👤 Το προφίλ μου"
 BTN_VIDEO = "🎬 Δημιουργία βίντεο"
 BTN_IMAGES = "🖼 Εικόνες"
 BTN_AUDIO = "🎧 Ήχος"
-BTN_JOBS = "💼 Jobs / Εργασίες"
+BTN_JOBS = "💼 Εργασίες"
 BTN_PROMPTS = "💡 Κανάλι με prompts"
 BTN_SUPPORT = "☁️ Υποστήριξη"
 BTN_MENU = "📋 Μενού"
@@ -134,7 +134,7 @@ JOBS_MENU = """
 
 JOBS_POST_TITLE = "📝 Στείλε τίτλο εργασίας:"
 JOBS_POST_DESC = "📄 Στείλε περιγραφή:"
-JOBS_POST_BUDGET = "💰 Budget;"
+JOBS_POST_BUDGET = "💰 Budget:"
 
 JOBS_POST_SUCCESS = "✅ Η εργασία δημοσιεύτηκε!"
 
