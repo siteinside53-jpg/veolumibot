@@ -8,6 +8,7 @@ from .texts import (
     BTN_AUDIO,
     BTN_PROMPTS,
     BTN_SUPPORT,
+    BTN_JOBS,
 )
 from .config import WEBAPP_URL
 
