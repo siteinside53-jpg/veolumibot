@@ -20,6 +20,8 @@ from .routes.nanobanana import router as nanobanana_router
 from .routes.grok import router as grok_router
 from .routes.kling26 import router as kling26_router
 from .routes.midjourney import router as midjourney_router
+from .routes.jobs import router as jobs_router
+
 
 
 
@@ -53,6 +55,7 @@ app.include_router(nanobanana_router)
 app.include_router(grok_router)
 app.include_router(kling26_router)
 app.include_router(midjourney_router)
+app.include_router(jobs_router)
 
 
 
