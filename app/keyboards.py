@@ -142,3 +142,4 @@ def jobs_freelancer_menu() -> InlineKeyboardMarkup:
             [InlineKeyboardButton("ℹ️ Πώς δουλεύει", callback_data="jobs:freelancer:how")],
             [InlineKeyboardButton("← Πίσω", callback_data="menu:jobs")],
         ]
+    )
