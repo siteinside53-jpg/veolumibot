@@ -5,9 +5,9 @@ BTN_PROFILE = "👤 Το προφίλ μου"
 BTN_VIDEO = "🎬 Δημιουργία βίντεο"
 BTN_IMAGES = "🖼 Εικόνες"
 BTN_AUDIO = "🎧 Ήχος"
+BTN_JOBS = "💼 Εργασίες"
 BTN_PROMPTS = "💡 Κανάλι με prompts"
 BTN_SUPPORT = "☁️ Υποστήριξη"
-BTN_JOBS = "💼 Δουλείες"
 BTN_MENU = "📋 Μενού"
 
 # === START CARD (σαν αυτού) ===
