@@ -193,3 +193,63 @@ async def open_jobs(cb: CallbackQuery):
         reply_markup=jobs_menu(),
         parse_mode="HTML"
     )
+
+
+# freelancer register flow
+user_states = {}
+
+@dp.callback_query_handler(lambda c: c.data=="jobs_freelancer")
+async def reg_freelancer(cb: CallbackQuery):
+    user_states[cb.from_user.id] = "await_skills"
+    await cb.message.edit_text("Στείλε skills σου (πχ Python, Design, AI)")
+
+@dp.message_handler(lambda m: user_states.get(m.from_user.id)=="await_skills")
+async def get_skills(m: Message):
+    user_states[m.from_user.id] = {"skills": m.text}
+    await m.answer("Πες λίγα λόγια για σένα")
+
+@dp.message_handler(lambda m: isinstance(user_states.get(m.from_user.id),dict))
+async def get_about(m: Message):
+    data = user_states.pop(m.from_user.id)
+    register_freelancer(m.from_user.id, data["skills"], m.text)
+    await m.answer("✅ Εγγράφηκες ως freelancer!")
+
+
+# post job flow
+@dp.callback_query_handler(lambda c: c.data=="jobs_post")
+async def job_post(cb: CallbackQuery):
+    user_states[cb.from_user.id] = "job_title"
+    await cb.message.edit_text("Τίτλος εργασίας;")
+
+@dp.message_handler(lambda m: user_states.get(m.from_user.id)=="job_title")
+async def job_title(m):
+    user_states[m.from_user.id] = {"title": m.text}
+    await m.answer("Περιγραφή;")
+
+@dp.message_handler(lambda m: isinstance(user_states.get(m.from_user.id),dict) and "title" in user_states[m.from_user.id])
+async def job_desc(m):
+    user_states[m.from_user.id]["desc"] = m.text
+    await m.answer("Budget;")
+
+@dp.message_handler(lambda m: isinstance(user_states.get(m.from_user.id),dict) and "desc" in user_states[m.from_user.id])
+async def job_budget(m):
+    data = user_states.pop(m.from_user.id)
+    create_job(m.from_user.id,data["title"],data["desc"],m.text)
+    await m.answer("🚀 Job δημοσιεύτηκε!")
+
+# Browse jobs
+@dp.callback_query_handler(lambda c: c.data=="jobs_find")
+async def list_jobs(cb: CallbackQuery):
+    jobs = list_open_jobs()
+    if not jobs:
+        await cb.message.edit_text("Δεν υπάρχουν διαθέσιμες εργασίες.")
+        return
+
+    txt = "<b>Διαθέσιμες εργασίες</b>\n\n"
+    for j in jobs:
+        txt += f"#{j[0]} — {j[1]} | 💰 {j[2]}\n"
+
+    await cb.message.edit_text(txt, parse_mode="HTML")
+
+
+
