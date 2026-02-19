@@ -868,3 +868,27 @@ def get_last_result_by_tg_id(tg_user_id: int, model: str) -> Optional[str]:
             )
             row = cur.fetchone()
             return (row or {}).get("result_url")
+
+def create_job(user_id, title, desc, budget):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO jobs (creator_id,title,description,budget)
+                VALUES (%s,%s,%s,%s)
+            """,(user_id,title,desc,budget))
+
+def list_open_jobs():
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id,title,budget FROM jobs WHERE status='open' ORDER BY id DESC LIMIT 20")
+            return cur.fetchall()
+
+def register_freelancer(user_id, skills, about):
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+            INSERT INTO freelancers (user_id,skills,about)
+            VALUES (%s,%s,%s)
+            ON CONFLICT (user_id)
+            DO UPDATE SET skills=EXCLUDED.skills, about=EXCLUDED.about
+            """,(user_id,skills,about))
