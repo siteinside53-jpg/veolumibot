@@ -110,12 +110,35 @@ def open_profile_webapp_kb() -> InlineKeyboardMarkup:
         ]
     )
 
+# =============================
+# Jobs (Telegram menus)
+# =============================
+
 def jobs_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("💼 Βρες εργασία", callback_data="jobs_find")],
-            [InlineKeyboardButton("🧠 Είμαι freelancer", callback_data="jobs_freelancer")],
-            [InlineKeyboardButton("📤 Ανέβασε εργασία", callback_data="jobs_post")],
+            [InlineKeyboardButton("🔎 Ζητάω βοήθεια (πελάτης)", callback_data="jobs:client")],
+            [InlineKeyboardButton("🧑‍💻 Είμαι freelancer", callback_data="jobs:freelancer")],
+            [InlineKeyboardButton("📤 Ανάρτηση εργασίας", callback_data="jobs:post")],
             [InlineKeyboardButton("← Πίσω", callback_data="menu:home")],
         ]
     )
+
+
+def jobs_client_menu() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("📝 Δημιούργησε αίτημα", callback_data="jobs:post")],
+            [InlineKeyboardButton("ℹ️ Τι να γράψω;", callback_data="jobs:client:help")],
+            [InlineKeyboardButton("← Πίσω", callback_data="menu:jobs")],
+        ]
+    )
+
+
+def jobs_freelancer_menu() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("👀 Δες διαθέσιμες εργασίες", callback_data="jobs:list")],
+            [InlineKeyboardButton("ℹ️ Πώς δουλεύει", callback_data="jobs:freelancer:how")],
+            [InlineKeyboardButton("← Πίσω", callback_data="menu:jobs")],
+        ]
