@@ -104,3 +104,13 @@ def open_profile_webapp_kb() -> InlineKeyboardMarkup:
             [InlineKeyboardButton("👤 Άνοιγμα Προφίλ / Αγορά Credits", web_app=WebAppInfo(url=_webapp_profile_url()))]
         ]
     )
+
+def jobs_menu():
+    return {
+        "inline_keyboard":[
+            [{"text":"💼 Βρες εργασία","callback_data":"jobs_find"}],
+            [{"text":"🧠 Είμαι freelancer","callback_data":"jobs_freelancer"}],
+            [{"text":"📤 Ανέβασε εργασία","callback_data":"jobs_post"}],
+            [{"text":"⬅️ Πίσω","callback_data":"menu_main"}]
+        ]
+    }
