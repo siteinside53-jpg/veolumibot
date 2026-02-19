@@ -185,3 +185,11 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+@dp.callback_query_handler(lambda c: c.data=="menu_jobs")
+async def open_jobs(cb: CallbackQuery):
+    await cb.message.edit_text(
+        "💼 <b>Jobs Hub</b>\n\nΤι θέλεις να κάνεις;",
+        reply_markup=jobs_menu(),
+        parse_mode="HTML"
+    )
