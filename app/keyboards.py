@@ -6,9 +6,10 @@ from .texts import (
     BTN_VIDEO,
     BTN_IMAGES,
     BTN_AUDIO,
+    BTN_JOBS,
     BTN_PROMPTS,
     BTN_SUPPORT,
-    BTN_JOBS,
+    
 )
 from .config import WEBAPP_URL
 
@@ -57,9 +58,10 @@ def start_inline_menu() -> InlineKeyboardMarkup:
             [InlineKeyboardButton(BTN_VIDEO, callback_data="menu:video")],
             [InlineKeyboardButton(BTN_IMAGES, callback_data="menu:images")],
             [InlineKeyboardButton(BTN_AUDIO, callback_data="menu:audio")],
+            [InlineKeyboardButton(BTN_JOBS, callback_data="menu_jobs")],
             [InlineKeyboardButton(BTN_PROMPTS, url="https://t.me/veolumiprompts")],
             [InlineKeyboardButton(BTN_SUPPORT, url="https://t.me/veolumisupport")],
-            [InlineKeyboardButton(BTN_JOBS, callback_data="menu_jobs")],
+           
 
         ]
     )
