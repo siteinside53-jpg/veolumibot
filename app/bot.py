@@ -18,6 +18,9 @@ from .keyboards import (
     video_models_menu,
     image_models_menu,
     audio_models_menu,
+    jobs_menu,
+    jobs_client_menu,
+    jobs_freelancer_menu,
 )
 
 from .db import (
