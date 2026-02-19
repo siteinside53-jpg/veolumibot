@@ -59,6 +59,8 @@ def start_inline_menu() -> InlineKeyboardMarkup:
             [InlineKeyboardButton(BTN_AUDIO, callback_data="menu:audio")],
             [InlineKeyboardButton(BTN_PROMPTS, url="https://t.me/veolumiprompts")],
             [InlineKeyboardButton(BTN_SUPPORT, url="https://t.me/veolumisupport")],
+            [InlineKeyboardButton(BTN_JOBS, callback_data="menu_jobs")],
+
         ]
     )
 
