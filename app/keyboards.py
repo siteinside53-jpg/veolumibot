@@ -108,12 +108,12 @@ def open_profile_webapp_kb() -> InlineKeyboardMarkup:
         ]
     )
 
-def jobs_menu():
-    return {
-        "inline_keyboard":[
-            [{"text":"💼 Βρες εργασία","callback_data":"jobs_find"}],
-            [{"text":"🧠 Είμαι freelancer","callback_data":"jobs_freelancer"}],
-            [{"text":"📤 Ανέβασε εργασία","callback_data":"jobs_post"}],
-            [{"text":"⬅️ Πίσω","callback_data":"menu_main"}]
+def jobs_menu() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("💼 Βρες εργασία", callback_data="jobs_find")],
+            [InlineKeyboardButton("🧠 Είμαι freelancer", callback_data="jobs_freelancer")],
+            [InlineKeyboardButton("📤 Ανέβασε εργασία", callback_data="jobs_post")],
+            [InlineKeyboardButton("← Πίσω", callback_data="menu:home")],
         ]
-    }
+    )
