@@ -1,10 +1,12 @@
 # app/texts.py
 
 # === Buttons (ΠΡΕΠΕΙ να υπάρχουν όπως τα περιμένει το bot/keyboard) ===
+BTN_TOPUP = "💰 Αναπλήρωση Υπολοίπου"
 BTN_PROFILE = "👤 Το προφίλ μου"
 BTN_VIDEO = "🎬 Δημιουργία βίντεο"
 BTN_IMAGES = "🖼 Εικόνες"
 BTN_AUDIO = "🎧 Ήχος"
+BTN_TEXT_AI = "📝 Κειμενικό AI"
 BTN_JOBS = "💼 Εργασίες"
 BTN_PROMPTS = "💡 Κανάλι με prompts"
 BTN_SUPPORT = "☁️ Υποστήριξη"
