@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <title>Hailuo 02</title>
+  <style>
+    :root{
+      --bg:#0b0c12;--card:#121422;--card2:#0f1020;--text:#e9e9f5;--muted:#a4a7c0;
+      --stroke:#242646;--accent:#7c3aed;--accent2:#6d28d9;--good:#19c37d;--bad:#ef4444;
+      --shadow:0 14px 40px rgba(0,0,0,.55);--radius:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,"Apple Color Emoji","Segoe UI Emoji";
+      background:radial-gradient(800px 500px at 20% 10%,rgba(124,58,237,.18),transparent 55%),
+      radial-gradient(700px 500px at 80% 40%,rgba(124,58,237,.12),transparent 60%),var(--bg);
+      color:var(--text);display:flex;justify-content:center;padding:18px 14px 28px;}
+    .wrap{width:min(520px,100%)}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
+      border:1px solid rgba(255,255,255,.06);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+    .card-inner{padding:16px}
+    .header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+    .brand{display:flex;align-items:center;gap:10px;min-width:0}
+    .logo{width:34px;height:34px;border-radius:12px;background:linear-gradient(135deg,rgba(124,58,237,.9),rgba(124,58,237,.35));
+      display:grid;place-items:center;box-shadow:0 10px 20px rgba(124,58,237,.25);border:1px solid rgba(255,255,255,.08);flex:0 0 auto;font-weight:900}
+    .title{font-size:18px;font-weight:900;letter-spacing:.2px;line-height:1.15}
+    .subtitle{font-size:12px;color:var(--muted);margin-top:2px;font-weight:700;opacity:.95}
+    .pill{font-size:12px;padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.03);color:var(--text);white-space:nowrap;opacity:.95;font-weight:800}
+    .pill b{font-weight:900}
+    .block{margin-top:12px;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:12px}
+    .label{font-size:12px;color:var(--muted);margin-bottom:8px;letter-spacing:.2px;text-transform:uppercase;opacity:.9;font-weight:800}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+    .counter{font-size:12px;color:var(--muted);font-weight:800}
+    .error{margin-top:8px;font-size:12px;color:var(--bad);display:none;font-weight:900;white-space:pre-wrap}
+    textarea{width:100%;min-height:140px;resize:vertical;border-radius:12px;border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.03);color:var(--text);padding:12px;outline:none;font-size:14px;line-height:1.35;font-weight:800}
+    textarea:focus{border-color:rgba(124,58,237,.55);box-shadow:0 0 0 4px rgba(124,58,237,.15)}
+    .select{width:100%;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);
+      color:var(--text);padding:12px 34px 12px 12px;outline:none;font-size:14px;appearance:none;font-weight:800}
+    .select:focus{border-color:rgba(124,58,237,.55);box-shadow:0 0 0 4px rgba(124,58,237,.15)}
+    .select-wrap{position:relative}
+    .select-wrap:after{content:"▾";position:absolute;right:12px;top:50%;transform:translateY(-50%);color:rgba(233,233,245,.75);pointer-events:none;font-size:14px}
+    .upload-box{width:100%;aspect-ratio:4/3;border-radius:14px;border:1px dashed rgba(255,255,255,.18);
+      background:radial-gradient(600px 280px at 30% 10%,rgba(124,58,237,.10),transparent 55%),rgba(0,0,0,.18);
+      display:grid;place-items:center;color:rgba(233,233,245,.85);user-select:none;position:relative;overflow:hidden;cursor:pointer}
+    .upload-plus{display:flex;flex-direction:column;align-items:center;gap:6px;font-weight:900}
+    .upload-plus .p{font-size:12px;font-weight:800;color:rgba(233,233,245,.7)}
+    .remove-x{display:none;position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:999px;border:none;
+      background:rgba(0,0,0,.55);color:white;font-weight:900;cursor:pointer;z-index:3}
+    .preview-img{display:none;width:100%;height:100%;object-fit:cover;border-radius:14px;position:absolute;inset:0;z-index:2}
+    .btn{border:0;background:linear-gradient(180deg,var(--accent),var(--accent2));color:white;font-weight:900;border-radius:16px;
+      padding:14px 16px;cursor:pointer;box-shadow:0 10px 18px rgba(0,0,0,.45),0 8px 18px rgba(124,58,237,.16);
+      width:100%;font-size:15px;letter-spacing:.2px;margin-top:14px}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .btn:active{transform:translateY(1px)}
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="card-inner">
+
+        <div class="header">
+          <div class="brand">
+            <div class="logo" aria-hidden="true">H</div>
+            <div>
+              <div class="title">Hailuo 02</div>
+              <div class="subtitle">Δημιουργία βίντεο AI</div>
+            </div>
+          </div>
+          <div class="pill">Κόστος: <b><span id="costTop">6</span></b> credits</div>
+        </div>
+
+        <!-- PROMPT -->
+        <div class="block">
+          <div class="row" style="margin-bottom:8px">
+            <div class="label" style="margin:0">PROMPT</div>
+            <div class="counter"><span id="charCount">0</span>/1000</div>
+          </div>
+          <textarea id="prompt" maxlength="1000" placeholder="Περιέγραψε τι θέλεις να γίνει..."></textarea>
+          <div id="promptErr" class="error">Βάλε prompt (1–1000 χαρακτήρες).</div>
+        </div>
+
+        <!-- START IMAGE (optional) -->
+        <div class="block">
+          <div class="row">
+            <div class="label" style="margin:0">ΕΙΚΟΝΑ ΕΝΑΡΞΗΣ (ΠΡΟΑΙΡΕΤΙΚΟ)</div>
+            <div class="counter">JPG/PNG • ≤ 10 MB</div>
+          </div>
+          <div id="dropStart" class="upload-box" style="margin-top:10px;">
+            <img id="previewStart" class="preview-img" alt="preview"/>
+            <button id="removeStart" class="remove-x" type="button" aria-label="Αφαίρεση">✕</button>
+            <div id="placeholderStart" class="upload-plus">
+              <div style="font-size:22px">+</div>
+              <div class="p">Ανέβασμα</div>
+            </div>
+          </div>
+          <input id="fileStart" type="file" accept="image/*" style="display:none"/>
+        </div>
+
+        <!-- END IMAGE (optional) -->
+        <div class="block">
+          <div class="row">
+            <div class="label" style="margin:0">ΕΙΚΟΝΑ ΛΗΞΗΣ (ΠΡΟΑΙΡΕΤΙΚΟ)</div>
+            <div class="counter">JPG/PNG • ≤ 10 MB</div>
+          </div>
+          <div id="dropEnd" class="upload-box" style="margin-top:10px;">
+            <img id="previewEnd" class="preview-img" alt="preview"/>
+            <button id="removeEnd" class="remove-x" type="button" aria-label="Αφαίρεση">✕</button>
+            <div id="placeholderEnd" class="upload-plus">
+              <div style="font-size:22px">+</div>
+              <div class="p">Ανέβασμα</div>
+            </div>
+          </div>
+          <input id="fileEnd" type="file" accept="image/*" style="display:none"/>
+        </div>
+
+        <!-- ASPECT RATIO -->
+        <div class="block">
+          <div class="label">ΑΝΑΛΟΓΙΑ ΠΛΕΥΡΩΝ</div>
+          <div class="select-wrap">
+            <select id="aspect" class="select">
+              <option value="16:9" selected>16:9</option>
+              <option value="9:16">9:16</option>
+              <option value="1:1">1:1</option>
+            </select>
+          </div>
+        </div>
+
+        <button id="btn" class="btn" type="button">Δημιουργία</button>
+
+      </div>
+    </div>
+  </div>
+
+<script>
+  const API_URL = "/api/hailuo02/generate";
+
+  const tg = window.Telegram?.WebApp;
+  if (tg) { tg.expand(); tg.ready(); }
+  const TG_INIT_DATA = tg?.initData || "";
+
+  const promptEl   = document.getElementById("prompt");
+  const aspectEl   = document.getElementById("aspect");
+  const btn        = document.getElementById("btn");
+  const charCount  = document.getElementById("charCount");
+  const promptErr  = document.getElementById("promptErr");
+  const costTop    = document.getElementById("costTop");
+
+  const dropStart       = document.getElementById("dropStart");
+  const fileStartEl     = document.getElementById("fileStart");
+  const previewStart    = document.getElementById("previewStart");
+  const placeholderStart= document.getElementById("placeholderStart");
+  const removeStartBtn  = document.getElementById("removeStart");
+
+  const dropEnd         = document.getElementById("dropEnd");
+  const fileEndEl       = document.getElementById("fileEnd");
+  const previewEnd      = document.getElementById("previewEnd");
+  const placeholderEnd  = document.getElementById("placeholderEnd");
+  const removeEndBtn    = document.getElementById("removeEnd");
+
+  let startFile = null;
+  let endFile   = null;
+
+  function showAlert(msg){
+    if (tg?.showAlert) tg.showAlert(msg);
+    else alert(msg);
+  }
+  function showSentPopup(){
+    if (!tg?.showPopup) return;
+    tg.showPopup({
+      title: "Telegram",
+      message: "Η αίτηση στάλθηκε. Το αποτέλεσμα θα έρθει μέσα στο Telegram.",
+      buttons: [{ type: "ok", text: "Close" }]
+    }, () => {});
+  }
+
+  function calcCost(){
+    return (startFile || endFile) ? 12 : 6;
+  }
+  function setCost(){
+    costTop.textContent = String(calcCost());
+  }
+
+  function fileToDataURL(f){
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result || ""));
+      r.onerror = () => reject(new Error("File read failed"));
+      r.readAsDataURL(f);
+    });
+  }
+
+  function setupUpload(dropEl, fileEl, previewEl, placeholderEl, removeBtn, setter){
+    function setPreview(f){
+      if (!f) {
+        previewEl.style.display = "none";
+        previewEl.src = "";
+        removeBtn.style.display = "none";
+        placeholderEl.style.display = "flex";
+        return;
+      }
+      if (f.size > 10*1024*1024) {
+        showAlert("Η εικόνα είναι πάνω από 10MB.");
+        setter(null);
+        fileEl.value = "";
+        setPreview(null);
+        return;
+      }
+      const r = new FileReader();
+      r.onload = () => {
+        previewEl.src = String(r.result || "");
+        previewEl.style.display = "block";
+        removeBtn.style.display = "block";
+        placeholderEl.style.display = "none";
+      };
+      r.readAsDataURL(f);
+    }
+
+    dropEl.addEventListener("click", () => fileEl.click());
+    dropEl.addEventListener("dragover", (e) => e.preventDefault());
+    dropEl.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const f = e.dataTransfer.files?.[0];
+      if (!f) return;
+      setter(f);
+      setPreview(f);
+      setCost();
+    });
+    fileEl.addEventListener("change", () => {
+      const f = fileEl.files?.[0];
+      if (!f) return;
+      setter(f);
+      setPreview(f);
+      setCost();
+    });
+    removeBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      setter(null);
+      fileEl.value = "";
+      setPreview(null);
+      setCost();
+    });
+  }
+
+  setupUpload(dropStart, fileStartEl, previewStart, placeholderStart, removeStartBtn, (f) => { startFile = f; });
+  setupUpload(dropEnd, fileEndEl, previewEnd, placeholderEnd, removeEndBtn, (f) => { endFile = f; });
+
+  async function safeJson(res){
+    const txt = await res.text();
+    try { return JSON.parse(txt); } catch { return { raw: txt }; }
+  }
+
+  promptEl.addEventListener("input", () => {
+    charCount.textContent = String(promptEl.value.length);
+    if (promptEl.value.trim().length > 0) promptErr.style.display = "none";
+  });
+
+  btn.addEventListener("click", async () => {
+    const prompt = (promptEl.value || "").trim();
+    const aspect_ratio = aspectEl.value;
+
+    if (!prompt) {
+      promptErr.style.display = "block";
+      showAlert("Βάλε prompt.");
+      return;
+    }
+
+    btn.disabled = true;
+
+    try {
+      let start_image_data_url = null;
+      let end_image_data_url = null;
+      if (startFile) start_image_data_url = await fileToDataURL(startFile);
+      if (endFile) end_image_data_url = await fileToDataURL(endFile);
+
+      const payload = {
+        initData: TG_INIT_DATA,
+        prompt,
+        aspect_ratio,
+        start_image_data_url,
+        end_image_data_url
+      };
+
+      showSentPopup();
+
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(payload),
+      });
+
+      const data = await safeJson(res);
+
+      if (!res.ok || data?.ok === false) {
+        const msg = data?.error || data?.detail || data?.message || "Αποτυχία";
+        throw new Error(msg);
+      }
+
+      if (tg?.close) tg.close();
+
+    } catch (e) {
+      showAlert("Αποτυχία. " + (e?.message || ""));
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  charCount.textContent = "0";
+  setCost();
+</script>
+</body>
+</html>

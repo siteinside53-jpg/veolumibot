@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <title>Topaz Upscale</title>
+  <style>
+    :root{
+      --bg:#0b0c12;--card:#121422;--card2:#0f1020;--text:#e9e9f5;--muted:#a4a7c0;
+      --stroke:#242646;--accent:#7c3aed;--accent2:#6d28d9;--good:#19c37d;--bad:#ef4444;
+      --shadow:0 14px 40px rgba(0,0,0,.55);--radius:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,"Apple Color Emoji","Segoe UI Emoji";
+      background:radial-gradient(800px 500px at 20% 10%,rgba(124,58,237,.18),transparent 55%),
+      radial-gradient(700px 500px at 80% 40%,rgba(124,58,237,.12),transparent 60%),var(--bg);
+      color:var(--text);display:flex;justify-content:center;padding:18px 14px 28px;}
+    .wrap{width:min(520px,100%)}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
+      border:1px solid rgba(255,255,255,.06);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+    .card-inner{padding:16px}
+    .header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+    .brand{display:flex;align-items:center;gap:10px;min-width:0}
+    .logo{width:34px;height:34px;border-radius:12px;background:linear-gradient(135deg,rgba(124,58,237,.9),rgba(124,58,237,.35));
+      display:grid;place-items:center;box-shadow:0 10px 20px rgba(124,58,237,.25);border:1px solid rgba(255,255,255,.08);flex:0 0 auto;font-weight:900}
+    .title{font-size:18px;font-weight:900;letter-spacing:.2px;line-height:1.15}
+    .subtitle{font-size:12px;color:var(--muted);margin-top:2px;font-weight:700;opacity:.95}
+    .pill{font-size:12px;padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.03);color:var(--text);white-space:nowrap;opacity:.95;font-weight:800}
+    .pill b{font-weight:900}
+    .block{margin-top:12px;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:12px}
+    .label{font-size:12px;color:var(--muted);margin-bottom:8px;letter-spacing:.2px;text-transform:uppercase;opacity:.9;font-weight:800}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+    .counter{font-size:12px;color:var(--muted);font-weight:800}
+    .error{margin-top:8px;font-size:12px;color:var(--bad);display:none;font-weight:900;white-space:pre-wrap}
+    .select{width:100%;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);
+      color:var(--text);padding:12px 34px 12px 12px;outline:none;font-size:14px;appearance:none;font-weight:800}
+    .select:focus{border-color:rgba(124,58,237,.55);box-shadow:0 0 0 4px rgba(124,58,237,.15)}
+    .select-wrap{position:relative}
+    .select-wrap:after{content:"▾";position:absolute;right:12px;top:50%;transform:translateY(-50%);color:rgba(233,233,245,.75);pointer-events:none;font-size:14px}
+    .upload-box{width:100%;aspect-ratio:4/3;border-radius:14px;border:1px dashed rgba(255,255,255,.18);
+      background:radial-gradient(600px 280px at 30% 10%,rgba(124,58,237,.10),transparent 55%),rgba(0,0,0,.18);
+      display:grid;place-items:center;color:rgba(233,233,245,.85);user-select:none;position:relative;overflow:hidden;cursor:pointer}
+    .upload-plus{display:flex;flex-direction:column;align-items:center;gap:6px;font-weight:900}
+    .upload-plus .p{font-size:12px;font-weight:800;color:rgba(233,233,245,.7)}
+    .remove-x{display:none;position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:999px;border:none;
+      background:rgba(0,0,0,.55);color:white;font-weight:900;cursor:pointer;z-index:3}
+    .file-name{display:none;font-size:13px;font-weight:800;color:var(--text);text-align:center;padding:8px;word-break:break-all}
+    .btn{border:0;background:linear-gradient(180deg,var(--accent),var(--accent2));color:white;font-weight:900;border-radius:16px;
+      padding:14px 16px;cursor:pointer;box-shadow:0 10px 18px rgba(0,0,0,.45),0 8px 18px rgba(124,58,237,.16);
+      width:100%;font-size:15px;letter-spacing:.2px;margin-top:14px}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .btn:active{transform:translateY(1px)}
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="card-inner">
+
+        <div class="header">
+          <div class="brand">
+            <div class="logo" aria-hidden="true">T</div>
+            <div>
+              <div class="title">Topaz Upscale</div>
+              <div class="subtitle">Αναβάθμιση ανάλυσης βίντεο</div>
+            </div>
+          </div>
+          <div class="pill">Κόστος: <b>14</b> credits</div>
+        </div>
+
+        <!-- VIDEO UPLOAD (REQUIRED) -->
+        <div class="block">
+          <div class="row">
+            <div class="label" style="margin:0">ΒΙΝΤΕΟ (ΥΠΟΧΡΕΩΤΙΚΟ)</div>
+            <div class="counter">MP4/MOV/WebM • ≤ 100 MB</div>
+          </div>
+          <div id="drop" class="upload-box" style="margin-top:10px;">
+            <button id="removeBtn" class="remove-x" type="button" aria-label="Αφαίρεση">✕</button>
+            <div id="fileName" class="file-name"></div>
+            <div id="uploadPlaceholder" class="upload-plus">
+              <div style="font-size:22px">+</div>
+              <div class="p">Ανέβασμα βίντεο</div>
+            </div>
+          </div>
+          <input id="fileInput" type="file" accept="video/*" style="display:none"/>
+          <div id="videoErr" class="error">Πρέπει να ανεβάσεις ένα βίντεο.</div>
+        </div>
+
+        <!-- SCALE FACTOR -->
+        <div class="block">
+          <div class="label">ΚΛΙΜΑΚΑ</div>
+          <div class="select-wrap">
+            <select id="scale" class="select">
+              <option value="2" selected>2x</option>
+              <option value="4">4x</option>
+            </select>
+          </div>
+        </div>
+
+        <button id="btn" class="btn" type="button">Δημιουργία</button>
+
+      </div>
+    </div>
+  </div>
+
+<script>
+  const API_URL = "/api/topaz-upscale/generate";
+
+  const tg = window.Telegram?.WebApp;
+  if (tg) { tg.expand(); tg.ready(); }
+  const TG_INIT_DATA = tg?.initData || "";
+
+  const scaleEl         = document.getElementById("scale");
+  const btn             = document.getElementById("btn");
+  const drop            = document.getElementById("drop");
+  const fileInput       = document.getElementById("fileInput");
+  const videoErr        = document.getElementById("videoErr");
+  const fileNameEl      = document.getElementById("fileName");
+  const uploadPlaceholder = document.getElementById("uploadPlaceholder");
+  const removeBtn       = document.getElementById("removeBtn");
+
+  let videoFile = null;
+
+  function showAlert(msg){
+    if (tg?.showAlert) tg.showAlert(msg);
+    else alert(msg);
+  }
+  function showSentPopup(){
+    if (!tg?.showPopup) return;
+    tg.showPopup({
+      title: "Telegram",
+      message: "Η αίτηση στάλθηκε. Το αποτέλεσμα θα έρθει μέσα στο Telegram.",
+      buttons: [{ type: "ok", text: "Close" }]
+    }, () => {});
+  }
+
+  function setVideoPreview(f){
+    if (!f) {
+      fileNameEl.style.display = "none";
+      fileNameEl.textContent = "";
+      removeBtn.style.display = "none";
+      uploadPlaceholder.style.display = "flex";
+      return;
+    }
+    if (f.size > 100*1024*1024) {
+      showAlert("Το βίντεο είναι πάνω από 100MB.");
+      videoFile = null;
+      fileInput.value = "";
+      setVideoPreview(null);
+      return;
+    }
+    fileNameEl.textContent = f.name;
+    fileNameEl.style.display = "block";
+    removeBtn.style.display = "block";
+    uploadPlaceholder.style.display = "none";
+  }
+
+  async function safeJson(res){
+    const txt = await res.text();
+    try { return JSON.parse(txt); } catch { return { raw: txt }; }
+  }
+
+  drop.addEventListener("click", () => fileInput.click());
+  drop.addEventListener("dragover", (e) => e.preventDefault());
+  drop.addEventListener("drop", (e) => {
+    e.preventDefault();
+    const f = e.dataTransfer.files?.[0];
+    if (!f) return;
+    videoFile = f;
+    videoErr.style.display = "none";
+    setVideoPreview(videoFile);
+  });
+
+  fileInput.addEventListener("change", () => {
+    const f = fileInput.files?.[0];
+    if (!f) return;
+    videoFile = f;
+    videoErr.style.display = "none";
+    setVideoPreview(videoFile);
+  });
+
+  removeBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    videoFile = null;
+    fileInput.value = "";
+    setVideoPreview(null);
+  });
+
+  btn.addEventListener("click", async () => {
+    if (!videoFile) {
+      videoErr.style.display = "block";
+      showAlert("Ανέβασε ένα βίντεο.");
+      return;
+    }
+
+    btn.disabled = true;
+
+    try {
+      const formData = new FormData();
+      formData.append("tg_init_data", TG_INIT_DATA);
+      formData.append("video", videoFile);
+      formData.append("scale", scaleEl.value);
+
+      showSentPopup();
+
+      const res = await fetch(API_URL, {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await safeJson(res);
+
+      if (!res.ok || data?.ok === false) {
+        const msg = data?.error || data?.detail || data?.message || "Αποτυχία";
+        throw new Error(msg);
+      }
+
+      if (tg?.close) tg.close();
+
+    } catch (e) {
+      showAlert("Αποτυχία. " + (e?.message || ""));
+    } finally {
+      btn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>
