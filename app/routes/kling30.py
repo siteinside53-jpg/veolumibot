@@ -17,7 +17,7 @@ from ._kling_shared import create_kling_video_task, poll_kling_video_task, kling
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-MODEL = "kling-v3-0"
+MODEL = "kling-video-3.0"
 ENDPOINT = "/v1/videos/text2video"
 BASE_COST = 18.0
 
