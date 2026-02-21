@@ -152,7 +152,7 @@ async def run_kling_job(
     try:
         # payload για Kling 2.6 (κρατάω τα δικά σου fields)
         payload = {
-            "model_name": "kling-v2.6-std",
+            "model_name": "kling-v2-6",
             "prompt": prompt,
             "aspect_ratio": aspect_ratio,
             "duration": 5,
@@ -212,7 +212,7 @@ async def kling_generate(request: Request, background_tasks: BackgroundTasks):
 
     # Spend credits
     try:
-        spend_credits_by_user_id(db_user_id, COST, "Kling 2.6 Video", "kling", "kling-v2.6-std")
+        spend_credits_by_user_id(db_user_id, COST, "Kling 2.6 Video", "kling", "kling-v2-6")
     except Exception as e:
         msg = str(e)
         if "not enough" in msg.lower():
@@ -349,7 +349,7 @@ async def run_kling_job(
     try:
         # payload για Kling 2.6 (κρατάω τα δικά σου fields)
         payload = {
-            "model_name": "kling-v2.6-std",
+            "model_name": "kling-v2-6",
             "prompt": prompt,
             "aspect_ratio": aspect_ratio,
             "duration": 5,
@@ -409,7 +409,7 @@ async def kling_generate(request: Request, background_tasks: BackgroundTasks):
 
     # Spend credits
     try:
-        spend_credits_by_user_id(db_user_id, COST, "Kling 2.6 Video", "kling", "kling-v2.6-std")
+        spend_credits_by_user_id(db_user_id, COST, "Kling 2.6 Video", "kling", "kling-v2-6")
     except Exception as e:
         msg = str(e)
         if "not enough" in msg.lower():
