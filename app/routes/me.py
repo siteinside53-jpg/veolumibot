@@ -5,7 +5,7 @@ from typing import Dict, Optional, Tuple
 import httpx
 from fastapi import APIRouter
 
-from ..web_shared import packs_list, plans_list
+from ..web_shared import packs_list, plans_list, SUBSCRIPTION_PLANS
 from ..core.telegram_auth import db_user_from_webapp, verify_telegram_init_data
 from ..config import BOT_TOKEN
 
@@ -16,39 +16,29 @@ async def me(payload: dict):
     init_data = payload.get("initData", "")
     dbu = db_user_from_webapp(init_data)
 
-    # Determine current plan based on credits
-    credits = float(dbu.get("credits", 0) or 0)
-    plan_name = "Free"
-    plan_credits = 5
+    total_credits = float(dbu.get("credits", 0) or 0)
+    extra_credits = float(dbu.get("extra_credits", 0) or 0)
+    plan_sku = dbu.get("plan_sku", "FREE") or "FREE"
 
-    # Simple plan detection based on last purchase or initial credits
-    if credits >= 2000:
-        plan_name = "ULTRA PRO"
-        plan_credits = 2000
-    elif credits >= 1000:
-        plan_name = "Creator"
-        plan_credits = 1000
-    elif credits >= 500:
-        plan_name = "Pro"
-        plan_credits = 500
-    elif credits >= 250:
-        plan_name = "Middle"
-        plan_credits = 250
-    elif credits >= 100:
-        plan_name = "Start"
-        plan_credits = 100
-    elif credits >= 5:
-        plan_name = "Free"
-        plan_credits = 5
+    # Plan info
+    plan = SUBSCRIPTION_PLANS.get(plan_sku, SUBSCRIPTION_PLANS["FREE"])
+    plan_name = plan["name"]
+    plan_total = plan["credits"]
+
+    # Plan credits remaining (total minus extra)
+    plan_credits_remaining = max(0.0, total_credits - extra_credits)
 
     return {
         "ok": True,
         "user": {
             "id": dbu["tg_user_id"],
             "username": dbu.get("tg_username") or "",
-            "credits": credits,
+            "credits": total_credits,
+            "extra_credits": extra_credits,
+            "plan_sku": plan_sku,
             "plan_name": plan_name,
-            "plan_credits": plan_credits,
+            "plan_total": plan_total,
+            "plan_credits_remaining": plan_credits_remaining,
         },
         "packs": packs_list(),
         "plans": plans_list(),

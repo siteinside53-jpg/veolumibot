@@ -5,951 +5,659 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>VeoLumi – Προφίλ</title>
-
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
   <style>
     :root{
-      --bg:#0e0f12;
-      --card:#171a20;
-      --card2:#141820;
-      --border:#232734;
-      --muted:#9aa3b2;
-      --text:#ffffff;
-      --purple:#7c3aed;
-      --purple2:#6d28d9;
-      --green:#22c55e;
-      --green2:#16a34a;
-      --shadow: 0 10px 30px rgba(0,0,0,.35);
-      --radius:18px;
+      --bg:#0e0f12;--card:#171a20;--card2:#141820;--border:#232734;
+      --muted:#9aa3b2;--text:#ffffff;--purple:#7c3aed;--purple2:#6d28d9;
+      --green:#22c55e;--green2:#16a34a;--red:#ef4444;
+      --shadow:0 10px 30px rgba(0,0,0,.35);--radius:18px;
     }
     *{box-sizing:border-box}
     body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
     .wrap{max-width:540px;margin:0 auto;padding:14px 14px 80px}
-    .card{
-      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0)) , var(--card);
-      border:1px solid var(--border);
-      border-radius:var(--radius);
-      padding:14px;
-      margin-bottom:14px;
-      box-shadow:var(--shadow);
-    }
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,0)),var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:14px;box-shadow:var(--shadow)}
     .row{display:flex;align-items:center;justify-content:space-between;gap:12px}
     .muted{color:var(--muted)}
     .h1{font-size:18px;font-weight:800;margin:0}
-    .btn{
-      display:inline-flex;align-items:center;justify-content:center;
-      padding:12px 14px;border-radius:14px;border:1px solid var(--border);
-      background:rgba(255,255,255,.03);
-      color:var(--text);
-      font-weight:800;
-      cursor:pointer;
-      width:100%;
-      transition:.15s transform, .15s opacity, .15s background;
-      user-select:none;
-      font-size:14px;
-    }
+    .btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 14px;border-radius:14px;border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--text);font-weight:800;cursor:pointer;width:100%;transition:.15s;user-select:none;font-size:14px}
     .btn:active{transform:scale(.99)}
-    .btn.primary{
-      background:linear-gradient(180deg,var(--purple),var(--purple2));
-      border-color:rgba(255,255,255,.08);
-    }
-    .btn.green{
-      background:linear-gradient(180deg,var(--green),var(--green2));
-      border-color:rgba(255,255,255,.08);
-      font-size:13px;
-      padding:8px 12px;
-      width:auto;
-    }
+    .btn.primary{background:linear-gradient(180deg,var(--purple),var(--purple2));border-color:rgba(255,255,255,.08)}
+    .btn.danger-outline{background:transparent;border-color:rgba(239,68,68,.35);color:#f87171;font-size:13px;padding:9px 12px}
     .btn.disabled{opacity:.55;cursor:not-allowed}
-    .avatar{
-      width:54px;height:54px;border-radius:50%;
-      background:#2a2f3d;
-      border:1px solid rgba(255,255,255,.06);
-      display:flex;align-items:center;justify-content:center;
-      overflow:hidden;flex:0 0 auto;
-    }
+    .avatar{width:54px;height:54px;border-radius:50%;background:#2a2f3d;border:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;overflow:hidden;flex:0 0 auto}
     .avatar img{width:100%;height:100%;object-fit:cover;display:none}
     .avatar span{font-size:18px;font-weight:950;color:#cfd3df}
     .balance{text-align:right;display:flex;flex-direction:column;gap:2px}
+    .balance .lbl{font-weight:900;font-size:12px}
     .balance .num{font-size:22px;font-weight:950}
-    .section-title{margin:14px 0 10px 0;color:#cfd3df;font-weight:900;letter-spacing:.2px}
+    .section-title{margin:14px 0 10px;color:#cfd3df;font-weight:900;letter-spacing:.2px}
 
+    /* Extra credits banner */
+    .extra-banner{background:rgba(124,58,237,.10);border:1px solid rgba(124,58,237,.25);border-radius:16px;padding:10px 14px;margin-bottom:14px;display:none}
+    .extra-banner .row{gap:8px}
+    .extra-banner .lbl{font-weight:900;color:var(--muted);font-size:13px}
+    .extra-banner .val{font-weight:950;font-size:20px}
+
+    /* Plans slider */
     .plans{display:flex;gap:12px;overflow:auto;padding-bottom:6px;scroll-snap-type:x mandatory}
-    .plan{
-      min-width:290px;
-      scroll-snap-align:start;
-      background:linear-gradient(180deg, rgba(124,58,237,.12), rgba(255,255,255,0)) , var(--card2);
-      border:1px solid var(--border);
-      border-radius:22px;
-      padding:14px;
-      position:relative;
-    }
-    .plan .name{font-size:20px;font-weight:950;margin:0 0 2px 0}
-    .plan .period{font-size:13px;color:var(--muted);font-weight:800;margin-bottom:6px}
-    .plan .credits{font-weight:900;color:#cfd3df;margin-bottom:8px}
+    .plan{min-width:290px;scroll-snap-align:start;background:linear-gradient(180deg,rgba(124,58,237,.12),rgba(255,255,255,0)),var(--card2);border:1px solid var(--border);border-radius:22px;padding:14px;position:relative}
+    .plan .name{font-size:20px;font-weight:950;margin:0 0 2px}
+    .plan .period{font-size:13px;color:var(--muted);font-weight:800;margin-bottom:6px;display:inline-block;background:rgba(255,255,255,.04);padding:2px 8px;border-radius:8px}
+    .plan .credits-line{font-weight:900;color:#cfd3df;margin-bottom:8px}
     .tags{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
-    .tag{
-      padding:7px 10px;border-radius:12px;border:1px solid var(--border);
-      background:rgba(255,255,255,.03);font-weight:900;
-    }
-    .checks{margin:10px 0 12px 0;display:flex;flex-direction:column;gap:8px}
+    .tag{padding:7px 10px;border-radius:12px;border:1px solid var(--border);background:rgba(255,255,255,.03);font-weight:900}
+    .checks{margin:10px 0 12px;display:flex;flex-direction:column;gap:8px}
     .check{display:flex;gap:10px;align-items:flex-start;color:#d8deea}
-    .check .dot{
-      width:18px;height:18px;border-radius:7px;
-      background:rgba(124,58,237,.18);
-      border:1px solid rgba(124,58,237,.35);
-      display:flex;align-items:center;justify-content:center;
-      flex:0 0 auto;margin-top:1px;
-    }
+    .check .dot{width:18px;height:18px;border-radius:7px;background:rgba(124,58,237,.18);border:1px solid rgba(124,58,237,.35);display:flex;align-items:center;justify-content:center;flex:0 0 auto;margin-top:1px}
     .check .dot::after{content:"\2713";font-weight:950;color:#bda8ff;font-size:12px}
     .plan .btn{margin-top:10px}
     .plan .btn.secondary{background:rgba(255,255,255,.03);border-color:var(--border);font-weight:900}
 
-    .tabs{
-      position:fixed;left:0;right:0;bottom:0;
-      background:rgba(14,15,18,.88);
-      backdrop-filter: blur(10px);
-      border-top:1px solid rgba(255,255,255,.06);
-      padding:10px 14px;
-    }
+    /* Tabs */
+    .tabs{position:fixed;left:0;right:0;bottom:0;background:rgba(14,15,18,.88);backdrop-filter:blur(10px);border-top:1px solid rgba(255,255,255,.06);padding:10px 14px}
     .tabs-inner{max-width:540px;margin:0 auto;display:flex;gap:10px}
-    .tab{
-      flex:1;border:1px solid rgba(255,255,255,.06);
-      background:rgba(255,255,255,.03);
-      color:#cfd3df;
-      padding:10px 12px;border-radius:16px;
-      font-weight:900;text-align:center;cursor:pointer;user-select:none;
-    }
-    .tab.active{
-      background:rgba(124,58,237,.18);
-      border-color:rgba(124,58,237,.35);
-      color:#ffffff;
-    }
+    .tab{flex:1;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);color:#cfd3df;padding:10px 12px;border-radius:16px;font-weight:900;text-align:center;cursor:pointer;user-select:none}
+    .tab.active{background:rgba(124,58,237,.18);border-color:rgba(124,58,237,.35);color:#fff}
 
-    .modal-backdrop{
-      position:fixed;inset:0;background:rgba(0,0,0,.55);
-      display:none;align-items:center;justify-content:center;
-      padding:18px;z-index:50;
-    }
-    .modal{
-      width:min(520px, 100%);
-      background:var(--card);
-      border:1px solid var(--border);
-      border-radius:22px;
-      box-shadow:var(--shadow);
-      overflow:hidden;
-      max-height:90vh;
-      overflow-y:auto;
-    }
-    .modal-head{
-      display:flex;align-items:center;justify-content:space-between;
-      padding:14px 14px 10px 14px;
-      border-bottom:1px solid rgba(255,255,255,.06);
-    }
+    /* Modals */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:18px;z-index:50}
+    .modal{width:min(520px,100%);background:var(--card);border:1px solid var(--border);border-radius:22px;box-shadow:var(--shadow);overflow:hidden;max-height:90vh;overflow-y:auto}
+    .modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 14px 10px;border-bottom:1px solid rgba(255,255,255,.06)}
     .modal-title{font-weight:950}
-    .x{
-      width:34px;height:34px;border-radius:12px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(255,255,255,.03);
-      color:#fff;font-weight:950;cursor:pointer;
-    }
+    .x{width:34px;height:34px;border-radius:12px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:#fff;font-weight:950;cursor:pointer}
     .modal-body{padding:14px}
-    .input,.select{
-      width:100%;
-      padding:12px 12px;
-      border-radius:14px;
-      border:1px solid var(--border);
-      background:rgba(255,255,255,.03);
-      color:#fff;
-      outline:none;
-      font-weight:900;
-      -webkit-appearance:none;
-      appearance:none;
-    }
-    .select{
-      background:rgba(255,255,255,.03) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239aa3b2' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center;
-      padding-right:36px;
-    }
+    .input,.select{width:100%;padding:12px;border-radius:14px;border:1px solid var(--border);background:rgba(255,255,255,.03);color:#fff;outline:none;font-weight:900;-webkit-appearance:none;appearance:none}
+    .select{background:rgba(255,255,255,.03) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239aa3b2' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center;padding-right:36px}
     .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}
-    .opt{
-      padding:12px 10px;border-radius:14px;border:1px solid var(--border);
-      background:rgba(255,255,255,.03);
-      text-align:center;font-weight:950;cursor:pointer;user-select:none;
-    }
+    .opt{padding:12px 10px;border-radius:14px;border:1px solid var(--border);background:rgba(255,255,255,.03);text-align:center;font-weight:950;cursor:pointer;user-select:none}
     .opt.active{background:rgba(124,58,237,.18);border-color:rgba(124,58,237,.35)}
     .price-line{margin-top:10px;display:flex;align-items:center;justify-content:space-between;color:#cfd3df;font-weight:900}
     .price-line .price{font-size:18px;font-weight:950;color:#fff}
 
-    .tools-box{
-      background:rgba(255,255,255,.03);
-      border:1px solid rgba(255,255,255,.06);
-      border-radius:18px;
-      padding:12px;
-    }
-    .tools-head{display:flex;align-items:center;justify-content:space-between;font-weight:950;color:#cfd3df;margin-bottom:10px}
-    .tool{
-      display:flex;align-items:center;justify-content:space-between;
-      padding:9px 10px;border-radius:14px;
-      border:1px solid rgba(255,255,255,.06);
-      background:rgba(0,0,0,.12);
-      margin-bottom:8px;gap:10px;
-    }
-    .tool:last-child{margin-bottom:0}
-    .tool .nm{font-weight:950}
-    .tool .c{color:#cfd3df;font-weight:900}
+    .confirm-detail{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);font-weight:800}
+    .confirm-detail .label{color:var(--muted)}.confirm-detail .val{font-weight:950}
 
-    .page{display:none}
-    .page.active{display:block}
-
-    .toast{
-      position:fixed;
-      left:50%;
-      bottom:74px;
-      transform:translateX(-50%);
-      background:rgba(0,0,0,.75);
-      border:1px solid rgba(255,255,255,.10);
-      color:#fff;
-      padding:10px 12px;
-      border-radius:14px;
-      font-weight:900;
-      max-width:min(520px, calc(100% - 28px));
-      box-shadow:var(--shadow);
-      display:none;
-      z-index:60;
-    }
-
-    .confirm-detail{
-      display:flex;justify-content:space-between;
-      padding:8px 0;
-      border-bottom:1px solid rgba(255,255,255,.06);
-      font-weight:800;
-    }
-    .confirm-detail .label{color:var(--muted)}
-    .confirm-detail .val{font-weight:950}
-
-    .badge-green{
-      display:inline-flex;align-items:center;gap:6px;
-      background:rgba(34,197,94,.15);
-      border:1px solid rgba(34,197,94,.35);
-      color:#4ade80;
-      padding:6px 12px;
-      border-radius:12px;
-      font-weight:900;
-      font-size:13px;
-    }
+    .badge-green{display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.35);color:#4ade80;padding:6px 12px;border-radius:12px;font-weight:900;font-size:13px}
     .badge-green::before{content:"\2713";font-weight:950}
 
-    .progress-bar{
-      width:100%;height:6px;border-radius:3px;
-      background:rgba(255,255,255,.08);
-      margin-top:8px;overflow:hidden;
-    }
-    .progress-bar .fill{
-      height:100%;border-radius:3px;
-      background:linear-gradient(90deg,var(--purple),var(--purple2));
-      transition:width .3s;
-    }
+    .progress-bar{width:100%;height:6px;border-radius:3px;background:rgba(255,255,255,.08);margin-top:8px;overflow:hidden}
+    .progress-bar .fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--purple),var(--purple2));transition:width .3s}
+
+    .tools-box{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:12px}
+    .tools-head{display:flex;align-items:center;justify-content:space-between;font-weight:950;color:#cfd3df;margin-bottom:10px}
+    .tool{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;border-radius:14px;border:1px solid rgba(255,255,255,.06);background:rgba(0,0,0,.12);margin-bottom:8px;gap:10px}
+    .tool:last-child{margin-bottom:0}
+    .tool .nm{font-weight:950}.tool .c{color:#cfd3df;font-weight:900}
+
+    .page{display:none}.page.active{display:block}
+    .toast{position:fixed;left:50%;bottom:74px;transform:translateX(-50%);background:rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.10);color:#fff;padding:10px 12px;border-radius:14px;font-weight:900;max-width:min(520px,calc(100% - 28px));box-shadow:var(--shadow);display:none;z-index:60}
   </style>
 </head>
 
 <body>
-  <div class="wrap">
+<div class="wrap">
 
-    <!-- Header card -->
-    <div class="card">
-      <div class="row">
-        <div class="row" style="gap:12px">
-          <div class="avatar">
-            <span id="avatarFallback">?</span>
-            <img id="avatarImg" alt="avatar" />
-          </div>
-          <div>
-            <div id="name" class="h1">—</div>
-            <div class="muted" style="font-weight:800;margin-top:2px" id="subtitle">Ο λογαριασμός σου</div>
-          </div>
+  <!-- Extra credits banner (top) -->
+  <div class="extra-banner" id="extraBanner">
+    <div class="row">
+      <div>
+        <div class="lbl">Επιπλέον credits</div>
+        <div class="val" id="extraCreditsVal">0</div>
+      </div>
+      <button class="btn" style="width:auto;padding:8px 14px;font-size:13px" id="btnExtraCreditsTop">+ Αγορά</button>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <div class="card">
+    <div class="row">
+      <div class="row" style="gap:12px">
+        <div class="avatar">
+          <span id="avatarFallback">?</span>
+          <img id="avatarImg" alt="avatar" />
         </div>
-
-        <div class="balance">
-          <div class="muted" style="font-weight:900">Credits</div>
-          <div class="num" id="credits">—</div>
+        <div>
+          <div id="name" class="h1">—</div>
+          <div class="muted" style="font-weight:800;margin-top:2px" id="subtitle">Ο λογαριασμός σου</div>
         </div>
       </div>
+      <div class="balance">
+        <div class="lbl muted">Υπόλοιπο credits</div>
+        <div class="num" id="credits">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Current plan -->
+  <div class="card">
+    <div class="muted" style="font-weight:900;margin-bottom:4px">Τρέχον πακέτο</div>
+    <div class="h1" style="font-size:22px" id="currentPlanName">Δωρεάν</div>
+    <div class="muted" style="font-weight:800;margin-top:4px" id="planCreditsInfo">Διαθέσιμα κατά πακέτο: — / — credits</div>
+    <div class="progress-bar"><div class="fill" id="planProgress" style="width:0%"></div></div>
+
+    <div style="height:10px"></div>
+    <div id="autoRenewSection" style="display:none">
+      <div class="badge-green">Αυτόματη ανανέωση ενεργή</div>
+      <div style="height:8px"></div>
+      <button class="btn danger-outline" id="btnCancelAutoRenew">Ακύρωση αυτόματης ανανέωσης</button>
+      <div style="height:8px"></div>
     </div>
 
-    <!-- Current plan card -->
-    <div class="card">
-      <div class="muted" style="font-weight:900;margin-bottom:4px">Τρέχον πακέτο</div>
-      <div class="h1" style="font-size:22px" id="currentPlanName">Δωρεάν</div>
-      <div class="muted" style="font-weight:800;margin-top:4px" id="planCreditsInfo">Διαθέσιμα: — / — credits</div>
-      <div class="progress-bar"><div class="fill" id="planProgress" style="width:0%"></div></div>
+    <button class="btn" id="btnExtraCredits">Αγορά επιπλέον credits</button>
+  </div>
 
+  <!-- PROFILE -->
+  <div id="page-profile" class="page active">
+    <div class="section-title">Συνδρομές</div>
+    <div class="plans" id="plans"></div>
+  </div>
+
+  <!-- PARTNERS -->
+  <div id="page-partners" class="page">
+    <div class="card">
+      <div style="font-weight:950;font-size:16px;margin-bottom:10px">Στείλε στους φίλους σου το μοναδικό σου link και κέρδιζε μαζί με το VeoLumi.</div>
+      <div style="display:flex;gap:10px">
+        <button class="btn primary" style="flex:1" id="btnCreateRef">Δημιουργία link</button>
+        <button class="btn" style="flex:1" id="btnPartnerBenefits">Προνόμια</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <div style="font-weight:950;margin:0">Τα referral links μου</div>
+        <div class="muted" style="font-weight:900" id="refCount">0/10</div>
+      </div>
+      <div class="plans" id="refsSlider" style="gap:12px"></div>
+      <div class="muted" style="margin-top:10px;font-weight:900">Σύρε δεξιά/αριστερά για να δεις όλα τα links.</div>
       <div style="height:10px"></div>
-      <div id="autoRenewBadge" style="display:none">
-        <div class="badge-green">Αυτόματη ανανέωση ενεργή</div>
-        <div style="height:6px"></div>
-      </div>
-
-      <button class="btn" id="btnExtraCredits">Αγορά επιπλέον credits</button>
-    </div>
-
-    <!-- PROFILE page -->
-    <div id="page-profile" class="page active">
-      <div class="section-title">Συνδρομές</div>
-      <div class="plans" id="plans"></div>
-    </div>
-
-    <!-- PARTNERS page -->
-    <div id="page-partners" class="page">
-      <div class="card">
-        <div style="font-weight:950;font-size:16px;margin-bottom:10px">
-          Στείλε στους φίλους σου το μοναδικό σου link και κέρδιζε μαζί με το VeoLumi.
+      <div class="row" style="gap:10px">
+        <div style="flex:1;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:10px;background:rgba(0,0,0,.12)">
+          <div class="muted" style="font-weight:900">Προσκληθέντες</div>
+          <div style="font-weight:950;font-size:18px" id="refTotalInvited">0</div>
         </div>
-
-        <div style="display:flex;gap:10px">
-          <button class="btn primary" style="flex:1" id="btnCreateRef">Δημιουργία link</button>
-          <button class="btn" style="flex:1" id="btnPartnerBenefits">Προνόμια</button>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="row" style="margin-bottom:10px">
-          <div class="h2" style="margin:0">Τα referral links μου</div>
-          <div class="muted" style="font-weight:900" id="refCount">0/10</div>
-        </div>
-
-        <div class="plans" id="refsSlider" style="gap:12px"></div>
-
-        <div class="muted" style="margin-top:10px;font-weight:900">
-          Σύρε δεξιά/αριστερά για να δεις όλα τα links.
-        </div>
-
-        <div style="height:10px"></div>
-
-        <div class="row" style="gap:10px">
-          <div style="flex:1;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:10px;background:rgba(0,0,0,.12)">
-            <div class="muted" style="font-weight:900">Προσκληθέντες</div>
-            <div style="font-weight:950;font-size:18px" id="refTotalInvited">0</div>
-          </div>
-          <div style="flex:1;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:10px;background:rgba(0,0,0,.12)">
-            <div class="muted" style="font-weight:900">Αγορές (€)</div>
-            <div style="font-weight:950;font-size:18px" id="refTotalPurchased">0</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- Tabs -->
-  <div class="tabs">
-    <div class="tabs-inner">
-      <div class="tab active" id="tabProfile">Το προφίλ μου</div>
-      <div class="tab" id="tabPartners">Συνεργασία</div>
-    </div>
-  </div>
-
-  <!-- Toast -->
-  <div class="toast" id="toast"></div>
-
-  <!-- ==================== MODAL: Extra credits ==================== -->
-  <div class="modal-backdrop" id="modalExtra">
-    <div class="modal">
-      <!-- Step 1: Form -->
-      <div id="extraStep1">
-        <div class="modal-head">
-          <div class="modal-title">Αγορά επιπλέον credits</div>
-          <button class="x" id="closeExtra">✕</button>
-        </div>
-        <div class="modal-body">
-          <div class="muted" style="font-weight:900;margin-bottom:8px">E-mail για απόδειξη</div>
-          <input class="input" id="email" placeholder="you@example.com" />
-
-          <div style="height:14px"></div>
-          <div class="muted" style="font-weight:900;margin-bottom:8px">Πακέτο credits</div>
-          <div class="grid" id="extraPacks"></div>
-
-          <div style="height:14px"></div>
-          <div class="muted" style="font-weight:900;margin-bottom:8px">Τρόπος πληρωμής</div>
-          <select class="select" id="payMethod">
-            <option value="stripe">Stripe (Visa / Mastercard)</option>
-            <option value="paypal">PayPal</option>
-            <option value="crypto">Κρυπτονόμισμα</option>
-          </select>
-
-          <div style="height:10px"></div>
-          <div class="muted" style="font-weight:900;margin-bottom:8px">Νόμισμα</div>
-          <select class="select" id="currency">
-            <option value="EUR">EUR</option>
-          </select>
-
-          <div class="price-line">
-            <div>Σύνολο</div>
-            <div class="price" id="totalPrice">— €</div>
-          </div>
-
-          <div style="height:12px"></div>
-          <button class="btn primary" id="btnBuyExtra">Πληρωμή</button>
-        </div>
-      </div>
-
-      <!-- Step 2: Confirmation -->
-      <div id="extraStep2" style="display:none">
-        <div class="modal-head">
-          <div class="modal-title">Αναμονή πληρωμής...</div>
-          <button class="x" id="closeExtra2">✕</button>
-        </div>
-        <div class="modal-body">
-          <div class="muted" style="font-weight:800;margin-bottom:14px">
-            Ελέγξτε τα στοιχεία και πατήστε για να ολοκληρωθεί η πληρωμή.
-          </div>
-
-          <div class="confirm-detail"><div class="label">Τύπος</div><div class="val">Αγορά credits</div></div>
-          <div class="confirm-detail"><div class="label">Πακέτο</div><div class="val" id="confPack">—</div></div>
-          <div class="confirm-detail"><div class="label">Μέθοδος</div><div class="val" id="confMethod">—</div></div>
-          <div class="confirm-detail"><div class="label">Νόμισμα</div><div class="val" id="confCurrency">EUR</div></div>
-          <div class="confirm-detail"><div class="label">E-mail</div><div class="val" id="confEmail">—</div></div>
-          <div class="confirm-detail" style="border:none"><div class="label">Σύνολο</div><div class="val" style="font-size:18px;color:var(--purple)" id="confTotal">—</div></div>
-
-          <div style="height:14px"></div>
-          <button class="btn primary" id="btnOpenPayment">Άνοιγμα πληρωμής</button>
-          <div style="height:10px"></div>
-          <button class="btn" id="btnBackToForm">Επιστροφή</button>
+        <div style="flex:1;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:10px;background:rgba(0,0,0,.12)">
+          <div class="muted" style="font-weight:900">Αγορές (€)</div>
+          <div style="font-weight:950;font-size:18px" id="refTotalPurchased">0</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ==================== MODAL: Subscription purchase ==================== -->
-  <div class="modal-backdrop" id="modalSubBuy">
-    <div class="modal">
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tabs-inner">
+    <div class="tab active" id="tabProfile">Το προφίλ μου</div>
+    <div class="tab" id="tabPartners">Συνεργασία</div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- ==================== MODAL: Extra credits ==================== -->
+<div class="modal-backdrop" id="modalExtra">
+  <div class="modal">
+    <div id="extraStep1">
       <div class="modal-head">
-        <div class="modal-title">Αγορά συνδρομής</div>
-        <button class="x" id="closeSubBuy">✕</button>
+        <div class="modal-title">Αγορά επιπλέον credits</div>
+        <button class="x" id="closeExtra">&#10005;</button>
       </div>
       <div class="modal-body">
-        <div class="muted" style="font-weight:800;margin-bottom:14px">
-          Ελέγξτε τα στοιχεία και πατήστε Πληρωμή.
-        </div>
+        <div class="muted" style="font-weight:900;margin-bottom:8px">E-mail για απόδειξη</div>
+        <input class="input" id="email" placeholder="you@example.com" />
 
-        <div class="confirm-detail"><div class="label">Πακέτο</div><div class="val" id="subConfPlan">—</div></div>
-        <div class="confirm-detail"><div class="label">Credits</div><div class="val" id="subConfCredits">—</div></div>
-        <div class="confirm-detail"><div class="label">Διάρκεια</div><div class="val">1 μήνας</div></div>
-        <div class="confirm-detail" style="border:none"><div class="label">Τιμή</div><div class="val" style="font-size:18px;color:var(--purple)" id="subConfPrice">—</div></div>
+        <div style="height:14px"></div>
+        <div class="muted" style="font-weight:900;margin-bottom:8px">Πακέτο credits</div>
+        <div class="grid" id="extraPacks"></div>
 
-        <div style="height:10px"></div>
+        <div style="height:14px"></div>
         <div class="muted" style="font-weight:900;margin-bottom:8px">Τρόπος πληρωμής</div>
-        <select class="select" id="subPayMethod">
+        <select class="select" id="payMethod">
           <option value="stripe">Stripe (Visa / Mastercard)</option>
           <option value="paypal">PayPal</option>
           <option value="crypto">Κρυπτονόμισμα</option>
         </select>
 
-        <div style="height:14px"></div>
-        <button class="btn primary" id="btnSubPay">Πληρωμή</button>
-      </div>
-    </div>
-  </div>
+        <div style="height:10px"></div>
+        <div class="muted" style="font-weight:900;margin-bottom:8px">Νόμισμα</div>
+        <select class="select" id="currency">
+          <option value="EUR">EUR</option>
+        </select>
 
-  <!-- ==================== MODAL: Tools ==================== -->
-  <div class="modal-backdrop" id="modalTools">
-    <div class="modal">
-      <div class="modal-head">
-        <div class="modal-title">Τι περιλαμβάνει το πακέτο</div>
-        <button class="x" id="closeTools">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="tools-box">
-          <div class="tools-head"><div>Βίντεο</div><div class="muted">credits</div></div>
-          <div class="tool"><div class="nm">Kling V3</div><div class="c">15–60</div></div>
-          <div class="tool"><div class="nm">Kling 2.6 Motion</div><div class="c">20–75</div></div>
-          <div class="tool"><div class="nm">Kling O1</div><div class="c">15–25</div></div>
-          <div class="tool"><div class="nm">Kling V1 Avatar</div><div class="c">16–32</div></div>
-          <div class="tool"><div class="nm">Kling 2.6</div><div class="c">11–44</div></div>
-          <div class="tool"><div class="nm">Kling 2.1</div><div class="c">5–64</div></div>
-          <div class="tool"><div class="nm">Sora 2 PRO</div><div class="c">18–60</div></div>
-          <div class="tool"><div class="nm">VEO 3.1</div><div class="c">12</div></div>
-          <div class="tool"><div class="nm">Sora 2</div><div class="c">6</div></div>
-          <div class="tool"><div class="nm">Veo 3</div><div class="c">10</div></div>
-          <div class="tool"><div class="nm">Midjourney Video</div><div class="c">2–13</div></div>
-          <div class="tool"><div class="nm">Runway Aleph</div><div class="c">22</div></div>
-          <div class="tool"><div class="nm">Runway</div><div class="c">6</div></div>
-          <div class="tool"><div class="nm">Seedance</div><div class="c">1–20</div></div>
-          <div class="tool"><div class="nm">Kling 2.5 Turbo</div><div class="c">8–17</div></div>
-          <div class="tool"><div class="nm">Wan 2.5</div><div class="c">12–30</div></div>
-          <div class="tool"><div class="nm">Hailuo O2</div><div class="c">6–12</div></div>
-
-          <div style="height:12px;border-top:1px solid rgba(255,255,255,.06);margin:12px 0"></div>
-
-          <div class="tools-head"><div>Φωτογραφία</div><div class="muted">credits</div></div>
-          <div class="tool"><div class="nm">GPT Image 1.5</div><div class="c">1–5</div></div>
-          <div class="tool"><div class="nm">Seedream 4.5</div><div class="c">1.3</div></div>
-          <div class="tool"><div class="nm">Nano Banana Pro</div><div class="c">4</div></div>
-          <div class="tool"><div class="nm">Nano Banana</div><div class="c">0.5</div></div>
-          <div class="tool"><div class="nm">Qwen</div><div class="c">1</div></div>
-          <div class="tool"><div class="nm">Seedream</div><div class="c">1–4</div></div>
-          <div class="tool"><div class="nm">Midjourney</div><div class="c">2</div></div>
-
-          <div style="height:12px;border-top:1px solid rgba(255,255,255,.06);margin:12px 0"></div>
-
-          <div class="tools-head"><div>Ήχος</div><div class="muted">credits</div></div>
-          <div class="tool"><div class="nm">Suno V5</div><div class="c">2.4</div></div>
-          <div class="tool"><div class="nm">Eleven Labs</div><div class="c">1–30</div></div>
-
-          <div style="height:12px;border-top:1px solid rgba(255,255,255,.06);margin:12px 0"></div>
-
-          <div class="tools-head"><div>Κείμενο</div><div class="muted">credits</div></div>
-          <div class="tool"><div class="nm">Gemini 3 Flash</div><div class="c">0.5</div></div>
+        <div class="price-line">
+          <div>Σύνολο</div>
+          <div class="price" id="totalPrice">— €</div>
         </div>
+
+        <div style="height:12px"></div>
+        <button class="btn primary" id="btnBuyExtra">Πληρωμή</button>
       </div>
     </div>
-  </div>
 
-  <!-- ==================== MODAL: Benefits ==================== -->
-  <div class="modal-backdrop" id="modalBenefits">
-    <div class="modal">
+    <div id="extraStep2" style="display:none">
       <div class="modal-head">
-        <div class="modal-title">Προνόμια συνεργασίας</div>
-        <button class="x" id="closeBenefits">✕</button>
+        <div class="modal-title">Αναμονή πληρωμής...</div>
+        <button class="x" id="closeExtra2">&#10005;</button>
       </div>
       <div class="modal-body">
-        <div class="check"><div class="dot"></div><div>5 € για κάθε νέο χρήστη που ξεκινάει από το link σου.</div></div>
-        <div class="check"><div class="dot"></div><div>10% από κάθε αγορά credits των χρηστών σου — για πάντα.</div></div>
-        <div class="check"><div class="dot"></div><div>Παρακολούθηση σε πραγματικό χρόνο &amp; ειδοποιήσεις.</div></div>
-        <div class="check"><div class="dot"></div><div>Ανάληψη κερδών μέσω διαχειριστή.</div></div>
+        <div class="muted" style="font-weight:800;margin-bottom:14px">Ελέγξτε τα στοιχεία και πατήστε για να ολοκληρωθεί η πληρωμή.</div>
+        <div class="confirm-detail"><div class="label">Τύπος</div><div class="val">Αγορά credits</div></div>
+        <div class="confirm-detail"><div class="label">Πακέτο</div><div class="val" id="confPack">—</div></div>
+        <div class="confirm-detail"><div class="label">Μέθοδος</div><div class="val" id="confMethod">—</div></div>
+        <div class="confirm-detail"><div class="label">Νόμισμα</div><div class="val" id="confCurrency">EUR</div></div>
+        <div class="confirm-detail"><div class="label">E-mail</div><div class="val" id="confEmail">—</div></div>
+        <div class="confirm-detail" style="border:none"><div class="label">Σύνολο</div><div class="val" style="font-size:18px;color:var(--purple)" id="confTotal">—</div></div>
+        <div style="height:14px"></div>
+        <button class="btn primary" id="btnOpenPayment">Άνοιγμα πληρωμής</button>
+        <div style="height:10px"></div>
+        <button class="btn" id="btnBackToForm">Επιστροφή</button>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- ==================== JAVASCRIPT ==================== -->
-  <script>
-    const $ = (id) => document.getElementById(id);
+<!-- ==================== MODAL: Subscription purchase ==================== -->
+<div class="modal-backdrop" id="modalSubBuy">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Αγορά συνδρομής</div>
+      <button class="x" id="closeSubBuy">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="muted" style="font-weight:800;margin-bottom:14px">Ελέγξτε τα στοιχεία και πατήστε Πληρωμή.</div>
+      <div class="confirm-detail"><div class="label">Πακέτο</div><div class="val" id="subConfPlan">—</div></div>
+      <div class="confirm-detail"><div class="label">Credits</div><div class="val" id="subConfCredits">—</div></div>
+      <div class="confirm-detail"><div class="label">Διάρκεια</div><div class="val">1 μήνας</div></div>
+      <div class="confirm-detail" style="border:none"><div class="label">Τιμή</div><div class="val" style="font-size:18px;color:var(--purple)" id="subConfPrice">—</div></div>
+      <div style="height:10px"></div>
+      <div class="muted" style="font-weight:900;margin-bottom:8px">Τρόπος πληρωμής</div>
+      <select class="select" id="subPayMethod">
+        <option value="stripe">Stripe (Visa / Mastercard)</option>
+        <option value="paypal">PayPal</option>
+        <option value="crypto">Κρυπτονόμισμα</option>
+      </select>
+      <div style="height:14px"></div>
+      <button class="btn primary" id="btnSubPay">Πληρωμή</button>
+    </div>
+  </div>
+</div>
 
-    const tg = window.Telegram?.WebApp;
-    if (tg) { tg.expand(); tg.ready(); }
+<!-- ==================== MODAL: Tools ==================== -->
+<div class="modal-backdrop" id="modalTools">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Τι περιλαμβάνει το πακέτο</div>
+      <button class="x" id="closeTools">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="tools-box">
+        <div class="tools-head"><div>Βίντεο</div><div class="muted">credits</div></div>
+        <div class="tool"><div class="nm">Kling V3</div><div class="c">15–60</div></div>
+        <div class="tool"><div class="nm">Kling 2.6 Motion</div><div class="c">20–75</div></div>
+        <div class="tool"><div class="nm">Kling O1</div><div class="c">15–25</div></div>
+        <div class="tool"><div class="nm">Kling V1 Avatar</div><div class="c">16–32</div></div>
+        <div class="tool"><div class="nm">Kling 2.6</div><div class="c">11–44</div></div>
+        <div class="tool"><div class="nm">Kling 2.1</div><div class="c">5–64</div></div>
+        <div class="tool"><div class="nm">Sora 2 PRO</div><div class="c">18–60</div></div>
+        <div class="tool"><div class="nm">VEO 3.1</div><div class="c">12</div></div>
+        <div class="tool"><div class="nm">Sora 2</div><div class="c">6</div></div>
+        <div class="tool"><div class="nm">Veo 3</div><div class="c">10</div></div>
+        <div class="tool"><div class="nm">Midjourney Video</div><div class="c">2–13</div></div>
+        <div class="tool"><div class="nm">Runway Aleph</div><div class="c">22</div></div>
+        <div class="tool"><div class="nm">Runway</div><div class="c">6</div></div>
+        <div class="tool"><div class="nm">Seedance</div><div class="c">1–20</div></div>
+        <div class="tool"><div class="nm">Kling 2.5 Turbo</div><div class="c">8–17</div></div>
+        <div class="tool"><div class="nm">Wan 2.5</div><div class="c">12–30</div></div>
+        <div class="tool"><div class="nm">Hailuo O2</div><div class="c">6–12</div></div>
+        <div style="height:12px;border-top:1px solid rgba(255,255,255,.06);margin:12px 0"></div>
+        <div class="tools-head"><div>Φωτογραφία</div><div class="muted">credits</div></div>
+        <div class="tool"><div class="nm">GPT Image 1.5</div><div class="c">1–5</div></div>
+        <div class="tool"><div class="nm">Seedream 4.5</div><div class="c">1.3</div></div>
+        <div class="tool"><div class="nm">Nano Banana Pro</div><div class="c">4</div></div>
+        <div class="tool"><div class="nm">Nano Banana</div><div class="c">0.5</div></div>
+        <div class="tool"><div class="nm">Qwen</div><div class="c">1</div></div>
+        <div class="tool"><div class="nm">Seedream</div><div class="c">1–4</div></div>
+        <div class="tool"><div class="nm">Midjourney</div><div class="c">2</div></div>
+        <div style="height:12px;border-top:1px solid rgba(255,255,255,.06);margin:12px 0"></div>
+        <div class="tools-head"><div>Ήχος</div><div class="muted">credits</div></div>
+        <div class="tool"><div class="nm">Suno V5</div><div class="c">2.4</div></div>
+        <div class="tool"><div class="nm">Eleven Labs</div><div class="c">1–30</div></div>
+        <div style="height:12px;border-top:1px solid rgba(255,255,255,.06);margin:12px 0"></div>
+        <div class="tools-head"><div>Κείμενο</div><div class="muted">credits</div></div>
+        <div class="tool"><div class="nm">Gemini 3 Flash</div><div class="c">0.5</div></div>
+      </div>
+    </div>
+  </div>
+</div>
 
-    // Toast
-    let toastTimer = null;
-    function toast(msg){
-      const el = $("toast");
-      if (!el) return;
-      el.textContent = msg;
-      el.style.display = "block";
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => { el.style.display = "none"; }, 2400);
+<!-- ==================== MODAL: Benefits ==================== -->
+<div class="modal-backdrop" id="modalBenefits">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Προνόμια συνεργασίας</div>
+      <button class="x" id="closeBenefits">&#10005;</button>
+    </div>
+    <div class="modal-body">
+      <div class="check"><div class="dot"></div><div>5 € για κάθε νέο χρήστη που ξεκινάει από το link σου.</div></div>
+      <div class="check"><div class="dot"></div><div>10% από κάθε αγορά credits των χρηστών σου — για πάντα.</div></div>
+      <div class="check"><div class="dot"></div><div>Παρακολούθηση σε πραγματικό χρόνο &amp; ειδοποιήσεις.</div></div>
+      <div class="check"><div class="dot"></div><div>Ανάληψη κερδών μέσω διαχειριστή.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== JS ==================== -->
+<script>
+var $ = function(id){ return document.getElementById(id); };
+var tg = window.Telegram && window.Telegram.WebApp;
+if(tg){ tg.expand(); tg.ready(); }
+
+var toastTimer = null;
+function toast(msg){ var el=$("toast"); if(!el)return; el.textContent=msg; el.style.display="block"; clearTimeout(toastTimer); toastTimer=setTimeout(function(){el.style.display="none"},2400); }
+function openModal(id){ $(id).style.display="flex"; }
+function closeModal(id){ $(id).style.display="none"; }
+
+// -------- Data --------
+var EXTRA_PACKS = [
+  {sku:"CREDITS_100",credits:100,price:7},
+  {sku:"CREDITS_250",credits:250,price:12},
+  {sku:"CREDITS_500",credits:500,price:22},
+  {sku:"CREDITS_1000",credits:1000,price:40}
+];
+
+var SUBS = [
+  {sku:"FREE",name:"Free",credits:5,price:0,refPct:0,features:["Δοκιμή εργαλείων","Nano Banana, Midjourney, Flux κ.ά."]},
+  {sku:"START",name:"Start",credits:100,price:7,refPct:5,features:["Πρόσβαση σε όλα τα νευροσυστήματα","5% στο referral πρόγραμμα"]},
+  {sku:"MIDDLE",name:"Middle",credits:250,price:12,refPct:10,features:["Πρόσβαση σε όλα τα νευροσυστήματα","10% στο referral πρόγραμμα"]},
+  {sku:"PRO",name:"Pro",credits:500,price:22,refPct:15,features:["Πρόσβαση σε όλα τα νευροσυστήματα","15% στο referral πρόγραμμα"]},
+  {sku:"CREATOR",name:"Creator",credits:1000,price:40,refPct:20,features:["Πρόσβαση σε όλα τα νευροσυστήματα","20% στο referral πρόγραμμα"]},
+  {sku:"ULTRA_PRO",name:"ULTRA PRO",credits:2000,price:95,refPct:30,features:["Πρόσβαση σε όλα τα εργαλεία AI","Gemini 3 Flash — απεριόριστα","Sora 2 — απεριόριστα","Veo 3.1 — απεριόριστα","Veo 3 — απεριόριστα","Nano Banana — απεριόριστα","Flux Kontext — απεριόριστα","30% κέρδος στο referral πρόγραμμα"]},
+  {sku:"UNLIMITED",name:"UNLIMITED",credits:3000,price:108,refPct:30,features:["Πρόσβαση σε όλα τα εργαλεία AI","Gemini 3 Flash — απεριόριστα","Sora 2 — απεριόριστα","Veo 3.1 — απεριόριστα","Veo 3 — απεριόριστα","Nano Banana — απεριόριστα","Flux Kontext — απεριόριστα","Kling V3 — απεριόριστα","Midjourney — απεριόριστα","30% κέρδος στο referral πρόγραμμα"]}
+];
+
+// -------- State --------
+var currentPlanSku = "FREE";
+var currentPlanName = "Free";
+var planTotal = 5;
+var planRemaining = 0;
+var extraCredits = 0;
+var totalCredits = 0;
+
+// -------- API --------
+function apiPost(path, body){
+  return fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body||{})})
+    .then(function(r){return r.json()})
+    .catch(function(e){return {ok:false,error:"network",message:String(e)}});
+}
+
+// -------- Clipboard --------
+function copyText(text){
+  try{if(tg&&typeof tg.setClipboardText==="function"){tg.setClipboardText(text);if(tg.HapticFeedback)tg.HapticFeedback.notificationOccurred("success");return Promise.resolve(true)}}catch(e){}
+  return navigator.clipboard.writeText(text).then(function(){if(tg&&tg.HapticFeedback)tg.HapticFeedback.notificationOccurred("success");return true}).catch(function(){return false});
+}
+
+// -------- Load user --------
+function loadMe(){
+  var initData = tg && tg.initData || "";
+  var u = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+  var firstName = (u&&u.first_name||"").trim();
+  var username = (u&&u.username||"").trim();
+  $("name").innerText = firstName || (username ? "@"+username : "Χρήστης");
+  $("avatarFallback").innerText = ((firstName||username||"U").trim()[0]||"U").toUpperCase();
+
+  return apiPost("/api/me",{initData:initData}).then(function(me){
+    if(!me||!me.ok) return;
+
+    totalCredits = Number(me.user.credits||0);
+    extraCredits = Number(me.user.extra_credits||0);
+    currentPlanSku = me.user.plan_sku||"FREE";
+    currentPlanName = me.user.plan_name||"Free";
+    planTotal = Number(me.user.plan_total||5);
+    planRemaining = Number(me.user.plan_credits_remaining||0);
+
+    // Header: total balance
+    $("credits").innerText = (Math.floor(totalCredits*100)/100).toString();
+
+    // Current plan card
+    $("currentPlanName").innerText = currentPlanName;
+    $("planCreditsInfo").innerText = "Διαθέσιμα κατά πακέτο: " + (Math.floor(planRemaining*100)/100).toFixed(2) + " / " + planTotal.toFixed(2) + " credits";
+
+    var pct = planTotal>0 ? Math.min(100, planRemaining/planTotal*100) : 0;
+    $("planProgress").style.width = pct.toFixed(1)+"%";
+
+    // Auto-renew (show for paid plans)
+    if(currentPlanSku!=="FREE"){
+      $("autoRenewSection").style.display = "block";
     }
 
-    // Modals
-    function openModal(id){ $(id).style.display = "flex"; }
-    function closeModal(id){ $(id).style.display = "none"; }
-
-    // -------- Data
-    const EXTRA_PACKS = [
-      { sku: "CREDITS_100",  credits: 100,  price: 7.00 },
-      { sku: "CREDITS_250",  credits: 250,  price: 12.00 },
-      { sku: "CREDITS_500",  credits: 500,  price: 22.00 },
-      { sku: "CREDITS_1000", credits: 1000, price: 40.00 },
-    ];
-
-    const SUBSCRIPTIONS = [
-      { sku:"FREE",      name:"Free",      credits:5,    price:0,     refPct:0,  features:["Δοκιμή εργαλείων","Nano Banana, Midjourney, Flux κ.ά."] },
-      { sku:"START",     name:"Start",     credits:100,  price:7,     refPct:5,  features:["Πρόσβαση σε όλα τα νευροσυστήματα","5% στο referral πρόγραμμα"] },
-      { sku:"MIDDLE",    name:"Middle",    credits:250,  price:12,    refPct:10, features:["Πρόσβαση σε όλα τα νευροσυστήματα","10% στο referral πρόγραμμα"] },
-      { sku:"PRO",       name:"Pro",       credits:500,  price:22,    refPct:15, features:["Πρόσβαση σε όλα τα νευροσυστήματα","15% στο referral πρόγραμμα"] },
-      { sku:"CREATOR",   name:"Creator",   credits:1000, price:40,    refPct:20, features:["Πρόσβαση σε όλα τα νευροσυστήματα","20% στο referral πρόγραμμα"] },
-      { sku:"ULTRA_PRO", name:"ULTRA PRO", credits:2000, price:95,    refPct:30, features:["Πρόσβαση σε όλα τα εργαλεία AI","Sora 2 — απεριόριστα","Veo 3.1 — απεριόριστα","Veo 3 — απεριόριστα","Nano Banana — απεριόριστα","Flux Kontext — απεριόριστα","30% κέρδος στο referral πρόγραμμα"] },
-    ];
-
-    // State
-    let currentPlan = "Free";
-    let currentPlanCredits = 5;
-    let currentCredits = 0;
-
-    // -------- API
-    async function apiPost(path, body) {
-      try {
-        const res = await fetch(path, {
-          method: "POST",
-          headers: {"Content-Type":"application/json"},
-          body: JSON.stringify(body || {})
-        });
-        const text = await res.text();
-        let json = null;
-        try { json = JSON.parse(text); } catch {}
-        if (!res.ok) return { ok:false, error:"http_"+res.status, raw:text };
-        return json || { ok:false, error:"not_json", raw:text };
-      } catch (e) {
-        return { ok:false, error:"network", message:String(e) };
-      }
+    // Extra credits banner (top)
+    if(extraCredits > 0){
+      $("extraBanner").style.display = "block";
+      $("extraCreditsVal").innerText = (Math.floor(extraCredits*100)/100).toString();
+    } else {
+      $("extraBanner").style.display = "none";
     }
 
-    // -------- Clipboard
-    async function copyText(text){
-      try {
-        if (tg && typeof tg.setClipboardText === "function") {
-          tg.setClipboardText(text);
-          if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-          return true;
-        }
-      } catch {}
-      try {
-        await navigator.clipboard.writeText(text);
-        if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
-        return true;
-      } catch { return false; }
+    renderPlans();
+
+    // Avatar
+    var direct = u&&u.photo_url;
+    if(direct){
+      $("avatarImg").src=direct; $("avatarImg").style.display="block"; $("avatarFallback").style.display="none";
+      return;
     }
-
-    // -------- Load user
-    async function loadMe() {
-      const initData = tg?.initData || "";
-      const u = tg?.initDataUnsafe?.user;
-      const firstName = (u?.first_name || "").trim();
-      const username = (u?.username || "").trim();
-      const displayName = firstName || (username ? "@"+username : "Χρήστης");
-      $("name").innerText = displayName;
-
-      const letter = (firstName || username || "U").trim()[0]?.toUpperCase() || "U";
-      $("avatarFallback").innerText = letter;
-
-      const me = await apiPost("/api/me", { initData });
-      if (me?.ok) {
-        currentCredits = Number(me.user?.credits ?? 0);
-        currentPlan = me.user?.plan_name || "Free";
-        currentPlanCredits = Number(me.user?.plan_credits ?? 5);
-
-        $("credits").innerText = String(Math.floor(currentCredits * 100) / 100);
-        $("currentPlanName").innerText = currentPlan;
-        $("planCreditsInfo").innerText = "Διαθέσιμα: " + (Math.floor(currentCredits*100)/100).toFixed(2) + " / " + currentPlanCredits.toFixed(2) + " credits";
-
-        var pct = currentPlanCredits > 0 ? Math.min(100, (currentCredits / currentPlanCredits) * 100) : 0;
-        $("planProgress").style.width = pct.toFixed(1) + "%";
-
-        if (currentPlan !== "Free") {
-          $("autoRenewBadge").style.display = "block";
-        }
-
-        renderPlans();
-      }
-
-      var direct = u?.photo_url;
-      if (direct) {
-        $("avatarImg").src = direct;
-        $("avatarImg").style.display = "block";
-        $("avatarFallback").style.display = "none";
-        return;
-      }
-
-      var av = await apiPost("/api/avatar", { initData });
-      if (av?.ok && av.url) {
-        $("avatarImg").src = av.url;
-        $("avatarImg").style.display = "block";
-        $("avatarFallback").style.display = "none";
-      }
-    }
-
-    // -------- Render plans slider
-    function renderPlans() {
-      var host = $("plans");
-      host.innerHTML = "";
-
-      SUBSCRIPTIONS.forEach(function(p) {
-        var isCurrent = (p.name === currentPlan);
-        var plan = document.createElement("div");
-        plan.className = "plan";
-
-        var tags = p.price === 0
-          ? '<div class="tag">Δωρεάν</div>'
-          : '<div class="tag">' + p.price.toFixed(0) + ' €</div>';
-
-        plan.innerHTML =
-          '<div class="name">' + p.name + '</div>' +
-          '<div class="period">' + (p.price === 0 ? "" : "Για 1 μήνα") + '</div>' +
-          '<div class="credits">Credits: ' + p.credits + '</div>' +
-          '<div class="tags">' + tags + '</div>' +
-          '<div class="checks">' +
-            p.features.map(function(t){ return '<div class="check"><div class="dot"></div><div>' + t + '</div></div>'; }).join("") +
-          '</div>' +
-          '<button class="btn secondary" data-tools="1">Τι περιλαμβάνει το πακέτο</button>' +
-          '<button class="btn ' + (isCurrent ? "disabled" : (p.price === 0 ? "disabled" : "primary")) + '" ' + (isCurrent || p.price === 0 ? "disabled" : "") + ' data-buy-sub="1">' +
-            (isCurrent ? "Τρέχον πακέτο" : (p.price === 0 ? "Δωρεάν" : "Αγορά")) +
-          '</button>';
-
-        plan.querySelector('[data-tools="1"]').addEventListener("click", function(){ openModal("modalTools"); });
-        plan.querySelector('[data-buy-sub="1"]').addEventListener("click", function(){
-          if (isCurrent || p.price === 0) return;
-          openSubBuyModal(p);
-        });
-
-        host.appendChild(plan);
-      });
-    }
-
-    // -------- Subscription buy modal
-    var selectedSubPlan = null;
-
-    function openSubBuyModal(plan){
-      selectedSubPlan = plan;
-      $("subConfPlan").innerText = plan.name;
-      $("subConfCredits").innerText = String(plan.credits);
-      $("subConfPrice").innerText = plan.price.toFixed(2) + " €";
-      openModal("modalSubBuy");
-    }
-
-    $("btnSubPay").addEventListener("click", async function() {
-      if (!selectedSubPlan) return;
-
-      var method = $("subPayMethod").value;
-      var initData = tg?.initData || "";
-
-      // Map subscription credits to pack SKU
-      var skuMap = { 100:"CREDITS_100", 250:"CREDITS_250", 500:"CREDITS_500", 1000:"CREDITS_1000" };
-      var sku = skuMap[selectedSubPlan.credits];
-
-      if (!sku) {
-        toast("Αυτό το πακέτο δεν είναι ακόμα διαθέσιμο.");
-        return;
-      }
-
-      var btn = $("btnSubPay");
-      btn.classList.add("disabled");
-      btn.disabled = true;
-      btn.innerText = "Παρακαλώ περιμένετε...";
-
-      try {
-        var endpoint = "/api/stripe/checkout";
-        if (method === "crypto") endpoint = "/api/cryptocloud/invoice";
-
-        var data = await apiPost(endpoint, { initData: initData, sku: sku });
-
-        if (data?.url) {
-          if (tg?.openLink) {
-            tg.openLink(data.url);
-          } else {
-            window.open(data.url, "_blank");
-          }
-          closeModal("modalSubBuy");
-          toast("Ανοίχτηκε η σελίδα πληρωμής!");
-        } else {
-          toast(data?.detail || data?.error || "Σφάλμα κατά τη δημιουργία πληρωμής");
-        }
-      } catch(e) {
-        toast("Σφάλμα δικτύου");
-      } finally {
-        btn.classList.remove("disabled");
-        btn.disabled = false;
-        btn.innerText = "Πληρωμή";
-      }
+    return apiPost("/api/avatar",{initData:initData}).then(function(av){
+      if(av&&av.ok&&av.url){$("avatarImg").src=av.url;$("avatarImg").style.display="block";$("avatarFallback").style.display="none"}
     });
+  });
+}
 
-    // -------- Extra credits
-    var selectedExtra = EXTRA_PACKS[0];
+// -------- Render plans --------
+function renderPlans(){
+  var host=$("plans");
+  host.innerHTML="";
 
-    function renderExtraPacks(){
-      var host = $("extraPacks");
-      host.innerHTML = "";
+  SUBS.forEach(function(p){
+    var isCurrent = (p.sku===currentPlanSku);
+    var el = document.createElement("div");
+    el.className="plan";
 
-      EXTRA_PACKS.forEach(function(p) {
-        var el = document.createElement("div");
-        el.className = "opt" + (p.sku === selectedExtra.sku ? " active" : "");
-        el.innerHTML = p.credits + '<div class="muted" style="font-weight:900;margin-top:4px">' + p.price.toFixed(0) + '€</div>';
-        el.onclick = function() {
-          selectedExtra = p;
-          renderExtraPacks();
-          $("totalPrice").innerText = p.price.toFixed(2) + " €";
-        };
-        host.appendChild(el);
-      });
+    var periodHtml = p.price>0 ? '<span class="period">Για 1 μήνα</span>' : '';
+    var tagsHtml = p.price===0 ? '<div class="tag">Δωρεάν</div>' : '<div class="tag">'+p.price+'€</div>';
+    var btnClass = isCurrent ? "btn disabled" : (p.price===0 ? "btn disabled" : "btn primary");
+    var btnText = isCurrent ? "Τρέχον πακέτο" : (p.price===0 ? "Δωρεάν" : "Αγορά");
 
-      $("totalPrice").innerText = selectedExtra.price.toFixed(2) + " €";
+    el.innerHTML =
+      '<div class="name">'+p.name+'</div>' +
+      periodHtml +
+      '<div class="credits-line">Credits: '+p.credits+'</div>' +
+      '<div class="tags">'+tagsHtml+'</div>' +
+      '<div class="checks">' + p.features.map(function(f){return '<div class="check"><div class="dot"></div><div>'+f+'</div></div>'}).join("") + '</div>' +
+      '<button class="btn secondary" data-tools="1">Τι περιλαμβάνει το πακέτο</button>' +
+      '<button class="'+btnClass+'" '+(isCurrent||p.price===0?'disabled':'')+' data-buy="1">'+btnText+'</button>';
+
+    el.querySelector('[data-tools="1"]').onclick = function(){ openModal("modalTools"); };
+    el.querySelector('[data-buy="1"]').onclick = function(){
+      if(isCurrent||p.price===0)return;
+      openSubBuyModal(p);
+    };
+    host.appendChild(el);
+  });
+}
+
+// -------- Subscription buy --------
+var selectedSubPlan = null;
+
+function openSubBuyModal(plan){
+  selectedSubPlan = plan;
+  $("subConfPlan").innerText = plan.name;
+  $("subConfCredits").innerText = String(plan.credits);
+  $("subConfPrice").innerText = plan.price.toFixed(2)+" €";
+  openModal("modalSubBuy");
+}
+
+$("btnSubPay").onclick = function(){
+  if(!selectedSubPlan)return;
+  var method = $("subPayMethod").value;
+  var initData = tg&&tg.initData||"";
+  var btn = $("btnSubPay");
+  btn.classList.add("disabled"); btn.disabled=true; btn.innerText="Παρακαλώ περιμένετε...";
+
+  var endpoint = method==="crypto" ? "/api/cryptocloud/invoice" : "/api/stripe/checkout";
+
+  apiPost(endpoint, {initData:initData, sku:selectedSubPlan.sku}).then(function(data){
+    if(data&&data.url){
+      if(tg&&tg.openLink) tg.openLink(data.url); else window.open(data.url,"_blank");
+      closeModal("modalSubBuy");
+      toast("Ανοίχτηκε η σελίδα πληρωμής!");
+    } else {
+      toast(data&&(data.detail||data.error)||"Σφάλμα");
     }
+  }).catch(function(){ toast("Σφάλμα δικτύου"); }).finally(function(){
+    btn.classList.remove("disabled"); btn.disabled=false; btn.innerText="Πληρωμή";
+  });
+};
 
-    function showExtraStep1(){
-      $("extraStep1").style.display = "block";
-      $("extraStep2").style.display = "none";
-    }
+// -------- Extra credits --------
+var selectedExtra = EXTRA_PACKS[0];
 
-    function showExtraStep2(){
-      $("confPack").innerText = selectedExtra.credits + " credits";
-      var methodMap = { stripe:"Stripe", paypal:"PayPal", crypto:"Κρυπτονόμισμα" };
-      $("confMethod").innerText = methodMap[$("payMethod").value] || $("payMethod").value;
-      $("confCurrency").innerText = $("currency").value;
-      $("confEmail").innerText = $("email").value || "—";
-      $("confTotal").innerText = selectedExtra.price.toFixed(2) + " €";
+function renderExtraPacks(){
+  var host=$("extraPacks"); host.innerHTML="";
+  EXTRA_PACKS.forEach(function(p){
+    var el=document.createElement("div");
+    el.className="opt"+(p.sku===selectedExtra.sku?" active":"");
+    el.innerHTML=p.credits+'<div class="muted" style="font-weight:900;margin-top:4px">'+p.price+'€</div>';
+    el.onclick=function(){ selectedExtra=p; renderExtraPacks(); $("totalPrice").innerText=p.price.toFixed(2)+" €"; };
+    host.appendChild(el);
+  });
+  $("totalPrice").innerText=selectedExtra.price.toFixed(2)+" €";
+}
 
-      $("extraStep1").style.display = "none";
-      $("extraStep2").style.display = "block";
-    }
+function showExtraStep1(){ $("extraStep1").style.display="block"; $("extraStep2").style.display="none"; }
+function showExtraStep2(){
+  $("confPack").innerText=selectedExtra.credits+" credits";
+  var mm={stripe:"Stripe",paypal:"PayPal",crypto:"Κρυπτονόμισμα"};
+  $("confMethod").innerText=mm[$("payMethod").value]||$("payMethod").value;
+  $("confCurrency").innerText=$("currency").value;
+  $("confEmail").innerText=$("email").value||"—";
+  $("confTotal").innerText=selectedExtra.price.toFixed(2)+" €";
+  $("extraStep1").style.display="none"; $("extraStep2").style.display="block";
+}
 
-    // Step 1 -> Step 2
-    $("btnBuyExtra").addEventListener("click", function() {
-      var email = $("email").value.trim();
-      if (!email || !email.includes("@")) {
-        toast("Εισάγετε έγκυρο e-mail");
-        return;
-      }
-      showExtraStep2();
+$("btnBuyExtra").onclick = function(){
+  var email=$("email").value.trim();
+  if(!email||email.indexOf("@")<0){toast("Εισάγετε έγκυρο e-mail");return;}
+  showExtraStep2();
+};
+
+$("btnOpenPayment").onclick = function(){
+  var btn=$("btnOpenPayment");
+  btn.classList.add("disabled"); btn.disabled=true; btn.innerText="Παρακαλώ περιμένετε...";
+  var initData=tg&&tg.initData||"";
+  var method=$("payMethod").value;
+  var endpoint = method==="crypto" ? "/api/cryptocloud/invoice" : "/api/stripe/checkout";
+
+  apiPost(endpoint,{initData:initData,sku:selectedExtra.sku}).then(function(data){
+    if(data&&data.url){
+      if(tg&&tg.openLink) tg.openLink(data.url); else window.open(data.url,"_blank");
+      closeModal("modalExtra"); showExtraStep1();
+      toast("Άνοιξε η σελίδα πληρωμής!");
+    } else { toast(data&&(data.detail||data.error)||"Σφάλμα"); }
+  }).catch(function(){ toast("Σφάλμα δικτύου"); }).finally(function(){
+    btn.classList.remove("disabled"); btn.disabled=false; btn.innerText="Άνοιγμα πληρωμής";
+  });
+};
+
+$("btnBackToForm").onclick = showExtraStep1;
+
+// -------- Cancel auto-renew --------
+$("btnCancelAutoRenew").onclick = function(){
+  // For now show confirmation toast — real cancellation via admin
+  toast("Η ακύρωση θα γίνει από τον διαχειριστή. Θα ειδοποιηθείτε.");
+};
+
+// -------- Tabs --------
+function setTab(which){
+  var isP = which==="profile";
+  $("page-profile").classList.toggle("active",isP);
+  $("page-partners").classList.toggle("active",!isP);
+  $("tabProfile").classList.toggle("active",isP);
+  $("tabPartners").classList.toggle("active",!isP);
+  if(!isP) loadRefs();
+}
+
+// -------- Refs --------
+function loadRefs(){
+  var initData=tg&&tg.initData||"";
+  apiPost("/api/ref/list",{initData:initData}).then(function(data){
+    if(!data||!data.ok)return;
+    var items=data.items||[];
+    $("refCount").innerText=items.length+"/"+(data.limit||10);
+    var totalInv=0,totalPur=0;
+    var slider=$("refsSlider"); slider.innerHTML="";
+    items.forEach(function(it,idx){
+      totalInv+=(it.invited||0); totalPur+=(it.purchased_eur||0);
+      var card=document.createElement("div"); card.className="plan"; card.style.minWidth="310px";
+      card.innerHTML=
+        '<div class="muted" style="font-weight:900;margin-bottom:6px">Σύνδεσμος #'+(idx+1)+'</div>'+
+        '<div class="muted" style="font-weight:900;margin-bottom:6px">URL</div>'+
+        '<div style="font-weight:900;word-break:break-all;font-size:13px">'+it.url+'</div>'+
+        '<div style="height:10px"></div>'+
+        '<div class="row" style="gap:10px">'+
+          '<div style="flex:1;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:10px;background:rgba(0,0,0,.12)"><div class="muted" style="font-weight:900">Προσκληθέντες</div><div style="font-weight:950;font-size:18px">'+(it.invited||0)+'</div></div>'+
+          '<div style="flex:1;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:10px;background:rgba(0,0,0,.12)"><div class="muted" style="font-weight:900">Αγορές (€)</div><div style="font-weight:950;font-size:18px">'+(it.purchased_eur||0).toFixed(2)+'</div></div>'+
+        '</div>'+
+        '<div style="height:12px"></div>'+
+        '<button class="btn" data-copy="'+encodeURIComponent(it.url)+'">Αντιγραφή link</button>';
+      card.querySelector("[data-copy]").onclick=function(e){
+        var url=decodeURIComponent(e.currentTarget.getAttribute("data-copy"));
+        copyText(url).then(function(ok){toast(ok?"Αντιγράφηκε!":"Δεν μπόρεσα να αντιγράψω.")});
+      };
+      slider.appendChild(card);
     });
+    $("refTotalInvited").innerText=String(totalInv);
+    $("refTotalPurchased").innerText=totalPur.toFixed(2);
+  });
+}
 
-    // Step 2 -> Open payment
-    $("btnOpenPayment").addEventListener("click", async function() {
-      var btn = $("btnOpenPayment");
-      btn.classList.add("disabled");
-      btn.disabled = true;
-      btn.innerText = "Παρακαλώ περιμένετε...";
-
-      try {
-        var initData = tg?.initData || "";
-        var method = $("payMethod").value;
-
-        var endpoint = "/api/stripe/checkout";
-        if (method === "crypto") endpoint = "/api/cryptocloud/invoice";
-
-        var data = await apiPost(endpoint, { initData: initData, sku: selectedExtra.sku });
-
-        if (data?.url) {
-          if (tg?.openLink) {
-            tg.openLink(data.url);
-          } else {
-            window.open(data.url, "_blank");
-          }
-          closeModal("modalExtra");
-          showExtraStep1();
-          toast("Άνοιξε η σελίδα πληρωμής!");
-        } else {
-          toast(data?.detail || data?.error || "Σφάλμα");
-        }
-      } catch (e) {
-        toast("Σφάλμα δικτύου");
-      } finally {
-        btn.classList.remove("disabled");
-        btn.disabled = false;
-        btn.innerText = "Άνοιγμα πληρωμής";
-      }
-    });
-
-    $("btnBackToForm").addEventListener("click", showExtraStep1);
-
-    // -------- Tabs
-    function setTab(which){
-      var isProfile = which === "profile";
-      $("page-profile").classList.toggle("active", isProfile);
-      $("page-partners").classList.toggle("active", !isProfile);
-      $("tabProfile").classList.toggle("active", isProfile);
-      $("tabPartners").classList.toggle("active", !isProfile);
-      if (!isProfile) loadRefs();
+var creatingRef=false;
+function createRef(){
+  if(creatingRef)return;
+  var btn=$("btnCreateRef"); creatingRef=true; btn.classList.add("disabled"); btn.disabled=true;
+  var initData=tg&&tg.initData||"";
+  apiPost("/api/ref/create",{initData:initData}).then(function(data){
+    if(!data||!data.ok){
+      toast(data&&data.error==="limit_reached"?"Έφτασες το όριο (10 links).":"Αποτυχία δημιουργίας link.");
+      return;
     }
+    loadRefs(); toast("Δημιουργήθηκε νέο link!");
+  }).finally(function(){ creatingRef=false; btn.classList.remove("disabled"); btn.disabled=false; });
+}
 
-    // -------- Refs
-    async function loadRefs() {
-      var initData = tg?.initData || "";
-      var data = await apiPost("/api/ref/list", { initData: initData });
-      if (!data?.ok) return;
+// -------- Events --------
+function openExtraModal(){ showExtraStep1(); openModal("modalExtra"); }
+$("btnExtraCredits").onclick = openExtraModal;
+$("btnExtraCreditsTop").onclick = openExtraModal;
+$("closeExtra").onclick = function(){ closeModal("modalExtra"); showExtraStep1(); };
+$("closeExtra2").onclick = function(){ closeModal("modalExtra"); showExtraStep1(); };
+$("closeTools").onclick = function(){ closeModal("modalTools"); };
+$("closeSubBuy").onclick = function(){ closeModal("modalSubBuy"); };
+$("btnPartnerBenefits").onclick = function(){ openModal("modalBenefits"); };
+$("closeBenefits").onclick = function(){ closeModal("modalBenefits"); };
+$("tabProfile").onclick = function(){ setTab("profile"); };
+$("tabPartners").onclick = function(){ setTab("partners"); };
+$("btnCreateRef").onclick = createRef;
 
-      var items = data.items || [];
-      $("refCount").innerText = items.length + "/" + (data.limit || 10);
+document.querySelectorAll(".modal-backdrop").forEach(function(el){
+  el.onclick=function(e){ if(e.target===el){el.style.display="none";showExtraStep1();} };
+});
 
-      var totalInv = 0;
-      var totalPur = 0;
-      var slider = $("refsSlider");
-      slider.innerHTML = "";
-
-      items.forEach(function(it, idx) {
-        totalInv += (it.invited || 0);
-        totalPur += (it.purchased_eur || 0);
-
-        var card = document.createElement("div");
-        card.className = "plan";
-        card.style.minWidth = "310px";
-        card.innerHTML =
-          '<div class="muted" style="font-weight:900;margin-bottom:6px">Σύνδεσμος #' + (idx+1) + '</div>' +
-          '<div class="muted" style="font-weight:900;margin-bottom:6px">URL</div>' +
-          '<div style="font-weight:900;word-break:break-all;font-size:13px">' + it.url + '</div>' +
-          '<div style="height:10px"></div>' +
-          '<div class="row" style="gap:10px">' +
-            '<div style="flex:1;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:10px;background:rgba(0,0,0,.12)">' +
-              '<div class="muted" style="font-weight:900">Προσκληθέντες</div>' +
-              '<div style="font-weight:950;font-size:18px">' + (it.invited || 0) + '</div>' +
-            '</div>' +
-            '<div style="flex:1;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:10px;background:rgba(0,0,0,.12)">' +
-              '<div class="muted" style="font-weight:900">Αγορές (€)</div>' +
-              '<div style="font-weight:950;font-size:18px">' + (it.purchased_eur || 0).toFixed(2) + '</div>' +
-            '</div>' +
-          '</div>' +
-          '<div style="height:12px"></div>' +
-          '<button class="btn" data-copy="' + encodeURIComponent(it.url) + '">Αντιγραφή link</button>';
-
-        card.querySelector("[data-copy]").addEventListener("click", async function(e) {
-          var url = decodeURIComponent(e.currentTarget.getAttribute("data-copy"));
-          var ok = await copyText(url);
-          toast(ok ? "Αντιγράφηκε!" : "Δεν μπόρεσα να αντιγράψω.");
-        });
-
-        slider.appendChild(card);
-      });
-
-      $("refTotalInvited").innerText = String(totalInv);
-      $("refTotalPurchased").innerText = totalPur.toFixed(2);
-    }
-
-    var creatingRef = false;
-    async function createRef() {
-      if (creatingRef) return;
-      var btn = $("btnCreateRef");
-      creatingRef = true;
-      btn.classList.add("disabled");
-      btn.disabled = true;
-
-      try {
-        var initData = tg?.initData || "";
-        var data = await apiPost("/api/ref/create", { initData: initData });
-
-        if (!data?.ok) {
-          if (data?.error === "limit_reached") {
-            toast("Έφτασες το όριο (10 links).");
-            return;
-          }
-          toast("Αποτυχία δημιουργίας link.");
-          return;
-        }
-        await loadRefs();
-        toast("Δημιουργήθηκε νέο link!");
-      } finally {
-        creatingRef = false;
-        btn.classList.remove("disabled");
-        btn.disabled = false;
-      }
-    }
-
-    // -------- Events
-    $("btnExtraCredits").addEventListener("click", function(){ showExtraStep1(); openModal("modalExtra"); });
-    $("closeExtra").addEventListener("click", function(){ closeModal("modalExtra"); showExtraStep1(); });
-    $("closeExtra2").addEventListener("click", function(){ closeModal("modalExtra"); showExtraStep1(); });
-    $("closeTools").addEventListener("click", function(){ closeModal("modalTools"); });
-    $("closeSubBuy").addEventListener("click", function(){ closeModal("modalSubBuy"); });
-    $("btnPartnerBenefits").addEventListener("click", function(){ openModal("modalBenefits"); });
-    $("closeBenefits").addEventListener("click", function(){ closeModal("modalBenefits"); });
-
-    $("tabProfile").addEventListener("click", function(){ setTab("profile"); });
-    $("tabPartners").addEventListener("click", function(){ setTab("partners"); });
-
-    $("btnCreateRef")?.addEventListener("click", createRef);
-
-    // Close modals by clicking backdrop
-    document.querySelectorAll(".modal-backdrop").forEach(function(el) {
-      el.addEventListener("click", function(e) {
-        if (e.target === el) {
-          el.style.display = "none";
-          showExtraStep1();
-        }
-      });
-    });
-
-    // Init
-    (async function() {
-      renderPlans();
-      renderExtraPacks();
-      await loadMe();
-    })();
-  </script>
+// -------- Init --------
+renderPlans();
+renderExtraPacks();
+loadMe();
+</script>
 </body>
 </html>

@@ -79,6 +79,8 @@ def run_migrations():
             # --- upgrades for users ---
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS credits_held NUMERIC(10,2) NOT NULL DEFAULT 0;")
             cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS extra_credits NUMERIC(10,2) NOT NULL DEFAULT 0;")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_sku TEXT NOT NULL DEFAULT 'FREE';")
 
             # -------------------------
             # credit_ledger
@@ -343,6 +345,56 @@ def add_credits_by_user_id(
 
             conn.commit()
             return new_balance
+
+
+def add_extra_credits_by_user_id(
+    user_id: int,
+    amount,
+    reason: str,
+    provider: Optional[str] = None,
+    provider_ref: Optional[str] = None,
+) -> Decimal:
+    """
+    Adds EXTRA credits (purchased separately from plan).
+    Updates both credits (total) and extra_credits (tracking).
+    Returns new total balance.
+    """
+    amount = _to_decimal(amount)
+    if amount <= 0:
+        raise ValueError("amount must be > 0")
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, credits, extra_credits FROM users WHERE id=%s FOR UPDATE", (user_id,))
+            u = cur.fetchone()
+            if not u:
+                raise RuntimeError("User not found")
+
+            new_balance = _to_decimal(u["credits"]) + amount
+            new_extra = _to_decimal(u.get("extra_credits", 0)) + amount
+
+            cur.execute(
+                "UPDATE users SET credits=%s, extra_credits=%s WHERE id=%s",
+                (new_balance, new_extra, user_id),
+            )
+            cur.execute(
+                """
+                INSERT INTO credit_ledger (user_id, delta, balance_after, reason, provider, provider_ref)
+                VALUES (%s, %s, %s, %s, %s, %s);
+                """,
+                (user_id, amount, new_balance, reason, provider, provider_ref),
+            )
+
+            conn.commit()
+            return new_balance
+
+
+def set_user_plan(user_id: int, plan_sku: str) -> None:
+    """Sets the user's subscription plan SKU."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE users SET plan_sku=%s WHERE id=%s", (plan_sku, user_id))
+            conn.commit()
 
 
 def spend_credits_by_user_id(
