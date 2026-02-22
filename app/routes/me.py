@@ -5,7 +5,7 @@ from typing import Dict, Optional, Tuple
 import httpx
 from fastapi import APIRouter
 
-from ..web_shared import packs_list
+from ..web_shared import packs_list, plans_list
 from ..core.telegram_auth import db_user_from_webapp, verify_telegram_init_data
 from ..config import BOT_TOKEN
 
@@ -15,14 +15,43 @@ router = APIRouter()
 async def me(payload: dict):
     init_data = payload.get("initData", "")
     dbu = db_user_from_webapp(init_data)
+
+    # Determine current plan based on credits
+    credits = float(dbu.get("credits", 0) or 0)
+    plan_name = "Free"
+    plan_credits = 5
+
+    # Simple plan detection based on last purchase or initial credits
+    if credits >= 2000:
+        plan_name = "ULTRA PRO"
+        plan_credits = 2000
+    elif credits >= 1000:
+        plan_name = "Creator"
+        plan_credits = 1000
+    elif credits >= 500:
+        plan_name = "Pro"
+        plan_credits = 500
+    elif credits >= 250:
+        plan_name = "Middle"
+        plan_credits = 250
+    elif credits >= 100:
+        plan_name = "Start"
+        plan_credits = 100
+    elif credits >= 5:
+        plan_name = "Free"
+        plan_credits = 5
+
     return {
         "ok": True,
         "user": {
             "id": dbu["tg_user_id"],
             "username": dbu.get("tg_username") or "",
-            "credits": float(dbu.get("credits", 0) or 0),
+            "credits": credits,
+            "plan_name": plan_name,
+            "plan_credits": plan_credits,
         },
         "packs": packs_list(),
+        "plans": plans_list(),
     }
 
 # ----------------------
