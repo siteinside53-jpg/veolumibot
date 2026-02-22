@@ -42,6 +42,13 @@ def _suno_headers() -> dict:
     }
 
 
+def _voice_tag(voice: str) -> str:
+    """Return a style/tag hint for the requested voice gender."""
+    if voice == "female":
+        return "female vocals"
+    return "male vocals"
+
+
 async def _tg_send_audio(
     chat_id: int,
     audio_bytes: bytes,
@@ -67,28 +74,45 @@ async def _tg_send_audio(
 async def _run_suno_v5_job(
     tg_chat_id: int,
     db_user_id: int,
-    prompt: str,
-    genre: str,
+    mode: str,
+    voice: str,
+    description: str,
+    title: str,
     style: str,
-    duration: int,
+    lyrics: str,
     cost: float,
 ) -> None:
     try:
         headers = _suno_headers()
+        voice_hint = _voice_tag(voice)
 
-        body: dict = {
-            "prompt": prompt,
-            "style": style,
-            "title": prompt[:80],
-            "customMode": True,
-            "instrumental": False,
-            "model": "V5",
-            "wait": False,
-        }
-        if genre:
-            body["tags"] = genre
-        if duration:
-            body["duration"] = duration
+        if mode == "auto":
+            # Automatic generation — Suno decides structure
+            body: dict = {
+                "prompt": description,
+                "customMode": False,
+                "instrumental": False,
+                "model": "V5",
+                "wait": False,
+            }
+            # Add voice hint as tags
+            body["tags"] = voice_hint
+        else:
+            # Custom / personal generation
+            body = {
+                "prompt": lyrics,
+                "style": style,
+                "title": title,
+                "customMode": True,
+                "instrumental": False,
+                "model": "V5",
+                "wait": False,
+            }
+            # Combine user style with voice hint
+            if voice_hint not in style.lower():
+                body["tags"] = f"{style}, {voice_hint}"
+            else:
+                body["tags"] = style
 
         # 1) Create generation
         async with httpx.AsyncClient(timeout=60) as c:
@@ -178,8 +202,8 @@ async def _run_suno_v5_job(
 
         kb = {
             "inline_keyboard": [
-                [{"text": "\ud83d\udd3d \u039a\u03b1\u03c4\u03ad\u03b2\u03b1\u03c3\u03b5", "url": public_url}],
-                [{"text": "\u2190 \u03a0\u03af\u03c3\u03c9", "callback_data": "menu:audio"}],
+                [{"text": "🔽 Κατέβασε", "url": public_url}],
+                [{"text": "← Πίσω", "callback_data": "menu:audio"}],
             ]
         }
 
@@ -187,7 +211,7 @@ async def _run_suno_v5_job(
             chat_id=tg_chat_id,
             audio_bytes=audio_bytes,
             filename=name,
-            caption="\u2705 Suno v5: \u0388\u03c4\u03bf\u03b9\u03bc\u03bf",
+            caption="✅ Suno v5: Έτοιμο",
             reply_markup=kb,
         )
 
@@ -218,19 +242,40 @@ async def suno_v5_generate(
         return JSONResponse({"ok": False, "error": "bad_json"}, status_code=400)
 
     init_data = payload.get("initData", "")
-    prompt = (payload.get("prompt") or "").strip()
-    genre = (payload.get("genre") or "").strip()
-    style = (payload.get("style") or "").strip()
-    duration_raw = payload.get("duration")
+    mode = (payload.get("mode") or "auto").strip().lower()
+    voice = (payload.get("voice") or "male").strip().lower()
 
-    try:
-        duration = int(duration_raw) if duration_raw else 30
-    except (ValueError, TypeError):
-        duration = 30
-    duration = max(10, min(240, duration))
+    if mode not in ("auto", "custom"):
+        mode = "auto"
+    if voice not in ("male", "female"):
+        voice = "male"
 
-    if not prompt:
-        return JSONResponse({"ok": False, "error": "empty_prompt"}, status_code=400)
+    # Extract fields based on mode
+    description = ""
+    title = ""
+    style = ""
+    lyrics = ""
+
+    if mode == "auto":
+        description = (payload.get("description") or "").strip()
+        if not description:
+            return JSONResponse({"ok": False, "error": "empty_description"}, status_code=400)
+        if len(description) > 5000:
+            return JSONResponse({"ok": False, "error": "description_too_long"}, status_code=400)
+    else:
+        title = (payload.get("title") or "").strip()
+        style = (payload.get("style") or "").strip()
+        lyrics = (payload.get("lyrics") or "").strip()
+        if not title:
+            return JSONResponse({"ok": False, "error": "empty_title"}, status_code=400)
+        if len(title) > 80:
+            return JSONResponse({"ok": False, "error": "title_too_long"}, status_code=400)
+        if not style:
+            return JSONResponse({"ok": False, "error": "empty_style"}, status_code=400)
+        if not lyrics:
+            return JSONResponse({"ok": False, "error": "empty_lyrics"}, status_code=400)
+        if len(lyrics) > 5000:
+            return JSONResponse({"ok": False, "error": "lyrics_too_long"}, status_code=400)
 
     try:
         dbu = db_user_from_webapp(init_data)
@@ -250,7 +295,7 @@ async def suno_v5_generate(
         return JSONResponse({"ok": False, "error": msg[:200]}, status_code=400)
 
     try:
-        await tg_send_message(tg_chat_id, "\ud83c\udfb5 Suno v5: \u0397 \u03bc\u03bf\u03c5\u03c3\u03b9\u03ba\u03ae \u03b5\u03c4\u03bf\u03b9\u03bc\u03ac\u03b6\u03b5\u03c4\u03b1\u03b9\u2026")
+        await tg_send_message(tg_chat_id, "🎵 Suno v5: Η μουσική ετοιμάζεται…")
     except Exception:
         logger.exception("Failed to send preparation message")
 
@@ -258,10 +303,12 @@ async def suno_v5_generate(
         _run_suno_v5_job,
         tg_chat_id,
         db_user_id,
-        prompt,
-        genre,
+        mode,
+        voice,
+        description,
+        title,
         style,
-        duration,
+        lyrics,
         COST,
     )
 

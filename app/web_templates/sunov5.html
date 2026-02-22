@@ -30,24 +30,52 @@
     .pill{font-size:12px;padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.10);
       background:rgba(255,255,255,.03);color:var(--text);white-space:nowrap;opacity:.95;font-weight:800}
     .pill b{font-weight:900}
+
     .block{margin-top:12px;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:12px}
     .label{font-size:12px;color:var(--muted);margin-bottom:8px;letter-spacing:.2px;text-transform:uppercase;opacity:.9;font-weight:800}
     .row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
     .counter{font-size:12px;color:var(--muted);font-weight:800}
     .error{margin-top:8px;font-size:12px;color:var(--bad);display:none;font-weight:900;white-space:pre-wrap}
+
+    /* SELECT / DROPDOWN */
+    select{width:100%;border-radius:12px;border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.03);color:var(--text);padding:12px;outline:none;font-size:14px;font-weight:800;
+      appearance:none;-webkit-appearance:none;-moz-appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='%23a4a7c0'%3E%3Cpath d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;background-position:right 14px center;background-size:12px;
+      cursor:pointer}
+    select:focus{border-color:rgba(124,58,237,.55);box-shadow:0 0 0 4px rgba(124,58,237,.15)}
+    select option{background:#1a1b2e;color:var(--text)}
+
+    /* VOICE RADIO */
+    .voice-row{display:flex;gap:10px;margin-top:4px}
+    .voice-option{flex:1;position:relative}
+    .voice-option input[type="radio"]{position:absolute;opacity:0;pointer-events:none}
+    .voice-label{display:flex;align-items:center;justify-content:center;gap:8px;
+      padding:12px 10px;border-radius:12px;border:1.5px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.03);cursor:pointer;transition:all .2s;font-weight:800;font-size:14px}
+    .voice-label .icon{font-size:18px}
+    .voice-option input[type="radio"]:checked + .voice-label{
+      border-color:var(--accent);background:rgba(124,58,237,.12);
+      box-shadow:0 0 0 3px rgba(124,58,237,.18)}
+
+    /* INPUTS */
     textarea{width:100%;min-height:140px;resize:vertical;border-radius:12px;border:1px solid rgba(255,255,255,.08);
-      background:rgba(255,255,255,.03);color:var(--text);padding:12px;outline:none;font-size:14px;line-height:1.35;font-weight:800}
+      background:rgba(255,255,255,.03);color:var(--text);padding:12px;outline:none;font-size:14px;line-height:1.35;font-weight:800;
+      font-family:inherit}
     textarea:focus{border-color:rgba(124,58,237,.55);box-shadow:0 0 0 4px rgba(124,58,237,.15)}
     input[type="text"]{width:100%;border-radius:12px;border:1px solid rgba(255,255,255,.08);
       background:rgba(255,255,255,.03);color:var(--text);padding:12px;outline:none;font-size:14px;font-weight:800}
     input[type="text"]:focus{border-color:rgba(124,58,237,.55);box-shadow:0 0 0 4px rgba(124,58,237,.15)}
-    input[type="range"]{width:100%;accent-color:var(--accent)}
-    .slider-value{font-size:14px;font-weight:900;color:var(--text);min-width:50px;text-align:right}
+
+    /* BUTTON */
     .btn{border:0;background:linear-gradient(180deg,var(--accent),var(--accent2));color:white;font-weight:900;border-radius:16px;
       padding:14px 16px;cursor:pointer;box-shadow:0 10px 18px rgba(0,0,0,.45),0 8px 18px rgba(124,58,237,.16);
       width:100%;font-size:15px;letter-spacing:.2px;margin-top:14px}
     .btn:disabled{opacity:.6;cursor:not-allowed}
     .btn:active{transform:translateY(1px)}
+
+    .hidden{display:none!important}
   </style>
 </head>
 
@@ -56,6 +84,7 @@
     <div class="card">
       <div class="card-inner">
 
+        <!-- HEADER -->
         <div class="header">
           <div class="brand">
             <div class="logo" aria-hidden="true">♫</div>
@@ -67,35 +96,70 @@
           <div class="pill">Κόστος: <b>2.4</b> credits</div>
         </div>
 
-        <!-- PROMPT / LYRICS -->
+        <!-- MODE SELECTOR -->
         <div class="block">
-          <div class="row" style="margin-bottom:8px">
-            <div class="label" style="margin:0">ΚΕΙΜΕΝΟ / ΣΤΙΧΟΙ</div>
-            <div class="counter"><span id="charCount">0</span>/2000</div>
+          <div class="label">ΤΥΠΟΣ ΔΗΜΙΟΥΡΓΙΑΣ</div>
+          <select id="mode">
+            <option value="auto">Αυτόματη δημιουργία</option>
+            <option value="custom">Προσωπική δημιουργία</option>
+          </select>
+        </div>
+
+        <!-- VOICE -->
+        <div class="block">
+          <div class="label">ΦΩΝΗ</div>
+          <div class="voice-row">
+            <div class="voice-option">
+              <input type="radio" name="voice" id="voiceMale" value="male" checked/>
+              <label class="voice-label" for="voiceMale"><span class="icon">👨</span> Αρσενικό</label>
+            </div>
+            <div class="voice-option">
+              <input type="radio" name="voice" id="voiceFemale" value="female"/>
+              <label class="voice-label" for="voiceFemale"><span class="icon">👩</span> Θηλυκό</label>
+            </div>
           </div>
-          <textarea id="prompt" maxlength="2000" placeholder="Γράψε στίχους ή περιέγραψε τη μουσική που θέλεις..." style="min-height:160px"></textarea>
-          <div id="promptErr" class="error">Βάλε κείμενο ή στίχους (1–2000 χαρακτήρες).</div>
         </div>
 
-        <!-- GENRE -->
-        <div class="block">
-          <div class="label">ΕΙΔΟΣ ΜΟΥΣΙΚΗΣ</div>
-          <input type="text" id="genre" placeholder="π.χ. Pop, Rock, Jazz, Lo-fi..."/>
-        </div>
-
-        <!-- STYLE -->
-        <div class="block">
-          <div class="label">ΣΤΥΛ</div>
-          <input type="text" id="style" placeholder="π.χ. Energetic, Chill, Dark, Uplifting..."/>
-        </div>
-
-        <!-- DURATION SLIDER -->
-        <div class="block">
-          <div class="row" style="margin-bottom:8px">
-            <div class="label" style="margin:0">ΔΙΑΡΚΕΙΑ</div>
-            <div class="slider-value"><span id="durValue">60</span>s</div>
+        <!-- AUTO MODE: DESCRIPTION -->
+        <div id="autoSection">
+          <div class="block">
+            <div class="row" style="margin-bottom:8px">
+              <div class="label" style="margin:0">ΠΕΡΙΓΡΑΦΗ</div>
+              <div class="counter"><span id="descCount">0</span>/5000</div>
+            </div>
+            <textarea id="description" maxlength="5000" placeholder="Περιέγραψε τη μουσική που θέλεις... π.χ. Ένα χαρούμενο ποπ τραγούδι για το καλοκαίρι με ανδρική φωνή" style="min-height:160px"></textarea>
+            <div id="descErr" class="error">Γράψε μια περιγραφή (1–5000 χαρακτήρες).</div>
           </div>
-          <input type="range" id="duration" min="10" max="240" value="60" step="5"/>
+        </div>
+
+        <!-- CUSTOM MODE: TITLE + STYLE + LYRICS -->
+        <div id="customSection" class="hidden">
+          <!-- TITLE -->
+          <div class="block">
+            <div class="row" style="margin-bottom:8px">
+              <div class="label" style="margin:0">ΤΙΤΛΟΣ</div>
+              <div class="counter"><span id="titleCount">0</span>/80</div>
+            </div>
+            <input type="text" id="songTitle" maxlength="80" placeholder="Τίτλος τραγουδιού..."/>
+            <div id="titleErr" class="error">Βάλε τίτλο (1–80 χαρακτήρες).</div>
+          </div>
+
+          <!-- TRACK STYLE -->
+          <div class="block">
+            <div class="label">ΣΤΥΛ ΚΟΜΜΑΤΙΟΥ</div>
+            <input type="text" id="trackStyle" placeholder="π.χ. Pop, Rock, Jazz, Lo-fi, Energetic..."/>
+            <div id="styleErr" class="error">Βάλε στυλ κομματιού.</div>
+          </div>
+
+          <!-- LYRICS -->
+          <div class="block">
+            <div class="row" style="margin-bottom:8px">
+              <div class="label" style="margin:0">ΣΤΙΧΟΙ</div>
+              <div class="counter"><span id="lyricsCount">0</span>/5000</div>
+            </div>
+            <textarea id="lyrics" maxlength="5000" placeholder="Γράψε τους στίχους εδώ..." style="min-height:180px"></textarea>
+            <div id="lyricsErr" class="error">Γράψε στίχους (1–5000 χαρακτήρες).</div>
+          </div>
         </div>
 
         <button id="btn" class="btn" type="button">Δημιουργία Μουσικής</button>
@@ -111,15 +175,24 @@
   if (tg) { tg.expand(); tg.ready(); }
   const TG_INIT_DATA = tg?.initData || "";
 
-  const promptEl   = document.getElementById("prompt");
-  const genreEl    = document.getElementById("genre");
-  const styleEl    = document.getElementById("style");
-  const durationEl = document.getElementById("duration");
-  const durValue   = document.getElementById("durValue");
-  const btn        = document.getElementById("btn");
-  const charCount  = document.getElementById("charCount");
-  const promptErr  = document.getElementById("promptErr");
+  /* DOM refs */
+  const modeEl       = document.getElementById("mode");
+  const autoSection   = document.getElementById("autoSection");
+  const customSection = document.getElementById("customSection");
+  const descEl        = document.getElementById("description");
+  const descCount     = document.getElementById("descCount");
+  const descErr       = document.getElementById("descErr");
+  const titleEl       = document.getElementById("songTitle");
+  const titleCount    = document.getElementById("titleCount");
+  const titleErr      = document.getElementById("titleErr");
+  const styleEl       = document.getElementById("trackStyle");
+  const styleErr      = document.getElementById("styleErr");
+  const lyricsEl      = document.getElementById("lyrics");
+  const lyricsCount   = document.getElementById("lyricsCount");
+  const lyricsErr     = document.getElementById("lyricsErr");
+  const btn           = document.getElementById("btn");
 
+  /* Helpers */
   function showAlert(msg){
     if (tg?.showAlert) tg.showAlert(msg);
     else alert(msg);
@@ -132,43 +205,82 @@
       buttons: [{ type: "ok", text: "Close" }]
     }, () => {});
   }
-
   async function safeJson(res){
     const txt = await res.text();
     try { return JSON.parse(txt); } catch { return { raw: txt }; }
   }
+  function getVoice(){
+    return document.querySelector('input[name="voice"]:checked')?.value || "male";
+  }
 
-  promptEl.addEventListener("input", () => {
-    charCount.textContent = String(promptEl.value.length);
-    if (promptEl.value.trim().length > 0) promptErr.style.display = "none";
+  /* Mode toggle */
+  modeEl.addEventListener("change", () => {
+    const isCustom = modeEl.value === "custom";
+    autoSection.classList.toggle("hidden", isCustom);
+    customSection.classList.toggle("hidden", !isCustom);
+    /* clear errors */
+    descErr.style.display = "none";
+    titleErr.style.display = "none";
+    styleErr.style.display = "none";
+    lyricsErr.style.display = "none";
   });
 
-  durationEl.addEventListener("input", () => {
-    durValue.textContent = durationEl.value;
+  /* Character counters */
+  descEl.addEventListener("input", () => {
+    descCount.textContent = String(descEl.value.length);
+    if (descEl.value.trim()) descErr.style.display = "none";
+  });
+  titleEl.addEventListener("input", () => {
+    titleCount.textContent = String(titleEl.value.length);
+    if (titleEl.value.trim()) titleErr.style.display = "none";
+  });
+  lyricsEl.addEventListener("input", () => {
+    lyricsCount.textContent = String(lyricsEl.value.length);
+    if (lyricsEl.value.trim()) lyricsErr.style.display = "none";
+  });
+  styleEl.addEventListener("input", () => {
+    if (styleEl.value.trim()) styleErr.style.display = "none";
   });
 
+  /* SUBMIT */
   btn.addEventListener("click", async () => {
-    const prompt = (promptEl.value || "").trim();
-    const genre = (genreEl.value || "").trim();
-    const style = (styleEl.value || "").trim();
-    const duration = parseInt(durationEl.value, 10) || 60;
+    const mode  = modeEl.value;   // "auto" | "custom"
+    const voice = getVoice();     // "male" | "female"
 
-    if (!prompt) {
-      promptErr.style.display = "block";
-      showAlert("Βάλε κείμενο ή στίχους.");
-      return;
+    /* Validate */
+    if (mode === "auto") {
+      const desc = (descEl.value || "").trim();
+      if (!desc) {
+        descErr.style.display = "block";
+        showAlert("Γράψε μια περιγραφή.");
+        return;
+      }
+    } else {
+      let hasErr = false;
+      const t = (titleEl.value || "").trim();
+      const s = (styleEl.value || "").trim();
+      const l = (lyricsEl.value || "").trim();
+      if (!t) { titleErr.style.display = "block"; hasErr = true; }
+      if (!s) { styleErr.style.display = "block"; hasErr = true; }
+      if (!l) { lyricsErr.style.display = "block"; hasErr = true; }
+      if (hasErr) {
+        showAlert("Συμπλήρωσε όλα τα πεδία.");
+        return;
+      }
     }
 
     btn.disabled = true;
 
     try {
-      const payload = {
-        initData: TG_INIT_DATA,
-        prompt,
-        genre,
-        style,
-        duration
-      };
+      const payload = { initData: TG_INIT_DATA, mode, voice };
+
+      if (mode === "auto") {
+        payload.description = (descEl.value || "").trim();
+      } else {
+        payload.title  = (titleEl.value || "").trim();
+        payload.style  = (styleEl.value || "").trim();
+        payload.lyrics = (lyricsEl.value || "").trim();
+      }
 
       showSentPopup();
 
@@ -193,9 +305,6 @@
       btn.disabled = false;
     }
   });
-
-  charCount.textContent = "0";
-  durValue.textContent = durationEl.value;
 </script>
 </body>
 </html>
