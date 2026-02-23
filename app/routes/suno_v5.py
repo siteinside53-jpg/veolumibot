@@ -116,6 +116,9 @@ async def _run_suno_v5_job(
             else:
                 body["tags"] = style
 
+        # callBackUrl is required by apibox — we still poll, but must provide it
+        body["callBackUrl"] = f"{public_base_url()}/api/sunov5/callback"
+
         # 1) Create generation
         async with httpx.AsyncClient(timeout=60) as c:
             r = await c.post(
@@ -320,3 +323,15 @@ async def suno_v5_generate(
     )
 
     return {"ok": True, "sent_to_telegram": True, "cost": COST}
+
+
+@router.post("/api/sunov5/callback")
+async def suno_v5_callback(request: Request):
+    """Callback endpoint for apibox Suno webhooks (required by their API).
+    We still rely on polling, so this just logs and acknowledges."""
+    try:
+        payload = await request.json()
+        logger.info("Suno callback received: %s", json.dumps(payload, ensure_ascii=False)[:2000])
+    except Exception:
+        logger.warning("Suno callback: could not parse body")
+    return {"ok": True}
