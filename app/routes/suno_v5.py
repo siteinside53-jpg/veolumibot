@@ -45,11 +45,9 @@ def _suno_headers() -> dict:
     }
 
 
-def _voice_tag(voice: str) -> str:
-    """Return a style/tag hint for the requested voice gender."""
-    if voice == "female":
-        return "female vocals"
-    return "male vocals"
+def _vocal_gender(voice: str) -> str:
+    """Map voice choice to Suno vocalGender param: 'm' or 'f'."""
+    return "f" if voice == "female" else "m"
 
 
 async def _tg_send_audio(
@@ -87,37 +85,30 @@ async def _run_suno_v5_job(
 ) -> None:
     try:
         headers = _suno_headers()
-        voice_hint = _voice_tag(voice)
+        gender = _vocal_gender(voice)
 
         if mode == "auto":
-            # Automatic generation — Suno decides structure
-            # apibox wrapper uses gpt_description_prompt for non-custom mode
+            # Automatic generation — customMode false
+            # prompt = core concept, max 500 chars; no style/title
             body: dict = {
-                "prompt": description,
-                "gpt_description_prompt": description,
+                "prompt": description[:500],
                 "customMode": False,
                 "instrumental": False,
                 "model": "V5",
-                "wait": False,
+                "vocalGender": gender,
             }
-            # Add voice hint as tags
-            body["tags"] = voice_hint
         else:
-            # Custom / personal generation
+            # Custom / personal generation — customMode true
+            # prompt = lyrics (max 5000), style (max 1000), title (max 100)
             body = {
-                "prompt": lyrics,
-                "style": style,
-                "title": title,
+                "prompt": lyrics[:5000],
+                "style": style[:1000],
+                "title": title[:100],
                 "customMode": True,
                 "instrumental": False,
                 "model": "V5",
-                "wait": False,
+                "vocalGender": gender,
             }
-            # Combine user style with voice hint
-            if voice_hint not in style.lower():
-                body["tags"] = f"{style}, {voice_hint}"
-            else:
-                body["tags"] = style
 
         # callBackUrl is required by apibox — we still poll, but must provide it
         body["callBackUrl"] = f"{public_base_url()}/api/sunov5/callback"
@@ -299,7 +290,7 @@ async def suno_v5_generate(
         description = (payload.get("description") or "").strip()
         if not description:
             return JSONResponse({"ok": False, "error": "empty_description"}, status_code=400)
-        if len(description) > 5000:
+        if len(description) > 500:
             return JSONResponse({"ok": False, "error": "description_too_long"}, status_code=400)
     else:
         title = (payload.get("title") or "").strip()
@@ -307,10 +298,12 @@ async def suno_v5_generate(
         lyrics = (payload.get("lyrics") or "").strip()
         if not title:
             return JSONResponse({"ok": False, "error": "empty_title"}, status_code=400)
-        if len(title) > 80:
+        if len(title) > 100:
             return JSONResponse({"ok": False, "error": "title_too_long"}, status_code=400)
         if not style:
             return JSONResponse({"ok": False, "error": "empty_style"}, status_code=400)
+        if len(style) > 1000:
+            return JSONResponse({"ok": False, "error": "style_too_long"}, status_code=400)
         if not lyrics:
             return JSONResponse({"ok": False, "error": "empty_lyrics"}, status_code=400)
         if len(lyrics) > 5000:
