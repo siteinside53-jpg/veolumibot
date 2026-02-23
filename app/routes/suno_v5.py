@@ -88,8 +88,10 @@ async def _run_suno_v5_job(
 
         if mode == "auto":
             # Automatic generation — Suno decides structure
+            # apibox wrapper uses gpt_description_prompt for non-custom mode
             body: dict = {
                 "prompt": description,
+                "gpt_description_prompt": description,
                 "customMode": False,
                 "instrumental": False,
                 "model": "V5",
@@ -127,12 +129,17 @@ async def _run_suno_v5_job(
         except Exception:
             data = {"raw": (r.text or "")[:2000]}
 
+        logger.info("Suno create response [%s]: %s", r.status_code, json.dumps(data, ensure_ascii=False)[:1500])
+
         if r.status_code >= 400:
             raise RuntimeError(f"Suno create error {r.status_code}: {data}")
 
         # Extract task id from response
+        # NOTE: data["data"] can be None (JSON null), so use `or {}` instead of default
+        inner = data.get("data") or {}
         task_id = (
-            data.get("data", {}).get("taskId")
+            inner.get("taskId")
+            or inner.get("task_id")
             or data.get("task_id")
             or data.get("id")
         )
