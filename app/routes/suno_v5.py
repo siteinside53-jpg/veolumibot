@@ -192,12 +192,8 @@ async def _run_suno_v5_job(
             else:
                 raise RuntimeError("Suno generation timeout")
 
-        # 3) Get audio URL
-        if found_via_callback:
-            # Callback payload structure: parse audio from callback data
-            resp_data = status_data.get("data") or status_data
-        else:
-            resp_data = status_data.get("data") or status_data
+        # 3) Get audio URL (try audio_url → stream_audio_url → source fallbacks)
+        resp_data = status_data.get("data") or status_data
         items = resp_data.get("data") or resp_data.get("songs") or resp_data.get("tracks") or []
         audio_url = None
 
@@ -205,13 +201,19 @@ async def _run_suno_v5_job(
             first = items[0]
             audio_url = (
                 first.get("audio_url")
+                or first.get("stream_audio_url")
+                or first.get("source_stream_audio_url")
                 or first.get("sourceUrl")
                 or first.get("url")
                 or first.get("song_url")
             )
+            # audio_url can be empty string — treat as None
+            if not audio_url:
+                audio_url = None
         if not audio_url:
             audio_url = (
                 resp_data.get("audio_url")
+                or resp_data.get("stream_audio_url")
                 or resp_data.get("url")
             )
         if not audio_url:
@@ -350,24 +352,33 @@ async def suno_v5_generate(
 @router.post("/api/sunov5/callback")
 async def suno_v5_callback(request: Request):
     """Callback endpoint for apibox Suno webhooks.
-    Stores the result so the background polling loop picks it up."""
+    Stores the result so the background polling loop picks it up.
+    Skips 'text' callbacks (lyrics only, no audio yet)."""
     try:
         payload = await request.json()
         logger.info("Suno callback received: %s", json.dumps(payload, ensure_ascii=False)[:2000])
 
-        # Try to extract taskId and store the full payload
         inner = payload.get("data") or payload
+        callback_type = (inner.get("callbackType") or "").lower()
         task_id = (
             inner.get("taskId")
             or inner.get("task_id")
             or payload.get("taskId")
             or payload.get("task_id")
         )
-        if task_id:
-            _callback_results[task_id] = payload
-            logger.info("Stored callback result for task %s", task_id)
-        else:
+
+        if not task_id:
             logger.warning("Suno callback: no taskId found in payload")
+            return {"ok": True}
+
+        # Skip 'text' callbacks — they contain lyrics but no audio yet
+        if callback_type == "text":
+            logger.info("Skipping 'text' callback for task %s (audio not ready)", task_id)
+            return {"ok": True}
+
+        # Store the callback with actual audio data
+        _callback_results[task_id] = payload
+        logger.info("Stored callback result for task %s (type=%s)", task_id, callback_type)
     except Exception:
         logger.warning("Suno callback: could not parse body")
     return {"ok": True}
