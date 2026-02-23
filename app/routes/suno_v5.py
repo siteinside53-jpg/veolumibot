@@ -31,6 +31,9 @@ COST = 2.4
 AUDIOS_DIR = VIDEOS_DIR.parent / "audios"
 AUDIOS_DIR.mkdir(parents=True, exist_ok=True)
 
+# In-memory store for callback results keyed by taskId
+_callback_results: dict[str, dict] = {}
+
 
 def _suno_headers() -> dict:
     if not SUNO_API_KEY:
@@ -149,35 +152,61 @@ async def _run_suno_v5_job(
         if not task_id:
             raise RuntimeError(f"No task_id returned: {data}")
 
-        # 2) Poll until done
+        # 2) Wait for result — check callback store first, then poll API
         poll_base = os.getenv("SUNO_POLL_URL", "https://apibox.erweima.ai/api/v1/generate/record-info").strip()
-        for _ in range(180):  # ~6 min at 2s
-            async with httpx.AsyncClient(timeout=30) as c:
-                pr = await c.get(
-                    poll_base,
-                    params={"taskId": task_id},
-                    headers=_suno_headers(),
-                )
+        status_data = {}
+        found_via_callback = False
 
-            try:
-                status_data = pr.json()
-            except Exception:
-                status_data = {}
-
-            resp_data = status_data.get("data") or status_data
-            status = (resp_data.get("status") or "").lower()
-
-            if status in ("succeeded", "completed", "done", "complete"):
+        for attempt in range(180):  # ~6 min at 2s
+            # --- Check if callback already delivered the result ---
+            if task_id in _callback_results:
+                status_data = _callback_results.pop(task_id)
+                logger.info("Got result from callback for task %s", task_id)
+                found_via_callback = True
                 break
-            if status in ("failed", "cancelled", "error"):
-                raise RuntimeError(f"Suno generation failed: {status_data}")
+
+            # --- Otherwise poll the API ---
+            try:
+                async with httpx.AsyncClient(timeout=30) as c:
+                    pr = await c.get(
+                        poll_base,
+                        params={"taskId": task_id},
+                        headers=_suno_headers(),
+                    )
+                try:
+                    status_data = pr.json()
+                except Exception:
+                    status_data = {}
+
+                resp_data = status_data.get("data") or status_data
+                status = (resp_data.get("status") or "").lower()
+
+                if status in ("succeeded", "completed", "done", "complete"):
+                    logger.info("Got result from polling for task %s (status=%s)", task_id, status)
+                    break
+                if status in ("failed", "cancelled", "error"):
+                    raise RuntimeError(f"Suno generation failed: {status_data}")
+            except RuntimeError:
+                raise
+            except Exception as poll_err:
+                logger.warning("Poll attempt %d failed: %s", attempt, poll_err)
 
             await asyncio.sleep(2)
         else:
-            raise RuntimeError("Suno generation timeout")
+            # Last chance — check callback one more time
+            if task_id in _callback_results:
+                status_data = _callback_results.pop(task_id)
+                found_via_callback = True
+                logger.info("Got result from callback (post-timeout) for task %s", task_id)
+            else:
+                raise RuntimeError("Suno generation timeout")
 
         # 3) Get audio URL
-        resp_data = status_data.get("data") or status_data
+        if found_via_callback:
+            # Callback payload structure: parse audio from callback data
+            resp_data = status_data.get("data") or status_data
+        else:
+            resp_data = status_data.get("data") or status_data
         items = resp_data.get("data") or resp_data.get("songs") or resp_data.get("tracks") or []
         audio_url = None
 
@@ -327,11 +356,25 @@ async def suno_v5_generate(
 
 @router.post("/api/sunov5/callback")
 async def suno_v5_callback(request: Request):
-    """Callback endpoint for apibox Suno webhooks (required by their API).
-    We still rely on polling, so this just logs and acknowledges."""
+    """Callback endpoint for apibox Suno webhooks.
+    Stores the result so the background polling loop picks it up."""
     try:
         payload = await request.json()
         logger.info("Suno callback received: %s", json.dumps(payload, ensure_ascii=False)[:2000])
+
+        # Try to extract taskId and store the full payload
+        inner = payload.get("data") or payload
+        task_id = (
+            inner.get("taskId")
+            or inner.get("task_id")
+            or payload.get("taskId")
+            or payload.get("task_id")
+        )
+        if task_id:
+            _callback_results[task_id] = payload
+            logger.info("Stored callback result for task %s", task_id)
+        else:
+            logger.warning("Suno callback: no taskId found in payload")
     except Exception:
         logger.warning("Suno callback: could not parse body")
     return {"ok": True}
