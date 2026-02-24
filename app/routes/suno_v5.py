@@ -246,12 +246,12 @@ async def _run_suno_v5_job(
                 public_url = f"{public_base_url()}/static/audios/{name}"
                 set_last_result(db_user_id, "suno_v5", public_url)
 
-                # Send as document (shows Download / Show in Finder in Telegram)
+                # Send as plain document (octet-stream forces Download view, not audio player)
                 await tg_send_document(
                     chat_id=tg_chat_id,
                     file_bytes=audio_bytes,
                     filename="audio.mp3",
-                    mime_type="audio/mpeg",
+                    mime_type="application/octet-stream",
                 )
                 sent_count += 1
             except Exception as track_err:
