@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException, Request, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
 
 from ..core.telegram_auth import db_user_from_webapp
-from ..core.telegram_client import tg_send_message, tg_send_document, tg_send_video
+from ..core.telegram_client import tg_send_message, tg_send_document
 from ..texts import map_provider_error_to_gr, tool_error_message_gr
 from ..core.paths import STATIC_DIR
 from ..web_shared import public_base_url
@@ -249,9 +249,11 @@ async def _run_grok_video_job(
             ]
         }
 
-        await tg_send_video(
+        await tg_send_document(
             chat_id=tg_chat_id,
-            video_bytes=video_bytes,
+            file_bytes=video_bytes,
+            filename="video.mp4",
+            mime_type="video/mp4",
             caption="✅ Grok Video: Έτοιμο",
             reply_markup=kb,
         )

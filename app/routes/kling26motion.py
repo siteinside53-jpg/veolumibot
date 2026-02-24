@@ -7,7 +7,7 @@ from fastapi import APIRouter, Request, BackgroundTasks
 from fastapi.responses import JSONResponse
 
 from ..core.telegram_auth import db_user_from_webapp
-from ..core.telegram_client import tg_send_message, tg_send_video
+from ..core.telegram_client import tg_send_message, tg_send_document
 from ..core.paths import VIDEOS_DIR
 from ..web_shared import public_base_url
 from ..db import spend_credits_by_user_id, add_credits_by_user_id, set_last_result
@@ -61,9 +61,11 @@ async def _run_kling26motion_job(
             ]
         }
 
-        await tg_send_video(
+        await tg_send_document(
             chat_id=tg_chat_id,
-            video_bytes=video_bytes,
+            file_bytes=video_bytes,
+            filename="video.mp4",
+            mime_type="video/mp4",
             caption="✅ Kling 2.6 Motion: Έτοιμο",
             reply_markup=kb,
         )

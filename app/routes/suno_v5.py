@@ -12,7 +12,7 @@ from fastapi import APIRouter, Request, BackgroundTasks, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 
 from ..core.telegram_auth import db_user_from_webapp
-from ..core.telegram_client import tg_send_message
+from ..core.telegram_client import tg_send_message, tg_send_document
 from ..core.paths import VIDEOS_DIR
 from ..web_shared import public_base_url
 from ..db import spend_credits_by_user_id, add_credits_by_user_id, set_last_result
@@ -246,19 +246,12 @@ async def _run_suno_v5_job(
                 public_url = f"{public_base_url()}/static/audios/{name}"
                 set_last_result(db_user_id, "suno_v5", public_url)
 
-                # Send as audio file with download button
-                track_label = f"🎵 Track {idx}" if len(audio_entries) > 1 else "🎵"
-                track_kb = {
-                    "inline_keyboard": [
-                        [{"text": "🔽 Κατέβασε", "url": public_url}],
-                    ]
-                }
-                await _tg_send_audio(
+                # Send as document (shows Download / Show in Finder in Telegram)
+                await tg_send_document(
                     chat_id=tg_chat_id,
-                    audio_bytes=audio_bytes,
-                    filename=f"{entry['title']}.mp3",
-                    caption=f"{track_label}: {entry['title']}",
-                    reply_markup=track_kb,
+                    file_bytes=audio_bytes,
+                    filename="audio.mp3",
+                    mime_type="audio/mpeg",
                 )
                 sent_count += 1
             except Exception as track_err:
