@@ -10,7 +10,7 @@ from fastapi import APIRouter, BackgroundTasks, Request
 from fastapi.responses import JSONResponse, HTMLResponse
 
 from ..core.telegram_auth import db_user_from_webapp
-from ..core.telegram_client import tg_send_message, tg_send_photo
+from ..core.telegram_client import tg_send_message, tg_send_document
 from ..core.paths import IMAGES_DIR, BASE_DIR
 from ..web_shared import public_base_url
 
@@ -168,10 +168,12 @@ async def _run_nanobanana_job(
                 ]
             }
 
-            await tg_send_photo(
+            await tg_send_document(
                 chat_id=tg_chat_id,
-                img_bytes=img_bytes,
+                file_bytes=img_bytes,
+                filename=f"photo_{idx}.png",
                 caption=f"✅ Banana AI: Έτοιμο ({idx}/{n_images})",
+                mime_type="image/png",
                 reply_markup=kb,
             )
 

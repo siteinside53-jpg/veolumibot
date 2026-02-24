@@ -53,6 +53,29 @@ async def tg_send_video(
         return j["result"]
 
 
+async def tg_send_document(
+    chat_id: int,
+    file_bytes: bytes,
+    filename: str = "file",
+    caption: str = "",
+    mime_type: str = "application/octet-stream",
+    reply_markup: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Send a file as document (downloadable) to Telegram."""
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendDocument"
+    data = {"chat_id": str(chat_id), "caption": caption}
+    if reply_markup:
+        data["reply_markup"] = json.dumps(reply_markup, ensure_ascii=False)
+    files = {"document": (filename, file_bytes, mime_type)}
+
+    async with httpx.AsyncClient(timeout=120) as c:
+        r = await c.post(url, data=data, files=files)
+        j = r.json()
+        if not j.get("ok"):
+            raise RuntimeError(f"Telegram sendDocument failed: {j}")
+        return j["result"]
+
+
 async def tg_send_message_safe(chat_id: int, text: str) -> None:
     """Στέλνει μήνυμα στο Telegram χωρίς να σκάει η ροή σε περίπτωση σφάλματος."""
     try:

@@ -11,7 +11,7 @@ from fastapi import APIRouter, Request, BackgroundTasks, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 
 from ..core.telegram_auth import db_user_from_webapp
-from ..core.telegram_client import tg_send_message, tg_send_photo
+from ..core.telegram_client import tg_send_message, tg_send_document
 from ..core.paths import IMAGES_DIR
 from ..web_shared import public_base_url
 from ..db import spend_credits_by_user_id, add_credits_by_user_id, set_last_result
@@ -151,10 +151,12 @@ async def _run_seedream_job(
             ]
         }
 
-        await tg_send_photo(
+        await tg_send_document(
             chat_id=tg_chat_id,
-            img_bytes=img_bytes,
-            caption="\u2705 Seedream: \u0388\u03c4\u03bf\u03b9\u03bc\u03bf",
+            file_bytes=img_bytes,
+            filename="photo.png",
+            caption="✅ Seedream: Έτοιμο",
+            mime_type="image/png",
             reply_markup=kb,
         )
 

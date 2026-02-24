@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException, Request, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
 
 from ..core.telegram_auth import db_user_from_webapp
-from ..core.telegram_client import tg_send_message, tg_send_photo, tg_send_video
+from ..core.telegram_client import tg_send_message, tg_send_document, tg_send_video
 from ..texts import map_provider_error_to_gr, tool_error_message_gr
 from ..core.paths import STATIC_DIR
 from ..web_shared import public_base_url
@@ -128,10 +128,12 @@ async def _run_grok_image_job(
             ]
         }
 
-        await tg_send_photo(
+        await tg_send_document(
             chat_id=tg_chat_id,
-            img_bytes=img_bytes,
+            file_bytes=img_bytes,
+            filename="photo.png",
             caption="✅ Grok Image: Έτοιμο",
+            mime_type="image/png",
             reply_markup=kb,
         )
 
