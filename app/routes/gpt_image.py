@@ -11,7 +11,8 @@ from ..core.telegram_client import tg_send_message, tg_send_photo
 from ..texts import map_provider_error_to_gr, tool_error_message_gr
 
 from ..core.paths import IMAGES_DIR
-from ..db import spend_credits_by_user_id, add_credits_by_user_id
+from ..web_shared import public_base_url
+from ..db import spend_credits_by_user_id, add_credits_by_user_id, set_last_result
 
 router = APIRouter()
 
@@ -44,8 +45,12 @@ async def _run_gpt_image_job(
         name = f"{uuid.uuid4().hex}.png"
         (IMAGES_DIR / name).write_bytes(img)
 
+        public_url = f"{public_base_url()}/static/images/{name}"
+        set_last_result(db_user_id, "gpt_image", public_url)
+
         kb = {
             "inline_keyboard": [
+                [{"text": "🔽 Κατέβασε", "url": public_url}],
                 [{"text": "🔽 Πάρε αποτέλεσμα ξανά (δωρεάν)", "callback_data": "gptimg:repeat:last"}],
                 [{"text": "← Πίσω", "callback_data": "menu:images"}],
             ]
