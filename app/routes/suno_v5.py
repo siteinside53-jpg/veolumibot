@@ -192,60 +192,88 @@ async def _run_suno_v5_job(
             else:
                 raise RuntimeError("Suno generation timeout")
 
-        # 3) Get audio URL (try audio_url → stream_audio_url → source fallbacks)
+        # 3) Extract ALL audio items from response
         resp_data = status_data.get("data") or status_data
         items = resp_data.get("data") or resp_data.get("songs") or resp_data.get("tracks") or []
-        audio_url = None
+        if not isinstance(items, list):
+            items = []
 
-        if isinstance(items, list) and items:
-            first = items[0]
-            audio_url = (
-                first.get("audio_url")
-                or first.get("stream_audio_url")
-                or first.get("source_stream_audio_url")
-                or first.get("sourceUrl")
-                or first.get("url")
-                or first.get("song_url")
-            )
-            # audio_url can be empty string — treat as None
-            if not audio_url:
-                audio_url = None
-        if not audio_url:
-            audio_url = (
+        def _extract_url(item: dict) -> str | None:
+            """Get best audio URL from an item, skipping empty strings."""
+            for key in ("audio_url", "stream_audio_url", "source_stream_audio_url", "sourceUrl", "url", "song_url"):
+                val = item.get(key)
+                if val:  # skip None and ''
+                    return val
+            return None
+
+        # Collect all downloadable URLs
+        audio_entries: list[dict] = []
+        for item in items:
+            url = _extract_url(item)
+            if url:
+                audio_entries.append({
+                    "url": url,
+                    "title": item.get("title") or "audio",
+                })
+
+        # Fallback: try top-level fields
+        if not audio_entries:
+            fallback_url = (
                 resp_data.get("audio_url")
                 or resp_data.get("stream_audio_url")
                 or resp_data.get("url")
             )
-        if not audio_url:
+            if fallback_url:
+                audio_entries.append({"url": fallback_url, "title": "audio"})
+
+        if not audio_entries:
             raise RuntimeError(f"No audio URL in response: {status_data}")
 
-        # 4) Download audio
-        async with httpx.AsyncClient(timeout=300, follow_redirects=True) as c:
-            ar = await c.get(audio_url)
-            if ar.status_code >= 400:
-                raise RuntimeError(f"Audio download error {ar.status_code}")
-            audio_bytes = ar.content
+        # 4) Download and send ALL tracks to Telegram
+        sent_count = 0
+        for idx, entry in enumerate(audio_entries, 1):
+            try:
+                async with httpx.AsyncClient(timeout=300, follow_redirects=True) as c:
+                    ar = await c.get(entry["url"])
+                    if ar.status_code >= 400:
+                        logger.warning("Audio download error %d for track %d", ar.status_code, idx)
+                        continue
+                    audio_bytes = ar.content
 
-        name = f"suno_v5_{uuid.uuid4().hex}.mp3"
-        (AUDIOS_DIR / name).write_bytes(audio_bytes)
+                name = f"suno_v5_{uuid.uuid4().hex}.mp3"
+                (AUDIOS_DIR / name).write_bytes(audio_bytes)
 
-        public_url = f"{public_base_url()}/static/audios/{name}"
-        set_last_result(db_user_id, "suno_v5", public_url)
+                public_url = f"{public_base_url()}/static/audios/{name}"
+                set_last_result(db_user_id, "suno_v5", public_url)
 
+                # Send as audio file (downloadable in Telegram)
+                track_label = f"🎵 Track {idx}" if len(audio_entries) > 1 else "🎵"
+                await _tg_send_audio(
+                    chat_id=tg_chat_id,
+                    audio_bytes=audio_bytes,
+                    filename=f"{entry['title']}.mp3",
+                    caption=f"{track_label}: {entry['title']}",
+                )
+                sent_count += 1
+            except Exception as track_err:
+                logger.warning("Failed to send track %d: %s", idx, track_err)
+
+        if sent_count == 0:
+            raise RuntimeError("All audio downloads/sends failed")
+
+        # Final success message with buttons
         kb = {
             "inline_keyboard": [
-                [{"text": "🔽 Κατέβασε", "url": public_url}],
                 [{"text": "← Πίσω", "callback_data": "menu:audio"}],
             ]
         }
-
-        await _tg_send_audio(
-            chat_id=tg_chat_id,
-            audio_bytes=audio_bytes,
-            filename=name,
-            caption="✅ Suno v5: Έτοιμο",
-            reply_markup=kb,
-        )
+        msg_text = f"✅ Suno V5: {sent_count} {'τραγούδια έτοιμα' if sent_count > 1 else 'τραγούδι έτοιμο'}!"
+        async with httpx.AsyncClient(timeout=30) as c:
+            await c.post(
+                f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+                json={"chat_id": tg_chat_id, "text": msg_text,
+                      "reply_markup": kb},
+            )
 
     except Exception as e:
         logger.exception("Error during Suno v5 job")
