@@ -246,13 +246,19 @@ async def _run_suno_v5_job(
                 public_url = f"{public_base_url()}/static/audios/{name}"
                 set_last_result(db_user_id, "suno_v5", public_url)
 
-                # Send as audio file (downloadable in Telegram)
+                # Send as audio file with download button
                 track_label = f"🎵 Track {idx}" if len(audio_entries) > 1 else "🎵"
+                track_kb = {
+                    "inline_keyboard": [
+                        [{"text": "🔽 Κατέβασε", "url": public_url}],
+                    ]
+                }
                 await _tg_send_audio(
                     chat_id=tg_chat_id,
                     audio_bytes=audio_bytes,
                     filename=f"{entry['title']}.mp3",
                     caption=f"{track_label}: {entry['title']}",
+                    reply_markup=track_kb,
                 )
                 sent_count += 1
             except Exception as track_err:
@@ -261,7 +267,7 @@ async def _run_suno_v5_job(
         if sent_count == 0:
             raise RuntimeError("All audio downloads/sends failed")
 
-        # Final success message with buttons
+        # Final success message with back button
         kb = {
             "inline_keyboard": [
                 [{"text": "← Πίσω", "callback_data": "menu:audio"}],
