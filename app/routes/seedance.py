@@ -124,7 +124,6 @@ async def _run_seedance_job(
 
         kb = {
             "inline_keyboard": [
-                [{"text": "\ud83d\udd3d \u039a\u03b1\u03c4\u03ad\u03b2\u03b1\u03c3\u03b5", "url": public_url}],
                 [{"text": "\u2190 \u03a0\u03af\u03c3\u03c9", "callback_data": "menu:video"}],
             ]
         }

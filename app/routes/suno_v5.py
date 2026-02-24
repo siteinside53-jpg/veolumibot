@@ -260,9 +260,10 @@ async def _run_suno_v5_job(
         if sent_count == 0:
             raise RuntimeError("All audio downloads/sends failed")
 
-        # Final success message with back button
+        # Final success message with resend + back button
         kb = {
             "inline_keyboard": [
+                [{"text": "⚡ Πάρε αποτέλεσμα ξανά (δωρεάν)", "callback_data": "resend:suno_v5"}],
                 [{"text": "← Πίσω", "callback_data": "menu:audio"}],
             ]
         }

@@ -49,7 +49,8 @@ async def _run_kling30_job(
 
         kb = {
             "inline_keyboard": [
-                [{"text": "🔽 Κατέβασε", "url": public_url}],
+                [{"text": "⚡ Πάρε αποτέλεσμα ξανά (δωρεάν)", "callback_data": "resend:kling30"}],
+
                 [{"text": "← Πίσω", "callback_data": "menu:video"}],
             ]
         }

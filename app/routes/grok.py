@@ -123,7 +123,8 @@ async def _run_grok_image_job(
 
         kb = {
             "inline_keyboard": [
-                [{"text": "🔽 Κατέβασε", "url": public_url}],
+                [{"text": "⚡ Πάρε αποτέλεσμα ξανά (δωρεάν)", "callback_data": "resend:grok"}],
+
                 [{"text": "← Πίσω", "callback_data": "menu:images"}],
             ]
         }
@@ -244,7 +245,7 @@ async def _run_grok_video_job(
 
         kb = {
             "inline_keyboard": [
-                [{"text": "🔽 Κατέβασε", "url": public_url}],
+                [{"text": "⚡ Πάρε αποτέλεσμα ξανά (δωρεάν)", "callback_data": "resend:grok_video"}],
                 [{"text": "← Πίσω", "callback_data": "menu:video"}],
             ]
         }

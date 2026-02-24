@@ -39,7 +39,9 @@ from .db import (
     apply_referral_start,
     spend_credits_by_tg_id,
     add_credits_by_tg_id,
+    get_last_result_by_tg_id,
 )
+from .web_shared import public_base_url
 
 logger = logging.getLogger(__name__)
 
@@ -389,6 +391,62 @@ async def on_text_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
 
+async def on_resend_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Re-send the last generated result (free, no regeneration)."""
+    q = update.callback_query
+    if not q:
+        return
+    await q.answer()
+
+    u = q.from_user
+    ensure_user(u.id, u.username, u.first_name)
+
+    data = q.data or ""
+    # Format: "resend:model_name"
+    parts = data.split(":", 1)
+    if len(parts) < 2:
+        return
+    model = parts[1]
+
+    result_url = get_last_result_by_tg_id(u.id, model)
+    if not result_url:
+        await q.message.reply_text("❌ Δεν βρέθηκε προηγούμενο αποτέλεσμα.")
+        return
+
+    try:
+        # Download the file from our server
+        async with httpx.AsyncClient(timeout=120, follow_redirects=True) as c:
+            r = await c.get(result_url)
+            if r.status_code >= 400:
+                raise RuntimeError(f"Download error {r.status_code}")
+            file_bytes = r.content
+
+        # Determine filename and mime from URL
+        url_lower = result_url.lower()
+        if url_lower.endswith(".mp4"):
+            filename, mime = "video.mp4", "video/mp4"
+        elif url_lower.endswith(".mp3"):
+            filename, mime = "audio.mp3", "application/octet-stream"
+        elif url_lower.endswith(".wav") or url_lower.endswith(".ogg"):
+            filename, mime = "audio.mp3", "application/octet-stream"
+        else:
+            filename, mime = "photo.png", "image/png"
+
+        # Send as document
+        from io import BytesIO
+        doc = BytesIO(file_bytes)
+        doc.name = filename
+        await q.message.reply_document(
+            document=doc,
+            filename=filename,
+            caption="⚡ Αποτέλεσμα ξανά (δωρεάν)",
+        )
+
+    except Exception as e:
+        logger.exception("Resend failed for model %s", model)
+        await q.message.reply_text("❌ Αποτυχία αποστολής. Δοκίμασε ξανά αργότερα.")
+
+
 def main():
     if not BOT_TOKEN:
         raise RuntimeError("Missing BOT_TOKEN")
@@ -401,6 +459,9 @@ def main():
 
     # Jobs handler
     app.add_handler(CallbackQueryHandler(on_jobs_click, pattern=r"^jobs:"))
+
+    # Resend last result handler
+    app.add_handler(CallbackQueryHandler(on_resend_click, pattern=r"^resend:"))
 
     # Menu handler
     app.add_handler(CallbackQueryHandler(on_menu_click, pattern=r"^menu:"))

@@ -113,8 +113,8 @@ async def _run_nanobanana_pro_job(
 
         kb = {
             "inline_keyboard": [
-                [{"text": "🔽 Κατέβασε", "url": public_url}],
-                [{"text": "🔁 Πάρε αποτέλεσμα ξανά (δωρεάν)", "callback_data": "nbpro:repeat:last"}],
+                [{"text": "⚡ Πάρε αποτέλεσμα ξανά (δωρεάν)", "callback_data": "resend:nano_banana_pro"}],
+
                 [{"text": "← Πίσω", "callback_data": "menu:images"}],
             ]
         }

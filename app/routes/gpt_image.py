@@ -50,8 +50,8 @@ async def _run_gpt_image_job(
 
         kb = {
             "inline_keyboard": [
-                [{"text": "🔽 Κατέβασε", "url": public_url}],
-                [{"text": "🔽 Πάρε αποτέλεσμα ξανά (δωρεάν)", "callback_data": "gptimg:repeat:last"}],
+                [{"text": "⚡ Πάρε αποτέλεσμα ξανά (δωρεάν)", "callback_data": "resend:gpt_image"}],
+
                 [{"text": "← Πίσω", "callback_data": "menu:images"}],
             ]
         }
