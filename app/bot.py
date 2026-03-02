@@ -297,6 +297,32 @@ async def on_jobs_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await q.message.reply_text(f"⚠️ Σφάλμα: {e}")
         return
 
+    # Help texts
+    if data == "jobs:help:client":
+        await q.message.reply_text(
+            "ℹ️ Τι να γράψω στην αγγελία:\n\n"
+            "• Τι θες να φτιαχτεί (βίντεο, εικόνα, μουσική...)\n"
+            "• Πόσα αρχεία / τι διάρκεια\n"
+            "• Στυλ & αναφορές (links/παραδείγματα)\n"
+            "• Deadline (πότε το χρειάζεσαι)\n"
+            "• Budget (αν έχεις)\n"
+            "• Μορφή παράδοσης (π.χ. .mp4, .png, .zip)\n\n"
+            "Όσο πιο αναλυτικός, τόσο καλύτερες προτάσεις θα πάρεις!"
+        )
+        return
+
+    if data == "jobs:help:freelancer":
+        await q.message.reply_text(
+            "ℹ️ Πώς δουλεύει το marketplace:\n\n"
+            "1️⃣ Πάτα «Δες Εργασίες» για να δεις τις ανοιχτές αγγελίες\n"
+            "2️⃣ Πάτα σε μια αγγελία → δες τι χρειάζεται ο πελάτης\n"
+            "3️⃣ Στείλε πρόταση με μήνυμα & τιμή\n"
+            "4️⃣ Ο πελάτης λαμβάνει ειδοποίηση & αποδέχεται\n"
+            "5️⃣ Επικοινωνείτε & κλείνετε τη συνεργασία\n\n"
+            "📤 Οι προτάσεις σου φαίνονται στο tab «Προτάσεις μου»"
+        )
+        return
+
 
 # ========================
 # Inline text handler (Gemini 3 Flash, Qwen AI, Flux Kontext)

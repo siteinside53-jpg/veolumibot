@@ -313,6 +313,10 @@ def jobs_menu() -> InlineKeyboardMarkup:
         [
             [InlineKeyboardButton("📝 Δημοσίευσε Αγγελία", web_app=WebAppInfo(url=_webapp_jobs_post_url()))],
             [InlineKeyboardButton("👀 Δες Εργασίες", web_app=WebAppInfo(url=_webapp_jobs_browse_url()))],
+            [
+                InlineKeyboardButton("ℹ️ Τι να γράψω;", callback_data="jobs:help:client"),
+                InlineKeyboardButton("ℹ️ Πώς δουλεύει", callback_data="jobs:help:freelancer"),
+            ],
             [InlineKeyboardButton("← Πίσω", callback_data="menu:home")],
         ]
     )
