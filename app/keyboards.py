@@ -141,13 +141,32 @@ def start_inline_menu() -> InlineKeyboardMarkup:
 
 
 # ========================
-# Video models (page 1 of 2)
+# Video — category menu
 # ========================
 def video_models_menu() -> InlineKeyboardMarkup:
-    return video_models_menu_page1()
+    return video_categories_menu()
 
 
-def video_models_menu_page1() -> InlineKeyboardMarkup:
+def video_categories_menu() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("🟢 Kling (9 μοντέλα)", callback_data="menu:video:kling")],
+            [InlineKeyboardButton("🎬 Runway (2 μοντέλα)", callback_data="menu:video:runway")],
+            [InlineKeyboardButton("🛰 Sora (2 μοντέλα)", callback_data="menu:video:sora")],
+            [InlineKeyboardButton("🎬 Google Veo (2 μοντέλα)", callback_data="menu:video:veo")],
+            [InlineKeyboardButton("🌀 Wan (2 μοντέλα)", callback_data="menu:video:wan")],
+            [InlineKeyboardButton("💃 Seedance 1.0 Lite (1–20 credits)", web_app=WebAppInfo(url=_webapp_seedance_url()))],
+            [InlineKeyboardButton("🌊 Hailuo 02 (6–12 credits)", web_app=WebAppInfo(url=_webapp_hailuo02_url()))],
+            [InlineKeyboardButton("✨ Topaz Upscale (14 credits)", web_app=WebAppInfo(url=_webapp_topaz_url()))],
+            [InlineKeyboardButton("⚪ Grok Imagine Video", web_app=WebAppInfo(url=_webapp_grok_url()))],
+            [InlineKeyboardButton("🟣 Modjourney Video (2–13 credits)", web_app=WebAppInfo(url=_webapp_modjourney_video_url()))],
+            [InlineKeyboardButton("← Πίσω", callback_data="menu:home")],
+        ]
+    )
+
+
+# --- Video submenus ---
+def kling_models_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
             [InlineKeyboardButton("🟢 Kling O1 (15–25 credits)", web_app=WebAppInfo(url=_webapp_kling_o1_url()))],
@@ -159,54 +178,86 @@ def video_models_menu_page1() -> InlineKeyboardMarkup:
             [InlineKeyboardButton("🔥 Kling 3.0 (18 credits)", web_app=WebAppInfo(url=_webapp_kling30_url()))],
             [InlineKeyboardButton("🔥 Kling 3.0 v2 (18 credits)", web_app=WebAppInfo(url=_webapp_kling30_2_url()))],
             [InlineKeyboardButton("👤 Kling V1 Avatar (16–32 credits)", web_app=WebAppInfo(url=_webapp_klingv1avatar_url()))],
-            [InlineKeyboardButton("🎬 Runway (6 credits)", web_app=WebAppInfo(url=_webapp_runway_url()))],
-            [InlineKeyboardButton("🎬 Runway Aleph (22 credits)", web_app=WebAppInfo(url=_webapp_runway_aleph_url()))],
-            [
-                InlineKeyboardButton("⏩ Σελίδα 2", callback_data="menu:video:2"),
-                InlineKeyboardButton("← Πίσω", callback_data="menu:home"),
-            ],
+            [InlineKeyboardButton("← Πίσω", callback_data="menu:video")],
         ]
     )
 
 
-def video_models_menu_page2() -> InlineKeyboardMarkup:
+def runway_models_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("💃 Seedance 1.0 Lite (1–20 credits)", web_app=WebAppInfo(url=_webapp_seedance_url()))],
+            [InlineKeyboardButton("🎬 Runway (6 credits)", web_app=WebAppInfo(url=_webapp_runway_url()))],
+            [InlineKeyboardButton("🎬 Runway Aleph (22 credits)", web_app=WebAppInfo(url=_webapp_runway_aleph_url()))],
+            [InlineKeyboardButton("← Πίσω", callback_data="menu:video")],
+        ]
+    )
+
+
+def sora_models_menu() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
             [InlineKeyboardButton("🛰 Sora 2 (6 credits)", web_app=WebAppInfo(url=_webapp_sora2_url()))],
             [InlineKeyboardButton("🛰 Sora 2 PRO (18–80 credits)", web_app=WebAppInfo(url=_webapp_sora2pro_url()))],
+            [InlineKeyboardButton("← Πίσω", callback_data="menu:video")],
+        ]
+    )
+
+
+def veo_models_menu() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
             [InlineKeyboardButton("🎬 Google Veo 3.1 (10–60 credits)", web_app=WebAppInfo(url=_webapp_veo31_url()))],
             [InlineKeyboardButton("⚡ Google Veo 3 Fast (7–30 credits)", web_app=WebAppInfo(url=_webapp_veo3fast_url()))],
+            [InlineKeyboardButton("← Πίσω", callback_data="menu:video")],
+        ]
+    )
+
+
+def wan_models_menu() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
             [InlineKeyboardButton("🌀 Wan 2.5 (12–30 credits)", web_app=WebAppInfo(url=_webapp_wan25_url()))],
             [InlineKeyboardButton("🌀 Wan 2.6 (14–56 credits)", web_app=WebAppInfo(url=_webapp_wan26_url()))],
-            [InlineKeyboardButton("🌊 Hailuo 02 (6–12 credits)", web_app=WebAppInfo(url=_webapp_hailuo02_url()))],
-            [InlineKeyboardButton("✨ Topaz Upscale (14 credits)", web_app=WebAppInfo(url=_webapp_topaz_url()))],
-            [InlineKeyboardButton("⚪ Grok Imagine Video", web_app=WebAppInfo(url=_webapp_grok_url()))],
-            [InlineKeyboardButton("🟣 Modjourney Video (2–13 credits)", web_app=WebAppInfo(url=_webapp_modjourney_video_url()))],
-            [
-                InlineKeyboardButton("⏪ Σελίδα 1", callback_data="menu:video:1"),
-                InlineKeyboardButton("← Πίσω", callback_data="menu:home"),
-            ],
+            [InlineKeyboardButton("← Πίσω", callback_data="menu:video")],
         ]
     )
 
 
 # ========================
-# Image models
+# Image — category menu
 # ========================
 def image_models_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
             [InlineKeyboardButton("🧠 GPT Image 1.5 (1–5 credits)", web_app=WebAppInfo(url=_webapp_gpt_image_url()))],
-            [InlineKeyboardButton("🌱 Seedream (1–4 credits)", web_app=WebAppInfo(url=_webapp_seedream_url()))],
-            [InlineKeyboardButton("🌱 Seedream 4.5 (1.3 credits)", web_app=WebAppInfo(url=_webapp_seedream45_url()))],
-            [InlineKeyboardButton("🍌 Nano Banana PRO (4 credits)", web_app=WebAppInfo(url=_webapp_nanobanana_pro_url()))],
-            [InlineKeyboardButton("🍌 Nano Banana AI (0.5 credits)", web_app=WebAppInfo(url=_webapp_nanobanana_url()))],
+            [InlineKeyboardButton("🌱 Seedream (2 μοντέλα)", callback_data="menu:images:seedream")],
+            [InlineKeyboardButton("🍌 Nano Banana (2 μοντέλα)", callback_data="menu:images:nanobanana")],
             [InlineKeyboardButton("🤖 Qwen AI (1 credit)", callback_data="menu:set:image:qwen_ai")],
             [InlineKeyboardButton("🟣 Midjourney (2 credits)", web_app=WebAppInfo(url=_webapp_midjourney_url()))],
             [InlineKeyboardButton("⚪ Grok Imagine (0.8–4 credits)", web_app=WebAppInfo(url=_webapp_grok_url()))],
             [InlineKeyboardButton("🧪 Flux Kontext (1 credit)", callback_data="menu:set:image:flux_kontext")],
             [InlineKeyboardButton("← Πίσω", callback_data="menu:home")],
+        ]
+    )
+
+
+# --- Image submenus ---
+def seedream_models_menu() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("🌱 Seedream (1–4 credits)", web_app=WebAppInfo(url=_webapp_seedream_url()))],
+            [InlineKeyboardButton("🌱 Seedream 4.5 (1.3 credits)", web_app=WebAppInfo(url=_webapp_seedream45_url()))],
+            [InlineKeyboardButton("← Πίσω", callback_data="menu:images")],
+        ]
+    )
+
+
+def nanobanana_models_menu() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("🍌 Nano Banana PRO (4 credits)", web_app=WebAppInfo(url=_webapp_nanobanana_pro_url()))],
+            [InlineKeyboardButton("🍌 Nano Banana AI (0.5 credits)", web_app=WebAppInfo(url=_webapp_nanobanana_url()))],
+            [InlineKeyboardButton("← Πίσω", callback_data="menu:images")],
         ]
     )
 

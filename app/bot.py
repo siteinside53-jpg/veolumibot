@@ -22,9 +22,15 @@ from . import texts
 from .keyboards import (
     start_inline_menu,
     video_models_menu,
-    video_models_menu_page1,
-    video_models_menu_page2,
+    video_categories_menu,
+    kling_models_menu,
+    runway_models_menu,
+    sora_models_menu,
+    veo_models_menu,
+    wan_models_menu,
     image_models_menu,
+    seedream_models_menu,
+    nanobanana_models_menu,
     audio_models_menu,
     text_models_menu,
     jobs_menu,
@@ -160,21 +166,44 @@ async def on_menu_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await edit_start_card(q, texts.START_CAPTION, start_inline_menu())
         return
 
-    # Video menus (paginated)
+    # Video — categories
     if data == "menu:video":
-        await edit_start_card(q, "👇 Επίλεξε μοντέλο AI για ΒΙΝΤΕΟ:", video_models_menu_page1())
+        await edit_start_card(q, "👇 Επίλεξε κατηγορία ΒΙΝΤΕΟ:", video_categories_menu())
         return
 
-    if data == "menu:video:1":
-        await edit_start_card(q, "👇 Επίλεξε μοντέλο AI για ΒΙΝΤΕΟ:", video_models_menu_page1())
+    # Video — brand submenus
+    if data == "menu:video:kling":
+        await edit_start_card(q, "🟢 Kling — Επίλεξε μοντέλο:", kling_models_menu())
         return
 
-    if data == "menu:video:2":
-        await edit_start_card(q, "👇 Επίλεξε μοντέλο AI για ΒΙΝΤΕΟ (σελ. 2):", video_models_menu_page2())
+    if data == "menu:video:runway":
+        await edit_start_card(q, "🎬 Runway — Επίλεξε μοντέλο:", runway_models_menu())
         return
 
+    if data == "menu:video:sora":
+        await edit_start_card(q, "🛰 Sora — Επίλεξε μοντέλο:", sora_models_menu())
+        return
+
+    if data == "menu:video:veo":
+        await edit_start_card(q, "🎬 Google Veo — Επίλεξε μοντέλο:", veo_models_menu())
+        return
+
+    if data == "menu:video:wan":
+        await edit_start_card(q, "🌀 Wan — Επίλεξε μοντέλο:", wan_models_menu())
+        return
+
+    # Image — categories
     if data == "menu:images":
         await edit_start_card(q, "👇 Επίλεξε μοντέλο AI για ΕΙΚΟΝΕΣ:", image_models_menu())
+        return
+
+    # Image — brand submenus
+    if data == "menu:images:seedream":
+        await edit_start_card(q, "🌱 Seedream — Επίλεξε μοντέλο:", seedream_models_menu())
+        return
+
+    if data == "menu:images:nanobanana":
+        await edit_start_card(q, "🍌 Nano Banana — Επίλεξε μοντέλο:", nanobanana_models_menu())
         return
 
     if data == "menu:audio":
