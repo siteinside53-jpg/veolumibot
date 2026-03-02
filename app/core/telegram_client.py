@@ -6,13 +6,24 @@ from typing import Optional, Dict, Any
 
 from ..config import BOT_TOKEN
 
-async def tg_send_message(chat_id: int, text: str) -> None:
+async def tg_send_message(
+    chat_id: int,
+    text: str,
+    reply_markup: Optional[Dict[str, Any]] = None,
+    parse_mode: Optional[str] = None,
+) -> Dict[str, Any]:
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    body: Dict[str, Any] = {"chat_id": chat_id, "text": text}
+    if reply_markup:
+        body["reply_markup"] = reply_markup
+    if parse_mode:
+        body["parse_mode"] = parse_mode
     async with httpx.AsyncClient(timeout=30) as c:
-        r = await c.post(url, json={"chat_id": chat_id, "text": text})
+        r = await c.post(url, json=body)
         j = r.json()
         if not j.get("ok"):
             raise RuntimeError(f"Telegram sendMessage failed: {j}")
+        return j.get("result", {})
 
 async def tg_send_photo(
     chat_id: int,

@@ -121,6 +121,13 @@ def _webapp_sunov5_url() -> str:
 def _webapp_elevenlabs_url() -> str:
     return f"{_base_url()}/elevenlabs"
 
+# --- Jobs ---
+def _webapp_jobs_post_url() -> str:
+    return f"{_base_url()}/jobs-post"
+
+def _webapp_jobs_browse_url() -> str:
+    return f"{_base_url()}/jobs-browse"
+
 
 # ========================
 # Main menu
@@ -299,34 +306,13 @@ def open_profile_webapp_kb() -> InlineKeyboardMarkup:
 
 
 # ========================
-# Jobs (Telegram menus)
+# Jobs (WebApp)
 # ========================
 def jobs_menu() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         [
-            [InlineKeyboardButton("🔎 Ζητάω βοήθεια (πελάτης)", callback_data="jobs:client")],
-            [InlineKeyboardButton("🧑‍💻 Είμαι freelancer", callback_data="jobs:freelancer")],
-            [InlineKeyboardButton("📤 Ανάρτηση εργασίας", callback_data="jobs:post")],
+            [InlineKeyboardButton("📝 Δημοσίευσε Αγγελία", web_app=WebAppInfo(url=_webapp_jobs_post_url()))],
+            [InlineKeyboardButton("👀 Δες Εργασίες", web_app=WebAppInfo(url=_webapp_jobs_browse_url()))],
             [InlineKeyboardButton("← Πίσω", callback_data="menu:home")],
-        ]
-    )
-
-
-def jobs_client_menu() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton("📝 Δημιούργησε αίτημα", callback_data="jobs:post")],
-            [InlineKeyboardButton("ℹ️ Τι να γράψω;", callback_data="jobs:client:help")],
-            [InlineKeyboardButton("← Πίσω", callback_data="menu:jobs")],
-        ]
-    )
-
-
-def jobs_freelancer_menu() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        [
-            [InlineKeyboardButton("👀 Δες διαθέσιμες εργασίες", callback_data="jobs:list")],
-            [InlineKeyboardButton("ℹ️ Πώς δουλεύει", callback_data="jobs:freelancer:how")],
-            [InlineKeyboardButton("← Πίσω", callback_data="menu:jobs")],
         ]
     )

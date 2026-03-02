@@ -213,7 +213,49 @@ def run_migrations():
             ON referral_events(referral_id, created_at DESC);
             """)
 
-            print(">>> ensured base tables exist (users/ledger/holds/jobs/referrals/last_results)", flush=True)
+            # -------------------------
+            # marketplace_jobs
+            # -------------------------
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS marketplace_jobs (
+              id UUID PRIMARY KEY,
+              client_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              title TEXT NOT NULL,
+              description TEXT NOT NULL,
+              budget_eur NUMERIC(10,2),
+              deadline_days INT,
+              status TEXT NOT NULL DEFAULT 'open',
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+            """)
+
+            cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_marketplace_jobs_status_created
+            ON marketplace_jobs(status, created_at DESC);
+            """)
+
+            # -------------------------
+            # job_offers
+            # -------------------------
+            cur.execute("""
+            CREATE TABLE IF NOT EXISTS job_offers (
+              id UUID PRIMARY KEY,
+              job_id UUID NOT NULL REFERENCES marketplace_jobs(id) ON DELETE CASCADE,
+              freelancer_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+              message TEXT NOT NULL,
+              price_eur NUMERIC(10,2),
+              status TEXT NOT NULL DEFAULT 'sent',
+              created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
+            """)
+
+            cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_job_offers_job
+            ON job_offers(job_id, created_at DESC);
+            """)
+
+            print(">>> ensured base tables exist (users/ledger/holds/jobs/referrals/last_results/marketplace)", flush=True)
 
     # Apply .sql migrations if any
     if not MIGRATIONS_DIR.exists():
@@ -921,26 +963,181 @@ def get_last_result_by_tg_id(tg_user_id: int, model: str) -> Optional[str]:
             row = cur.fetchone()
             return (row or {}).get("result_url")
 
-def create_job(user_id, title, desc, budget):
+# ======================
+# Marketplace Jobs
+# ======================
+def create_marketplace_job(
+    client_user_id: int,
+    title: str,
+    description: str,
+    budget_eur=None,
+    deadline_days=None,
+) -> Dict[str, Any]:
+    job_id = str(uuid.uuid4())
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("""
-                INSERT INTO jobs (creator_id,title,description,budget)
-                VALUES (%s,%s,%s,%s)
-            """,(user_id,title,desc,budget))
+            cur.execute(
+                """
+                INSERT INTO marketplace_jobs (id, client_user_id, title, description, budget_eur, deadline_days, status)
+                VALUES (%s, %s, %s, %s, %s, %s, 'open')
+                RETURNING *
+                """,
+                (job_id, client_user_id, title, description, budget_eur, deadline_days),
+            )
+            row = cur.fetchone()
+            conn.commit()
+            return row
 
-def list_open_jobs():
+
+def list_marketplace_jobs(status: str = "open", limit: int = 20) -> List[Dict[str, Any]]:
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id,title,budget FROM jobs WHERE status='open' ORDER BY id DESC LIMIT 20")
+            cur.execute(
+                """
+                SELECT j.*, u.tg_username, u.tg_first_name, u.tg_user_id
+                FROM marketplace_jobs j
+                JOIN users u ON u.id = j.client_user_id
+                WHERE j.status = %s
+                ORDER BY j.created_at DESC
+                LIMIT %s
+                """,
+                (status, limit),
+            )
             return cur.fetchall()
 
-def register_freelancer(user_id, skills, about):
+
+def get_marketplace_job(job_id: str) -> Optional[Dict[str, Any]]:
     with get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("""
-            INSERT INTO freelancers (user_id,skills,about)
-            VALUES (%s,%s,%s)
-            ON CONFLICT (user_id)
-            DO UPDATE SET skills=EXCLUDED.skills, about=EXCLUDED.about
-            """,(user_id,skills,about))
+            cur.execute(
+                """
+                SELECT j.*, u.tg_username, u.tg_first_name, u.tg_user_id
+                FROM marketplace_jobs j
+                JOIN users u ON u.id = j.client_user_id
+                WHERE j.id = %s
+                """,
+                (job_id,),
+            )
+            return cur.fetchone()
+
+
+def get_my_marketplace_jobs(user_id: int, limit: int = 20) -> List[Dict[str, Any]]:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT j.*,
+                  (SELECT COUNT(*) FROM job_offers o WHERE o.job_id = j.id) AS offer_count
+                FROM marketplace_jobs j
+                WHERE j.client_user_id = %s
+                ORDER BY j.created_at DESC
+                LIMIT %s
+                """,
+                (user_id, limit),
+            )
+            return cur.fetchall()
+
+
+def create_job_offer(
+    job_id: str,
+    freelancer_user_id: int,
+    message: str,
+    price_eur=None,
+) -> Dict[str, Any]:
+    offer_id = str(uuid.uuid4())
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO job_offers (id, job_id, freelancer_user_id, message, price_eur, status)
+                VALUES (%s, %s, %s, %s, %s, 'sent')
+                RETURNING *
+                """,
+                (offer_id, job_id, freelancer_user_id, message, price_eur),
+            )
+            row = cur.fetchone()
+            conn.commit()
+            return row
+
+
+def list_offers_for_job(job_id: str) -> List[Dict[str, Any]]:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT o.*, u.tg_username, u.tg_first_name, u.tg_user_id
+                FROM job_offers o
+                JOIN users u ON u.id = o.freelancer_user_id
+                WHERE o.job_id = %s
+                ORDER BY o.created_at DESC
+                """,
+                (job_id,),
+            )
+            return cur.fetchall()
+
+
+def accept_job_offer(offer_id: str) -> Optional[Dict[str, Any]]:
+    """Accept an offer: mark offer as accepted, mark job as assigned. Returns offer+job info."""
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM job_offers WHERE id = %s FOR UPDATE", (offer_id,))
+            offer = cur.fetchone()
+            if not offer:
+                return None
+
+            if offer["status"] != "sent":
+                return offer  # already processed
+
+            job_id = str(offer["job_id"])
+
+            cur.execute(
+                "UPDATE job_offers SET status = 'accepted' WHERE id = %s RETURNING *",
+                (offer_id,),
+            )
+            offer = cur.fetchone()
+
+            # reject other offers for same job
+            cur.execute(
+                "UPDATE job_offers SET status = 'rejected' WHERE job_id = %s AND id != %s AND status = 'sent'",
+                (job_id, offer_id),
+            )
+
+            cur.execute(
+                "UPDATE marketplace_jobs SET status = 'assigned', updated_at = now() WHERE id = %s",
+                (job_id,),
+            )
+
+            conn.commit()
+
+            # fetch full info for notification
+            cur.execute(
+                """
+                SELECT o.*, j.title AS job_title, j.client_user_id,
+                       uf.tg_user_id AS freelancer_tg_id, uf.tg_first_name AS freelancer_name,
+                       uc.tg_user_id AS client_tg_id
+                FROM job_offers o
+                JOIN marketplace_jobs j ON j.id = o.job_id
+                JOIN users uf ON uf.id = o.freelancer_user_id
+                JOIN users uc ON uc.id = j.client_user_id
+                WHERE o.id = %s
+                """,
+                (offer_id,),
+            )
+            return cur.fetchone()
+
+
+def get_my_offers(user_id: int, limit: int = 20) -> List[Dict[str, Any]]:
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT o.*, j.title AS job_title, j.status AS job_status
+                FROM job_offers o
+                JOIN marketplace_jobs j ON j.id = o.job_id
+                WHERE o.freelancer_user_id = %s
+                ORDER BY o.created_at DESC
+                LIMIT %s
+                """,
+                (user_id, limit),
+            )
+            return cur.fetchall()

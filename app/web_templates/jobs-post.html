@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <title>Δημοσίευσε Αγγελία</title>
+  <style>
+    :root{
+      --bg:#0b0c12;--card:#121422;--text:#e9e9f5;--muted:#a4a7c0;
+      --stroke:#242646;--accent:#7c3aed;--accent2:#6d28d9;--good:#19c37d;--bad:#ef4444;
+      --shadow:0 14px 40px rgba(0,0,0,.55);--radius:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background:radial-gradient(800px 500px at 20% 10%,rgba(124,58,237,.18),transparent 55%),
+      radial-gradient(700px 500px at 80% 40%,rgba(124,58,237,.12),transparent 60%),var(--bg);
+      color:var(--text);display:flex;justify-content:center;padding:18px 14px 28px;}
+    .wrap{width:min(520px,100%)}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
+      border:1px solid rgba(255,255,255,.06);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;}
+    .card-inner{padding:16px}
+    .header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+    .logo{width:34px;height:34px;border-radius:12px;background:linear-gradient(135deg,rgba(124,58,237,.9),rgba(124,58,237,.35));
+      display:grid;place-items:center;box-shadow:0 10px 20px rgba(124,58,237,.25);border:1px solid rgba(255,255,255,.08);font-size:18px}
+    .title{font-size:18px;font-weight:900;letter-spacing:.2px}
+    .subtitle{font-size:12px;color:var(--muted);margin-top:2px;font-weight:700}
+
+    .block{margin-top:12px;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:12px}
+    .label{font-size:12px;color:var(--muted);margin-bottom:8px;letter-spacing:.2px;text-transform:uppercase;font-weight:800}
+    .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .counter{font-size:12px;color:var(--muted);font-weight:800}
+
+    input,textarea,select{width:100%;border-radius:12px;border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.03);color:var(--text);padding:12px;outline:none;font-size:14px;font-weight:700;
+      font-family:inherit;resize:vertical}
+    input:focus,textarea:focus,select:focus{border-color:rgba(124,58,237,.55);box-shadow:0 0 0 4px rgba(124,58,237,.15)}
+    textarea{min-height:100px}
+    select{appearance:none;-webkit-appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='%23a4a7c0'%3E%3Cpath d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;background-position:right 14px center;background-size:12px;cursor:pointer}
+    select option{background:#1a1b2e;color:var(--text)}
+
+    .btn{width:100%;padding:14px;border:none;border-radius:14px;font-weight:900;font-size:15px;cursor:pointer;
+      background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;letter-spacing:.3px;
+      box-shadow:0 8px 25px rgba(124,58,237,.35);transition:opacity .2s,transform .15s}
+    .btn:active{transform:scale(.97)}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+
+    .error{margin-top:8px;font-size:12px;color:var(--bad);display:none;font-weight:900}
+    .success{margin-top:12px;text-align:center;font-size:14px;color:var(--good);font-weight:800;display:none}
+    .optional{font-size:10px;color:var(--muted);font-weight:600;margin-left:6px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="card-inner">
+        <div class="header">
+          <div class="logo">💼</div>
+          <div>
+            <div class="title">Δημοσίευσε Αγγελία</div>
+            <div class="subtitle">Βρες freelancer για το project σου</div>
+          </div>
+        </div>
+
+        <!-- Title -->
+        <div class="block">
+          <div class="row">
+            <div class="label">Τίτλος εργασίας</div>
+            <div class="counter"><span id="titleCount">0</span>/120</div>
+          </div>
+          <input id="jobTitle" type="text" maxlength="120" placeholder="πχ. Θέλω AI video για το brand μου"/>
+        </div>
+
+        <!-- Description -->
+        <div class="block">
+          <div class="row">
+            <div class="label">Περιγραφή</div>
+            <div class="counter"><span id="descCount">0</span>/2000</div>
+          </div>
+          <textarea id="jobDesc" maxlength="2000" placeholder="Τι ακριβώς χρειάζεσαι; Πόσα βίντεο/εικόνες; Ποιο στυλ; Deadline;"></textarea>
+        </div>
+
+        <!-- Budget -->
+        <div class="block">
+          <div class="label">Budget (€) <span class="optional">προαιρετικό</span></div>
+          <input id="jobBudget" type="number" min="1" max="100000" placeholder="πχ. 50"/>
+        </div>
+
+        <!-- Deadline -->
+        <div class="block">
+          <div class="label">Deadline <span class="optional">προαιρετικό</span></div>
+          <select id="jobDeadline">
+            <option value="">— Χωρίς deadline —</option>
+            <option value="3">1-3 ημέρες</option>
+            <option value="7">3-7 ημέρες</option>
+            <option value="14">1-2 εβδομάδες</option>
+            <option value="30">1 μήνας</option>
+          </select>
+        </div>
+
+        <div class="error" id="err"></div>
+        <div class="success" id="ok">✅ Η αγγελία δημοσιεύτηκε!</div>
+
+        <div class="block" style="border:none;background:transparent;padding:0;margin-top:16px">
+          <button class="btn" id="submitBtn" onclick="submit()">📤 Δημοσίευσε</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const tg = window.Telegram?.WebApp;
+if(tg) tg.expand();
+const initData = tg?.initData || "";
+
+const titleEl = document.getElementById("jobTitle");
+const descEl = document.getElementById("jobDesc");
+const budgetEl = document.getElementById("jobBudget");
+const deadlineEl = document.getElementById("jobDeadline");
+const errEl = document.getElementById("err");
+const okEl = document.getElementById("ok");
+const btn = document.getElementById("submitBtn");
+
+titleEl.addEventListener("input", () => {
+  document.getElementById("titleCount").textContent = titleEl.value.length;
+});
+descEl.addEventListener("input", () => {
+  document.getElementById("descCount").textContent = descEl.value.length;
+});
+
+async function submit(){
+  errEl.style.display = "none";
+  okEl.style.display = "none";
+
+  const title = titleEl.value.trim();
+  const desc = descEl.value.trim();
+  const budget = budgetEl.value ? parseFloat(budgetEl.value) : null;
+  const deadline = deadlineEl.value ? parseInt(deadlineEl.value) : null;
+
+  if(title.length < 3){ showErr("Ο τίτλος πρέπει να είναι τουλάχιστον 3 χαρακτήρες"); return; }
+  if(desc.length < 10){ showErr("Η περιγραφή πρέπει να είναι τουλάχιστον 10 χαρακτήρες"); return; }
+
+  btn.disabled = true;
+  btn.textContent = "⏳ Δημοσίευση...";
+
+  try{
+    const r = await fetch("/api/jobs", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ initData, title, description: desc, budget_eur: budget, deadline_days: deadline })
+    });
+    const j = await r.json();
+    if(!j.ok){ showErr(j.error || j.detail || "Σφάλμα"); btn.disabled=false; btn.textContent="📤 Δημοσίευσε"; return; }
+
+    okEl.style.display = "block";
+    btn.textContent = "✅ Δημοσιεύτηκε!";
+
+    setTimeout(() => { if(tg) tg.close(); }, 1500);
+  } catch(e){
+    showErr("Σφάλμα δικτύου: " + e.message);
+    btn.disabled = false;
+    btn.textContent = "📤 Δημοσίευσε";
+  }
+}
+
+function showErr(msg){ errEl.textContent = msg; errEl.style.display = "block"; }
+</script>
+</body>
+</html>

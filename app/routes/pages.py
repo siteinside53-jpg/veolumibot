@@ -147,3 +147,14 @@ async def sunov5_page(request: Request):
 @router.get("/elevenlabs", response_class=HTMLResponse)
 async def elevenlabs_page(request: Request):
     return templates.TemplateResponse("elevenlabs.html", {"request": request})
+
+# ========================
+# JOBS
+# ========================
+@router.get("/jobs-post", response_class=HTMLResponse)
+async def jobs_post_page(request: Request):
+    return templates.TemplateResponse("jobs-post.html", {"request": request})
+
+@router.get("/jobs-browse", response_class=HTMLResponse)
+async def jobs_browse_page(request: Request):
+    return templates.TemplateResponse("jobs-browse.html", {"request": request})

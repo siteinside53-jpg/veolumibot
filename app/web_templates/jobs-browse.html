@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="el">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <title>Εργασίες</title>
+  <style>
+    :root{
+      --bg:#0b0c12;--card:#121422;--text:#e9e9f5;--muted:#a4a7c0;
+      --stroke:#242646;--accent:#7c3aed;--accent2:#6d28d9;--good:#19c37d;--bad:#ef4444;
+      --shadow:0 14px 40px rgba(0,0,0,.55);--radius:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background:radial-gradient(800px 500px at 20% 10%,rgba(124,58,237,.18),transparent 55%),
+      radial-gradient(700px 500px at 80% 40%,rgba(124,58,237,.12),transparent 60%),var(--bg);
+      color:var(--text);display:flex;justify-content:center;padding:18px 14px 28px;}
+    .wrap{width:min(520px,100%)}
+
+    .page-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+    .logo{width:34px;height:34px;border-radius:12px;background:linear-gradient(135deg,rgba(124,58,237,.9),rgba(124,58,237,.35));
+      display:grid;place-items:center;box-shadow:0 10px 20px rgba(124,58,237,.25);border:1px solid rgba(255,255,255,.08);font-size:18px}
+    .page-title{font-size:18px;font-weight:900}
+    .page-sub{font-size:12px;color:var(--muted);font-weight:700}
+
+    /* Tabs */
+    .tabs{display:flex;gap:8px;margin-bottom:14px}
+    .tab{flex:1;padding:10px;border-radius:12px;border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.03);color:var(--muted);text-align:center;font-weight:800;font-size:13px;
+      cursor:pointer;transition:all .2s}
+    .tab.active{border-color:var(--accent);background:rgba(124,58,237,.12);color:var(--text)}
+
+    /* Job Card */
+    .job-card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
+      border:1px solid rgba(255,255,255,.06);border-radius:var(--radius);box-shadow:var(--shadow);
+      overflow:hidden;margin-bottom:12px;transition:border-color .2s}
+    .job-card.expanded{border-color:rgba(124,58,237,.3)}
+    .job-top{padding:14px;cursor:pointer}
+    .job-title{font-size:15px;font-weight:900;margin-bottom:4px}
+    .job-meta{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);font-weight:700}
+    .job-meta span{display:flex;align-items:center;gap:4px}
+    .job-preview{font-size:13px;color:var(--muted);margin-top:8px;line-height:1.5;
+      display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+    /* Expanded */
+    .job-detail{display:none;padding:0 14px 14px;border-top:1px solid rgba(255,255,255,.06)}
+    .job-card.expanded .job-detail{display:block}
+    .job-card.expanded .job-preview{display:none}
+    .job-full-desc{font-size:13px;color:var(--text);line-height:1.6;margin-top:12px;white-space:pre-wrap}
+
+    /* Offer form inside card */
+    .offer-form{margin-top:14px;background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:12px}
+    .offer-label{font-size:12px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;font-weight:800}
+    .offer-form textarea{width:100%;border-radius:10px;border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.03);color:var(--text);padding:10px;outline:none;font-size:13px;font-weight:700;
+      font-family:inherit;resize:vertical;min-height:70px}
+    .offer-form textarea:focus{border-color:rgba(124,58,237,.55)}
+    .offer-form input{width:100%;border-radius:10px;border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.03);color:var(--text);padding:10px;outline:none;font-size:13px;font-weight:700;
+      font-family:inherit;margin-top:8px}
+    .offer-form input:focus{border-color:rgba(124,58,237,.55)}
+    .offer-row{display:flex;gap:8px;margin-top:10px}
+    .offer-btn{flex:1;padding:11px;border:none;border-radius:12px;font-weight:900;font-size:13px;cursor:pointer;
+      background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;
+      box-shadow:0 6px 18px rgba(124,58,237,.3);transition:opacity .2s}
+    .offer-btn:disabled{opacity:.5;cursor:not-allowed}
+    .offer-success{font-size:12px;color:var(--good);font-weight:800;margin-top:8px;display:none}
+    .offer-err{font-size:12px;color:var(--bad);font-weight:800;margin-top:8px;display:none}
+    .optional-tag{font-size:10px;color:var(--muted);font-weight:600;margin-left:4px}
+
+    /* Empty */
+    .empty{text-align:center;color:var(--muted);padding:40px 20px;font-size:14px;font-weight:700}
+
+    /* Loading */
+    .loading{text-align:center;color:var(--muted);padding:40px;font-size:14px;font-weight:700}
+
+    /* My offers / my jobs specific */
+    .status-badge{display:inline-block;padding:3px 10px;border-radius:8px;font-size:11px;font-weight:900;text-transform:uppercase}
+    .status-open{background:rgba(25,195,125,.15);color:var(--good)}
+    .status-assigned{background:rgba(124,58,237,.15);color:var(--accent)}
+    .status-sent{background:rgba(255,180,0,.15);color:#f5a623}
+    .status-accepted{background:rgba(25,195,125,.15);color:var(--good)}
+    .status-rejected{background:rgba(239,68,68,.15);color:var(--bad)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="page-header">
+      <div class="logo">👀</div>
+      <div>
+        <div class="page-title">Εργασίες</div>
+        <div class="page-sub">Βρες δουλειά ή δες τις αγγελίες σου</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('browse')">🔍 Αγγελίες</div>
+      <div class="tab" onclick="switchTab('myjobs')">📋 Οι δικές μου</div>
+      <div class="tab" onclick="switchTab('myoffers')">📤 Προτάσεις μου</div>
+    </div>
+
+    <div id="content">
+      <div class="loading">⏳ Φόρτωση...</div>
+    </div>
+  </div>
+
+<script>
+const tg = window.Telegram?.WebApp;
+if(tg) tg.expand();
+const initData = tg?.initData || "";
+const contentEl = document.getElementById("content");
+
+let currentTab = "browse";
+let jobsCache = [];
+
+// ===== Tab switching =====
+function switchTab(tab){
+  currentTab = tab;
+  document.querySelectorAll(".tab").forEach((t,i) => {
+    t.classList.toggle("active", ["browse","myjobs","myoffers"][i] === tab);
+  });
+  if(tab === "browse") loadJobs();
+  else if(tab === "myjobs") loadMyJobs();
+  else if(tab === "myoffers") loadMyOffers();
+}
+
+// ===== Load open jobs =====
+async function loadJobs(){
+  contentEl.innerHTML = '<div class="loading">⏳ Φόρτωση...</div>';
+  try{
+    const r = await fetch("/api/jobs?limit=30");
+    const j = await r.json();
+    if(!j.ok){ contentEl.innerHTML = '<div class="empty">Σφάλμα φόρτωσης</div>'; return; }
+    jobsCache = j.items;
+    if(!j.items.length){ contentEl.innerHTML = '<div class="empty">📭 Δεν υπάρχουν διαθέσιμες εργασίες ακόμα.</div>'; return; }
+    contentEl.innerHTML = j.items.map(renderJobCard).join("");
+  } catch(e){
+    contentEl.innerHTML = '<div class="empty">Σφάλμα δικτύου</div>';
+  }
+}
+
+function renderJobCard(job){
+  const budget = job.budget_eur ? `💰 ${job.budget_eur}€` : "";
+  const deadline = job.deadline_days ? `⏰ ${job.deadline_days} ημ.` : "";
+  const ago = timeAgo(job.created_at);
+  return `
+    <div class="job-card" id="job-${job.id}" onclick="toggleJob('${job.id}')">
+      <div class="job-top">
+        <div class="job-title">${esc(job.title)}</div>
+        <div class="job-meta">
+          <span>👤 ${esc(job.client_name)}</span>
+          ${budget ? `<span>${budget}</span>` : ""}
+          ${deadline ? `<span>${deadline}</span>` : ""}
+          <span>🕐 ${ago}</span>
+        </div>
+        <div class="job-preview">${esc(job.description)}</div>
+      </div>
+      <div class="job-detail">
+        <div class="job-full-desc">${esc(job.description)}</div>
+        <div class="offer-form">
+          <div class="offer-label">Στείλε Πρόταση</div>
+          <textarea id="msg-${job.id}" placeholder="Γράψε τι προσφέρεις, εμπειρία, timeline..." maxlength="1000"></textarea>
+          <input id="price-${job.id}" type="number" min="1" placeholder="Τιμή σε € (προαιρετικό)"/>
+          <div class="offer-row">
+            <button class="offer-btn" id="btn-${job.id}" onclick="event.stopPropagation(); sendOffer('${job.id}')">📩 Στείλε Πρόταση</button>
+          </div>
+          <div class="offer-success" id="ok-${job.id}">✅ Η πρότασή σου στάλθηκε!</div>
+          <div class="offer-err" id="err-${job.id}"></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function toggleJob(id){
+  const card = document.getElementById("job-" + id);
+  if(!card) return;
+  const wasExpanded = card.classList.contains("expanded");
+  // collapse all
+  document.querySelectorAll(".job-card.expanded").forEach(c => c.classList.remove("expanded"));
+  if(!wasExpanded) card.classList.add("expanded");
+}
+
+async function sendOffer(jobId){
+  const msgEl = document.getElementById("msg-" + jobId);
+  const priceEl = document.getElementById("price-" + jobId);
+  const btnEl = document.getElementById("btn-" + jobId);
+  const okEl = document.getElementById("ok-" + jobId);
+  const errEl = document.getElementById("err-" + jobId);
+
+  okEl.style.display = "none";
+  errEl.style.display = "none";
+
+  const message = (msgEl.value || "").trim();
+  const price = priceEl.value ? parseFloat(priceEl.value) : null;
+
+  if(message.length < 5){ errEl.textContent = "Η πρόταση πρέπει να είναι τουλάχιστον 5 χαρακτήρες"; errEl.style.display = "block"; return; }
+
+  btnEl.disabled = true;
+  btnEl.textContent = "⏳ Αποστολή...";
+
+  try{
+    const r = await fetch(`/api/jobs/${jobId}/offer`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ initData, message, price_eur: price })
+    });
+    const j = await r.json();
+    if(!j.ok){
+      const msg = j.error === "cannot_offer_own_job" ? "Δεν μπορείς να στείλεις πρόταση στη δική σου αγγελία"
+                : j.error === "job_not_open" ? "Αυτή η εργασία δεν είναι πλέον διαθέσιμη"
+                : j.detail || j.error || "Σφάλμα";
+      errEl.textContent = msg; errEl.style.display = "block";
+      btnEl.disabled = false; btnEl.textContent = "📩 Στείλε Πρόταση";
+      return;
+    }
+    okEl.style.display = "block";
+    btnEl.textContent = "✅ Στάλθηκε!";
+  } catch(e){
+    errEl.textContent = "Σφάλμα δικτύου"; errEl.style.display = "block";
+    btnEl.disabled = false; btnEl.textContent = "📩 Στείλε Πρόταση";
+  }
+}
+
+// ===== My Jobs =====
+async function loadMyJobs(){
+  contentEl.innerHTML = '<div class="loading">⏳ Φόρτωση...</div>';
+  try{
+    const r = await fetch("/api/my/jobs", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ initData })
+    });
+    const j = await r.json();
+    if(!j.ok){ contentEl.innerHTML = '<div class="empty">Σφάλμα</div>'; return; }
+    if(!j.items.length){ contentEl.innerHTML = '<div class="empty">📭 Δεν έχεις δημοσιεύσει αγγελίες ακόμα.</div>'; return; }
+    contentEl.innerHTML = j.items.map(renderMyJobCard).join("");
+  } catch(e){
+    contentEl.innerHTML = '<div class="empty">Σφάλμα δικτύου</div>';
+  }
+}
+
+function renderMyJobCard(job){
+  const statusCls = job.status === "open" ? "status-open" : "status-assigned";
+  const statusText = job.status === "open" ? "Ανοιχτή" : "Ανατέθηκε";
+  const offers = job.offer_count || 0;
+  return `
+    <div class="job-card" id="myjob-${job.id}" onclick="toggleMyJob('${job.id}')">
+      <div class="job-top">
+        <div class="job-title">${esc(job.title)} <span class="status-badge ${statusCls}">${statusText}</span></div>
+        <div class="job-meta">
+          <span>📩 ${offers} πρόταση${offers !== 1 ? "ες" : ""}</span>
+          <span>🕐 ${timeAgo(job.created_at)}</span>
+        </div>
+      </div>
+      <div class="job-detail" id="detail-myjob-${job.id}">
+        <div class="job-full-desc">${esc(job.description)}</div>
+        <div id="offers-${job.id}" style="margin-top:12px">
+          <button class="offer-btn" onclick="event.stopPropagation(); loadOffers('${job.id}')" style="background:rgba(255,255,255,.06);box-shadow:none">📩 Δες Προτάσεις</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function toggleMyJob(id){
+  const card = document.getElementById("myjob-" + id);
+  if(!card) return;
+  card.classList.toggle("expanded");
+}
+
+async function loadOffers(jobId){
+  const container = document.getElementById("offers-" + jobId);
+  container.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px">⏳ Φόρτωση...</div>';
+  try{
+    const r = await fetch(`/api/jobs/${jobId}/offers`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ initData })
+    });
+    const j = await r.json();
+    if(!j.ok){ container.innerHTML = '<div style="color:var(--bad);font-size:12px">Σφάλμα</div>'; return; }
+    if(!j.items.length){ container.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px">Δεν υπάρχουν προτάσεις ακόμα</div>'; return; }
+    container.innerHTML = j.items.map(renderOffer).join("");
+  } catch(e){
+    container.innerHTML = '<div style="color:var(--bad);font-size:12px">Σφάλμα δικτύου</div>';
+  }
+}
+
+function renderOffer(o){
+  const price = o.price_eur ? `💰 ${o.price_eur}€` : "";
+  const statusCls = o.status === "sent" ? "status-sent" : o.status === "accepted" ? "status-accepted" : "status-rejected";
+  const statusText = o.status === "sent" ? "Σε αναμονή" : o.status === "accepted" ? "Αποδεκτή" : "Απορρίφθηκε";
+  const acceptBtn = o.status === "sent"
+    ? `<button class="offer-btn" id="accept-${o.id}" onclick="event.stopPropagation(); acceptOffer('${o.id}')" style="margin-top:8px;font-size:12px;padding:9px">✅ Αποδοχή</button>`
+    : "";
+  return `
+    <div style="background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:10px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-weight:800;font-size:13px">👤 ${esc(o.freelancer_name)}</span>
+        <span class="status-badge ${statusCls}">${statusText}</span>
+      </div>
+      <div style="font-size:13px;color:var(--text);margin-top:6px;line-height:1.5">${esc(o.message)}</div>
+      ${price ? `<div style="font-size:12px;color:var(--muted);margin-top:4px;font-weight:700">${price}</div>` : ""}
+      ${acceptBtn}
+    </div>`;
+}
+
+async function acceptOffer(offerId){
+  const btn = document.getElementById("accept-" + offerId);
+  if(btn){ btn.disabled = true; btn.textContent = "⏳..."; }
+  try{
+    const r = await fetch(`/api/offers/${offerId}/accept`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ initData })
+    });
+    const j = await r.json();
+    if(j.ok){
+      if(btn){ btn.textContent = "✅ Αποδεκτή!"; btn.style.background = "rgba(25,195,125,.2)"; }
+      // reload my jobs
+      setTimeout(() => loadMyJobs(), 1000);
+    } else {
+      if(btn){ btn.textContent = "Σφάλμα"; btn.disabled = false; }
+    }
+  } catch(e){
+    if(btn){ btn.textContent = "Σφάλμα"; btn.disabled = false; }
+  }
+}
+
+// ===== My Offers =====
+async function loadMyOffers(){
+  contentEl.innerHTML = '<div class="loading">⏳ Φόρτωση...</div>';
+  try{
+    const r = await fetch("/api/my/offers", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ initData })
+    });
+    const j = await r.json();
+    if(!j.ok){ contentEl.innerHTML = '<div class="empty">Σφάλμα</div>'; return; }
+    if(!j.items.length){ contentEl.innerHTML = '<div class="empty">📭 Δεν έχεις στείλει προτάσεις ακόμα.</div>'; return; }
+    contentEl.innerHTML = j.items.map(renderMyOffer).join("");
+  } catch(e){
+    contentEl.innerHTML = '<div class="empty">Σφάλμα δικτύου</div>';
+  }
+}
+
+function renderMyOffer(o){
+  const price = o.price_eur ? `💰 ${o.price_eur}€` : "";
+  const statusCls = o.status === "sent" ? "status-sent" : o.status === "accepted" ? "status-accepted" : "status-rejected";
+  const statusText = o.status === "sent" ? "Σε αναμονή" : o.status === "accepted" ? "Αποδεκτή!" : "Απορρίφθηκε";
+  return `
+    <div class="job-card">
+      <div class="job-top" style="cursor:default">
+        <div class="job-title">📋 ${esc(o.job_title)} <span class="status-badge ${statusCls}">${statusText}</span></div>
+        <div style="font-size:13px;color:var(--text);margin-top:8px;line-height:1.5">${esc(o.message)}</div>
+        ${price ? `<div style="font-size:12px;color:var(--muted);margin-top:4px;font-weight:700">${price}</div>` : ""}
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">🕐 ${timeAgo(o.created_at)}</div>
+      </div>
+    </div>`;
+}
+
+// ===== Helpers =====
+function esc(s){ const d = document.createElement("div"); d.textContent = s || ""; return d.innerHTML; }
+
+function timeAgo(dateStr){
+  if(!dateStr) return "";
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diff = Math.floor((now - then) / 1000);
+  if(diff < 60) return "μόλις τώρα";
+  if(diff < 3600) return Math.floor(diff/60) + " λεπτά";
+  if(diff < 86400) return Math.floor(diff/3600) + " ώρες";
+  return Math.floor(diff/86400) + " ημέρες";
+}
+
+// Initial load
+loadJobs();
+</script>
+</body>
+</html>

@@ -34,8 +34,6 @@ from .keyboards import (
     audio_models_menu,
     text_models_menu,
     jobs_menu,
-    jobs_client_menu,
-    jobs_freelancer_menu,
 )
 
 from .db import (
@@ -263,41 +261,40 @@ async def on_jobs_click(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     data = q.data or ""
 
-    if data == "jobs:client":
-        await edit_start_card(q, "🧑‍💼 Πελάτης\n\nΤι θέλεις να κάνεις;", jobs_client_menu())
-        return
+    # Accept offer from inline notification button
+    if data.startswith("jobs:accept:"):
+        offer_id = data.split(":", 2)[2]
+        try:
+            from .db import accept_job_offer
+            from .core.telegram_client import tg_send_message as _tg_msg
 
-    if data == "jobs:freelancer":
-        await edit_start_card(q, "🧑‍💻 Freelancer\n\nΤι θέλεις να κάνεις;", jobs_freelancer_menu())
-        return
+            result = accept_job_offer(offer_id)
+            if not result:
+                await q.message.reply_text("⚠️ Η πρόταση δεν βρέθηκε.")
+                return
 
-    if data == "jobs:client:help":
-        await q.message.reply_text(
-            "ℹ️ Τι να γράψω στο αίτημα:\n"
-            "• Τι θες να φτιαχτεί\n"
-            "• Deadline\n"
-            "• Budget\n"
-            "• Παραδείγματα/links\n"
-            "• Τι μορφή παράδοσης θέλεις (π.χ. αρχείο .zip, Figma, κτλ)"
-        )
-        return
+            if result.get("status") == "accepted":
+                await q.message.reply_text(
+                    f"✅ Αποδέχτηκες την πρόταση για: {result.get('job_title', '—')}\n\n"
+                    f"Ο freelancer θα ειδοποιηθεί."
+                )
 
-    if data == "jobs:freelancer:how":
-        await q.message.reply_text(
-            "ℹ️ Πώς δουλεύει:\n"
-            "• Βλέπεις εργασίες\n"
-            "• Στέλνεις πρόταση/μήνυμα\n"
-            "• Συμφωνείτε όρους & παράδοση\n\n"
-            "Σύντομα θα γίνει πλήρης marketplace ροή."
-        )
-        return
-
-    if data == "jobs:list":
-        await q.message.reply_text("📭 Προς το παρόν το listing θα έρθει από το backend (Railway).")
-        return
-
-    if data == "jobs:post":
-        await q.message.reply_text("📝 Η ανάρτηση εργασίας θα γίνει από το backend (Railway). Θα το κουμπώσουμε αμέσως μετά.")
+                # Notify freelancer
+                freelancer_tg = result.get("freelancer_tg_id")
+                if freelancer_tg:
+                    try:
+                        await _tg_msg(
+                            int(freelancer_tg),
+                            f"✅ Η πρότασή σου έγινε δεκτή!\n\n"
+                            f"📋 Εργασία: {result.get('job_title', '—')}\n\n"
+                            f"Επικοινώνησε με τον πελάτη για τις λεπτομέρειες."
+                        )
+                    except Exception:
+                        pass
+            else:
+                await q.message.reply_text("ℹ️ Αυτή η πρόταση έχει ήδη διαχειριστεί.")
+        except Exception as e:
+            await q.message.reply_text(f"⚠️ Σφάλμα: {e}")
         return
 
 
